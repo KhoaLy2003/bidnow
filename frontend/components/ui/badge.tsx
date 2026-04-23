@@ -19,6 +19,21 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // Auction state variants
+        active:
+          "bg-auction-active-bg text-auction-active-text border-auction-active-border font-semibold tracking-wide uppercase",
+        "ending-soon":
+          "bg-auction-ending-bg text-auction-ending-text border-auction-ending-border font-semibold tracking-wide uppercase",
+        critical:
+          "bg-auction-critical-bg text-auction-critical-text border-auction-critical-border font-semibold tracking-wide uppercase",
+        closed:
+          "bg-auction-closed-bg text-auction-closed-text border-auction-closed-border font-semibold tracking-wide uppercase",
+        won:
+          "bg-auction-won-bg text-auction-won-text border-auction-won-border font-semibold tracking-wide uppercase",
+        lost:
+          "bg-auction-lost-bg text-auction-lost-text border-auction-lost-border font-semibold tracking-wide uppercase",
+        outbid:
+          "bg-auction-outbid-bg text-auction-outbid-text border-auction-outbid-border font-semibold tracking-wide uppercase",
       },
     },
     defaultVariants: {

@@ -10,10 +10,10 @@
 | `npx shadcn@latest init` | ✅ Done |
 | 18 shadcn UI primitives in `components/ui/` | ✅ Done |
 | Stitch prototype (16 screens) | ✅ Done |
-| **Phase 1** — `globals.css` full token rewrite | ⬜ Next |
-| **Phase 2** — Core utilities | ⬜ Pending |
-| **Phase 3** — Customize shadcn primitives | ⬜ Pending |
-| **Phase 4** — Auction components | ⬜ Pending |
+| **Phase 1** — `globals.css` full token rewrite | ✅ Done |
+| **Phase 2** — Core utilities | ✅ Done |
+| **Phase 3** — Customize shadcn primitives | ✅ Done |
+| **Phase 4** — Auction components | ⬜ Next |
 | **Phase 5** — Layout components | ⬜ Pending |
 | **Phase 6** — Wallet & Notification components | ⬜ Pending |
 | **Phase 7** — Route pages | ⬜ Pending |
