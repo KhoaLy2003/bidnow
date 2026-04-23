@@ -13,10 +13,10 @@
 | **Phase 1** — `globals.css` full token rewrite | ✅ Done |
 | **Phase 2** — Core utilities | ✅ Done |
 | **Phase 3** — Customize shadcn primitives | ✅ Done |
-| **Phase 4** — Auction components | ⬜ Next |
-| **Phase 5** — Layout components | ⬜ Pending |
-| **Phase 6** — Wallet & Notification components | ⬜ Pending |
-| **Phase 7** — Route pages | ⬜ Pending |
+| **Phase 4** — Auction components | ✅ Done |
+| **Phase 5** — Layout components | ✅ Done |
+| **Phase 6** — Wallet & Notification components | ✅ Done |
+| **Phase 7** — Route pages | ✅ Done |
 
 ---
 

@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BidNow Frontend
 
-## Getting Started
+This is the frontend application for the BidNow platform, a modern, high-performance E-commerce platform specialized in real-time auctions.
 
-First, run the development server:
+## 🛠️ Tech Stack
+
+- **Framework:** Next.js 16.2 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS v4
+- **UI Components:** Base UI (`@base-ui/react`) & shadcn/ui
+- **Icons:** Lucide React
+- **State Management:** Zustand 5
+- **Real-time:** Socket.io-client
+
+## 🚀 Getting Started
+
+First, install the dependencies if you haven't already:
+
+```bash
+npm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/`: Next.js App Router layout, pages, and `globals.css`.
+- `components/ui/`: Base UI and shadcn-generated primitives.
+- `components/auction/`, `components/wallet/`, `components/shared/`: Domain-specific custom components.
+- `hooks/`: Custom React hooks (e.g., `useCountdown`, `useAuctionSocket`).
+- `lib/`: Utilities (`utils.ts`, `format.ts`, etc.).
+- `mock-data/`: Centralized mock data for development.
+- `types/`: TypeScript interfaces and types.
 
-## Learn More
+## 🤖 AI Agents
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If you are an AI coding agent working in this repository, please read the `AGENTS.md` file for specific rules, design system details, and architectural guidelines.
