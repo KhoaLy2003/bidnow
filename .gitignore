@@ -1,1 +1,42 @@
+# Java/Maven
+target/
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# IDEs
+.idea/
+*.iml
+*.iws
+.settings/
+.classpath
+.project
+.factorypath
+.vscode/
+
+# Node/Frontend (for BidNow frontend)
+node_modules/
+dist/
+.next/
+out/
+build/
+.env*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent
 .agent/
+.gemini/
+
+#Docs
+docs/epics/
