@@ -1,0 +1,653 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   LAYER 1 — shadcn semantic vars (light mode)
+   BidNow maps its indigo brand onto shadcn's naming convention.
+   Full hsl() values required for Tailwind v4 compatibility.
+   ============================================================ */
+:root {
+  --background:             hsl(0, 0%, 100%);
+  --foreground:             hsl(240, 6%, 7%);
+  --card:                   hsl(0, 0%, 100%);
+  --card-foreground:        hsl(240, 6%, 7%);
+  --popover:                hsl(0, 0%, 100%);
+  --popover-foreground:     hsl(240, 6%, 7%);
+  --primary:                hsl(244, 72%, 58%);
+  --primary-foreground:     hsl(0, 0%, 100%);
+  --secondary:              hsl(240, 5%, 96%);
+  --secondary-foreground:   hsl(240, 6%, 7%);
+  --muted:                  hsl(240, 5%, 96%);
+  --muted-foreground:       hsl(240, 4%, 46%);
+  --accent:                 hsl(239, 84%, 97%);
+  --accent-foreground:      hsl(244, 72%, 58%);
+  --destructive:            hsl(0, 72%, 51%);
+  --border:                 hsl(240, 6%, 90%);
+  --input:                  hsl(240, 6%, 90%);
+  --ring:                   hsl(244, 72%, 58%);
+  --radius:                 0.5rem;
+}
+
+/* shadcn dark overrides */
+.dark {
+  --background:             hsl(240, 7%, 6%);
+  --foreground:             hsl(240, 9%, 95%);
+  --card:                   hsl(240, 6%, 12%);
+  --card-foreground:        hsl(240, 9%, 95%);
+  --popover:                hsl(240, 6%, 12%);
+  --popover-foreground:     hsl(240, 9%, 95%);
+  --primary:                hsl(239, 84%, 67%);
+  --primary-foreground:     hsl(0, 0%, 100%);
+  --secondary:              hsl(240, 5%, 15%);
+  --secondary-foreground:   hsl(240, 9%, 95%);
+  --muted:                  hsl(240, 5%, 15%);
+  --muted-foreground:       hsl(240, 4%, 56%);
+  --accent:                 hsl(244, 59%, 20%);
+  --accent-foreground:      hsl(239, 84%, 67%);
+  --destructive:            hsl(0, 84%, 60%);
+  --border:                 hsl(240, 6%, 20%);
+  --input:                  hsl(240, 6%, 20%);
+  --ring:                   hsl(239, 84%, 67%);
+}
+
+/* ============================================================
+   LAYER 2 — BidNow extended tokens (light mode)
+   ============================================================ */
+:root {
+  /* Brand palette */
+  --brand-50:  hsl(239, 100%, 97%);
+  --brand-100: hsl(239, 93%, 92%);
+  --brand-200: hsl(239, 87%, 83%);
+  --brand-300: hsl(239, 86%, 73%);
+  --brand-400: hsl(239, 84%, 67%);
+  --brand-500: hsl(244, 72%, 58%);
+  --brand-600: hsl(244, 48%, 41%);
+  --brand-700: hsl(244, 46%, 33%);
+  --brand-800: hsl(244, 45%, 20%);
+  --brand-900: hsl(244, 45%, 15%);
+
+  /* Surface / Background */
+  --color-bg-base:        #FFFFFF;
+  --color-bg-elevated:    #F9F9FB;
+  --color-bg-overlay:     #F3F3F7;
+  --color-bg-card:        #FFFFFF;
+  --color-bg-card-hover:  #F5F5FF;
+  --color-bg-modal:       rgba(255, 255, 255, 0.97);
+  --color-bg-backdrop:    rgba(0, 0, 0, 0.4);
+  --color-bg-sidebar:     #F4F4F8;
+
+  /* Text */
+  --color-text-primary:    #111115;
+  --color-text-secondary:  #52525C;
+  --color-text-tertiary:   #8B8B9A;
+  --color-text-disabled:   #C2C2D0;
+  --color-text-inverse:    #FFFFFF;
+  --color-text-brand:      #4F46E5;
+  --color-text-link:       #4F46E5;
+  --color-text-link-hover: #3730A3;
+
+  /* Semantic — Success */
+  --color-success-default: #16A34A;
+  --color-success-subtle:  #F0FDF4;
+  --color-success-border:  #BBF7D0;
+  --color-success-text:    #14532D;
+
+  /* Semantic — Warning */
+  --color-warning-default: #D97706;
+  --color-warning-subtle:  #FFFBEB;
+  --color-warning-border:  #FDE68A;
+  --color-warning-text:    #92400E;
+
+  /* Semantic — Danger */
+  --color-danger-default: #DC2626;
+  --color-danger-subtle:  #FEF2F2;
+  --color-danger-border:  #FECACA;
+  --color-danger-text:    #7F1D1D;
+
+  /* Semantic — Info */
+  --color-info-default: #0284C7;
+  --color-info-subtle:  #F0F9FF;
+  --color-info-border:  #BAE6FD;
+  --color-info-text:    #075985;
+
+  /* Neutral scale */
+  --color-neutral-0:   #FFFFFF;
+  --color-neutral-50:  #F8F8FC;
+  --color-neutral-100: #F0F0F5;
+  --color-neutral-200: #E2E2EC;
+  --color-neutral-300: #C8C8D8;
+  --color-neutral-400: #9898AE;
+  --color-neutral-500: #6B6B82;
+  --color-neutral-600: #52525C;
+  --color-neutral-700: #3A3A4A;
+  --color-neutral-800: #27272F;
+  --color-neutral-900: #111115;
+  --color-neutral-950: #08080A;
+
+  /* Border */
+  --color-border-default: #E2E2EC;
+  --color-border-strong:  #C8C8D8;
+  --color-border-focus:   #6366F1;
+  --color-border-error:   #DC2626;
+
+  /* Auction — Active */
+  --color-auction-active-bg:     #F0F9FF;
+  --color-auction-active-text:   #0284C7;
+  --color-auction-active-border: #BAE6FD;
+  --color-auction-active-accent: #0284C7;
+
+  /* Auction — Ending Soon */
+  --color-auction-ending-bg:     #FFFBEB;
+  --color-auction-ending-text:   #B45309;
+  --color-auction-ending-border: #FDE68A;
+  --color-auction-ending-accent: #F59E0B;
+
+  /* Auction — Critical */
+  --color-auction-critical-bg:     #FEF2F2;
+  --color-auction-critical-text:   #B91C1C;
+  --color-auction-critical-border: #FECACA;
+  --color-auction-critical-accent: #DC2626;
+
+  /* Auction — Closed */
+  --color-auction-closed-bg:     #F0F0F5;
+  --color-auction-closed-text:   #6B6B82;
+  --color-auction-closed-border: #E2E2EC;
+  --color-auction-closed-accent: #9898AE;
+
+  /* Auction — Won */
+  --color-auction-won-bg:     #F0FDF4;
+  --color-auction-won-text:   #14532D;
+  --color-auction-won-border: #BBF7D0;
+  --color-auction-won-accent: #16A34A;
+
+  /* Auction — Lost */
+  --color-auction-lost-bg:     #FEF2F2;
+  --color-auction-lost-text:   #7F1D1D;
+  --color-auction-lost-border: #FECACA;
+  --color-auction-lost-accent: #DC2626;
+
+  /* Auction — Outbid */
+  --color-auction-outbid-bg:     #FFF7ED;
+  --color-auction-outbid-text:   #9A3412;
+  --color-auction-outbid-border: #FDBA74;
+  --color-auction-outbid-accent: #EA580C;
+
+  /* Wallet */
+  --color-wallet-bg:       #F0F9FF;
+  --color-wallet-text:     #0369A1;
+  --color-wallet-icon:     #0284C7;
+  --color-wallet-positive: #16A34A;
+  --color-wallet-negative: #DC2626;
+
+  /* Shadows */
+  --shadow-none:    none;
+  --shadow-xs:      0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm:      0 1px 3px 0 rgba(0, 0, 0, 0.10), 0 1px 2px -1px rgba(0, 0, 0, 0.10);
+  --shadow-md:      0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.10);
+  --shadow-lg:      0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+  --shadow-xl:      0 20px 25px -5px rgba(0, 0, 0, 0.10), 0 8px 10px -6px rgba(0, 0, 0, 0.10);
+  --shadow-2xl:     0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-inner:   inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  --shadow-brand:   0 0 0 3px rgba(99, 102, 241, 0.20), 0 4px 14px 0 rgba(79, 70, 229, 0.25);
+  --shadow-danger:  0 0 0 3px rgba(239, 68, 68, 0.20), 0 4px 14px 0 rgba(220, 38, 38, 0.25);
+  --shadow-success: 0 0 0 3px rgba(34, 197, 94, 0.20), 0 4px 14px 0 rgba(22, 163, 74, 0.25);
+
+  /* Backdrop blur */
+  --blur-sm: blur(4px);
+  --blur-md: blur(8px);
+  --blur-lg: blur(16px);
+  --blur-xl: blur(24px);
+
+  /* Z-index scale */
+  --z-index-base:     0;
+  --z-index-raised:   10;
+  --z-index-dropdown: 100;
+  --z-index-sticky:   200;
+  --z-index-overlay:  300;
+  --z-index-modal:    400;
+  --z-index-toast:    500;
+  --z-index-tooltip:  600;
+
+  /* Font stacks */
+  --font-sans:    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    var(--font-geist-mono), ui-monospace, 'Cascadia Code', monospace;
+  --font-display: var(--font-dm-sans), var(--font-geist-sans), sans-serif;
+
+  /* Font size */
+  --font-size-2xs:      0.625rem;
+  --font-size-xs:       0.75rem;
+  --font-size-sm:       0.875rem;
+  --font-size-base:     1rem;
+  --font-size-md:       1.125rem;
+  --font-size-lg:       1.25rem;
+  --font-size-xl:       1.5rem;
+  --font-size-2xl:      1.875rem;
+  --font-size-3xl:      2.25rem;
+  --font-size-4xl:      3rem;
+  --font-size-5xl:      3.75rem;
+  --font-size-6xl:      4.5rem;
+  --font-size-price-sm: 1.5rem;
+  --font-size-price-md: 2.25rem;
+  --font-size-price-lg: 3rem;
+  --font-size-timer-sm: 1.25rem;
+  --font-size-timer-md: 2rem;
+  --font-size-timer-lg: 3rem;
+
+  /* Font weight */
+  --font-weight-regular:   400;
+  --font-weight-medium:    500;
+  --font-weight-semibold:  600;
+  --font-weight-bold:      700;
+  --font-weight-extrabold: 800;
+
+  /* Line height */
+  --line-height-none:    1;
+  --line-height-tight:   1.2;
+  --line-height-snug:    1.35;
+  --line-height-normal:  1.5;
+  --line-height-relaxed: 1.625;
+
+  /* Letter spacing */
+  --letter-spacing-tighter: -0.04em;
+  --letter-spacing-tight:   -0.02em;
+  --letter-spacing-normal:  0em;
+  --letter-spacing-wide:    0.02em;
+  --letter-spacing-wider:   0.05em;
+  --letter-spacing-widest:  0.1em;
+
+  /* Border radius (full scale) */
+  --radius-none: 0px;
+  --radius-xs:   2px;
+  --radius-sm:   calc(var(--radius) - 4px);
+  --radius-md:   calc(var(--radius) - 2px);
+  --radius-lg:   var(--radius);
+  --radius-xl:   calc(var(--radius) + 4px);
+  --radius-2xl:  16px;
+  --radius-3xl:  24px;
+  --radius-full: 9999px;
+
+  /* Border width */
+  --border-0: 0px;
+  --border-1: 1px;
+  --border-2: 2px;
+  --border-4: 4px;
+
+  /* Duration */
+  --duration-instant:    0ms;
+  --duration-fast:       80ms;
+  --duration-normal:     150ms;
+  --duration-moderate:   250ms;
+  --duration-slow:       350ms;
+  --duration-extra-slow: 500ms;
+  --duration-bid-pulse:  600ms;
+  --duration-countdown:  1000ms;
+
+  /* Easing */
+  --ease-linear:     linear;
+  --ease-in:         cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:        cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce-out: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  --ease-snappy:     cubic-bezier(0.2, 0, 0, 1);
+
+  /* Container widths */
+  --container-xs:             480px;
+  --container-sm:             640px;
+  --container-md:             768px;
+  --container-lg:             1024px;
+  --container-xl:             1280px;
+  --container-2xl:            1440px;
+  --container-auction-grid:   1200px;
+  --container-auction-detail: 960px;
+  --container-sidebar:        320px;
+}
+
+/* ============================================================
+   LAYER 2 — BidNow extended tokens (dark overrides)
+   ============================================================ */
+.dark {
+  /* Surface / Background */
+  --color-bg-base:        #0F0F0F;
+  --color-bg-elevated:    #1A1A1F;
+  --color-bg-overlay:     #242428;
+  --color-bg-card:        #1E1E24;
+  --color-bg-card-hover:  #25252E;
+  --color-bg-modal:       rgba(18, 18, 22, 0.97);
+  --color-bg-backdrop:    rgba(0, 0, 0, 0.6);
+  --color-bg-sidebar:     #16161B;
+
+  /* Text */
+  --color-text-primary:    #F0F0F4;
+  --color-text-secondary:  #A0A0B0;
+  --color-text-tertiary:   #6A6A7E;
+  --color-text-disabled:   #3A3A4A;
+  --color-text-inverse:    #0F0F0F;
+  --color-text-brand:      #8483F5;
+  --color-text-link:       #8483F5;
+  --color-text-link-hover: #A5A4F8;
+
+  /* Semantic — Success */
+  --color-success-default: #22C55E;
+  --color-success-subtle:  #052E16;
+  --color-success-border:  #166534;
+  --color-success-text:    #86EFAC;
+
+  /* Semantic — Warning */
+  --color-warning-default: #F59E0B;
+  --color-warning-subtle:  #1C1200;
+  --color-warning-border:  #78350F;
+  --color-warning-text:    #FCD34D;
+
+  /* Semantic — Danger */
+  --color-danger-default: #EF4444;
+  --color-danger-subtle:  #1C0000;
+  --color-danger-border:  #7F1D1D;
+  --color-danger-text:    #FCA5A5;
+
+  /* Semantic — Info */
+  --color-info-default: #38BDF8;
+  --color-info-subtle:  #001B2E;
+  --color-info-border:  #0369A1;
+  --color-info-text:    #7DD3FC;
+
+  /* Border */
+  --color-border-default: #2A2A35;
+  --color-border-strong:  #3A3A4A;
+  --color-border-focus:   #6366F1;
+  --color-border-error:   #EF4444;
+
+  /* Auction — Active */
+  --color-auction-active-bg:     #001B2E;
+  --color-auction-active-text:   #38BDF8;
+  --color-auction-active-border: #0369A1;
+  --color-auction-active-accent: #38BDF8;
+
+  /* Auction — Ending Soon */
+  --color-auction-ending-bg:     #1C1200;
+  --color-auction-ending-text:   #FCD34D;
+  --color-auction-ending-border: #78350F;
+  --color-auction-ending-accent: #F59E0B;
+
+  /* Auction — Critical */
+  --color-auction-critical-bg:     #1C0000;
+  --color-auction-critical-text:   #F87171;
+  --color-auction-critical-border: #7F1D1D;
+  --color-auction-critical-accent: #EF4444;
+
+  /* Auction — Closed */
+  --color-auction-closed-bg:     #1A1A1F;
+  --color-auction-closed-text:   #6A6A7E;
+  --color-auction-closed-border: #2A2A35;
+  --color-auction-closed-accent: #6A6A7E;
+
+  /* Auction — Won */
+  --color-auction-won-bg:     #052E16;
+  --color-auction-won-text:   #86EFAC;
+  --color-auction-won-border: #166534;
+  --color-auction-won-accent: #22C55E;
+
+  /* Auction — Lost */
+  --color-auction-lost-bg:     #1C0000;
+  --color-auction-lost-text:   #FCA5A5;
+  --color-auction-lost-border: #7F1D1D;
+  --color-auction-lost-accent: #EF4444;
+
+  /* Auction — Outbid */
+  --color-auction-outbid-bg:     #180900;
+  --color-auction-outbid-text:   #FB923C;
+  --color-auction-outbid-border: #7C2D12;
+  --color-auction-outbid-accent: #F97316;
+
+  /* Wallet */
+  --color-wallet-bg:       #001B2E;
+  --color-wallet-text:     #38BDF8;
+  --color-wallet-icon:     #7DD3FC;
+  --color-wallet-positive: #22C55E;
+  --color-wallet-negative: #EF4444;
+}
+
+/* ============================================================
+   @theme inline — forward all tokens as Tailwind utilities
+   ============================================================ */
+@theme inline {
+  /* shadcn semantic vars */
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
+
+  /* Font stacks */
+  --font-sans:    var(--font-sans);
+  --font-mono:    var(--font-mono);
+  --font-display: var(--font-display);
+
+  /* Border radius */
+  --radius-none: var(--radius-none);
+  --radius-xs:   var(--radius-xs);
+  --radius-sm:   var(--radius-sm);
+  --radius-md:   var(--radius-md);
+  --radius-lg:   var(--radius-lg);
+  --radius-xl:   var(--radius-xl);
+  --radius-2xl:  var(--radius-2xl);
+  --radius-3xl:  var(--radius-3xl);
+  --radius-full: var(--radius-full);
+
+  /* Brand palette */
+  --color-brand-50:  var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  /* Surface */
+  --color-bg-base:       var(--color-bg-base);
+  --color-bg-elevated:   var(--color-bg-elevated);
+  --color-bg-overlay:    var(--color-bg-overlay);
+  --color-bg-card:       var(--color-bg-card);
+  --color-bg-card-hover: var(--color-bg-card-hover);
+  --color-bg-sidebar:    var(--color-bg-sidebar);
+
+  /* Text */
+  --color-text-primary:    var(--color-text-primary);
+  --color-text-secondary:  var(--color-text-secondary);
+  --color-text-tertiary:   var(--color-text-tertiary);
+  --color-text-disabled:   var(--color-text-disabled);
+  --color-text-inverse:    var(--color-text-inverse);
+  --color-text-brand:      var(--color-text-brand);
+  --color-text-link:       var(--color-text-link);
+  --color-text-link-hover: var(--color-text-link-hover);
+
+  /* Semantic */
+  --color-success-default: var(--color-success-default);
+  --color-success-subtle:  var(--color-success-subtle);
+  --color-success-border:  var(--color-success-border);
+  --color-success-text:    var(--color-success-text);
+  --color-warning-default: var(--color-warning-default);
+  --color-warning-subtle:  var(--color-warning-subtle);
+  --color-warning-border:  var(--color-warning-border);
+  --color-warning-text:    var(--color-warning-text);
+  --color-danger-default:  var(--color-danger-default);
+  --color-danger-subtle:   var(--color-danger-subtle);
+  --color-danger-border:   var(--color-danger-border);
+  --color-danger-text:     var(--color-danger-text);
+  --color-info-default:    var(--color-info-default);
+  --color-info-subtle:     var(--color-info-subtle);
+  --color-info-border:     var(--color-info-border);
+  --color-info-text:       var(--color-info-text);
+
+  /* Neutral scale */
+  --color-neutral-0:   var(--color-neutral-0);
+  --color-neutral-50:  var(--color-neutral-50);
+  --color-neutral-100: var(--color-neutral-100);
+  --color-neutral-200: var(--color-neutral-200);
+  --color-neutral-300: var(--color-neutral-300);
+  --color-neutral-400: var(--color-neutral-400);
+  --color-neutral-500: var(--color-neutral-500);
+  --color-neutral-600: var(--color-neutral-600);
+  --color-neutral-700: var(--color-neutral-700);
+  --color-neutral-800: var(--color-neutral-800);
+  --color-neutral-900: var(--color-neutral-900);
+  --color-neutral-950: var(--color-neutral-950);
+
+  /* Border tokens */
+  --color-border-default: var(--color-border-default);
+  --color-border-strong:  var(--color-border-strong);
+  --color-border-focus:   var(--color-border-focus);
+  --color-border-error:   var(--color-border-error);
+
+  /* Auction state tokens */
+  --color-auction-active-bg:       var(--color-auction-active-bg);
+  --color-auction-active-text:     var(--color-auction-active-text);
+  --color-auction-active-border:   var(--color-auction-active-border);
+  --color-auction-active-accent:   var(--color-auction-active-accent);
+  --color-auction-ending-bg:       var(--color-auction-ending-bg);
+  --color-auction-ending-text:     var(--color-auction-ending-text);
+  --color-auction-ending-border:   var(--color-auction-ending-border);
+  --color-auction-ending-accent:   var(--color-auction-ending-accent);
+  --color-auction-critical-bg:     var(--color-auction-critical-bg);
+  --color-auction-critical-text:   var(--color-auction-critical-text);
+  --color-auction-critical-border: var(--color-auction-critical-border);
+  --color-auction-critical-accent: var(--color-auction-critical-accent);
+  --color-auction-closed-bg:       var(--color-auction-closed-bg);
+  --color-auction-closed-text:     var(--color-auction-closed-text);
+  --color-auction-closed-border:   var(--color-auction-closed-border);
+  --color-auction-closed-accent:   var(--color-auction-closed-accent);
+  --color-auction-won-bg:          var(--color-auction-won-bg);
+  --color-auction-won-text:        var(--color-auction-won-text);
+  --color-auction-won-border:      var(--color-auction-won-border);
+  --color-auction-won-accent:      var(--color-auction-won-accent);
+  --color-auction-lost-bg:         var(--color-auction-lost-bg);
+  --color-auction-lost-text:       var(--color-auction-lost-text);
+  --color-auction-lost-border:     var(--color-auction-lost-border);
+  --color-auction-lost-accent:     var(--color-auction-lost-accent);
+  --color-auction-outbid-bg:       var(--color-auction-outbid-bg);
+  --color-auction-outbid-text:     var(--color-auction-outbid-text);
+  --color-auction-outbid-border:   var(--color-auction-outbid-border);
+  --color-auction-outbid-accent:   var(--color-auction-outbid-accent);
+
+  /* Wallet */
+  --color-wallet-bg:       var(--color-wallet-bg);
+  --color-wallet-text:     var(--color-wallet-text);
+  --color-wallet-icon:     var(--color-wallet-icon);
+  --color-wallet-positive: var(--color-wallet-positive);
+  --color-wallet-negative: var(--color-wallet-negative);
+
+  /* Shadows */
+  --shadow-none:    var(--shadow-none);
+  --shadow-xs:      var(--shadow-xs);
+  --shadow-sm:      var(--shadow-sm);
+  --shadow-md:      var(--shadow-md);
+  --shadow-lg:      var(--shadow-lg);
+  --shadow-xl:      var(--shadow-xl);
+  --shadow-2xl:     var(--shadow-2xl);
+  --shadow-inner:   var(--shadow-inner);
+  --shadow-brand:   var(--shadow-brand);
+  --shadow-danger:  var(--shadow-danger);
+  --shadow-success: var(--shadow-success);
+}
+
+/* ============================================================
+   @keyframes
+   ============================================================ */
+
+/* New bid arrived via WebSocket on CurrentBidDisplay */
+@keyframes bid-pulse {
+  0%, 100% { transform: scale(1); box-shadow: none; }
+  30%       { transform: scale(1.04); box-shadow: var(--shadow-brand); background-color: var(--color-bg-elevated); }
+}
+
+/* User is outbid */
+@keyframes outbid-flash {
+  0%        { background-color: transparent; border-color: transparent; transform: translateX(0); }
+  10%, 30%, 50% { transform: translateX(-4px); background-color: var(--color-danger-subtle); border-color: var(--color-danger-border); }
+  20%, 40%  { transform: translateX(4px); }
+  70%       { background-color: var(--color-danger-subtle); border-color: var(--color-danger-border); transform: translateX(0); }
+  100%      { background-color: transparent; border-color: transparent; transform: translateX(0); }
+}
+
+/* Each second tick on CountdownTimer */
+@keyframes countdown-tick {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+
+/* Price number — old value exits upward */
+@keyframes price-roll-out {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 0; }
+}
+
+/* Price number — new value enters from below */
+@keyframes price-roll-in {
+  0%   { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Auction won state reveal */
+@keyframes won-reveal {
+  0%   { transform: scale(0.8); box-shadow: none; }
+  70%  { transform: scale(1.05); box-shadow: var(--shadow-success); background-color: var(--color-auction-won-bg); }
+  100% { transform: scale(1); box-shadow: var(--shadow-success); background-color: var(--color-auction-won-bg); }
+}
+
+/* Toast enter */
+@keyframes toast-slide-in {
+  0%   { transform: translateX(100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* Toast exit */
+@keyframes toast-slide-out {
+  0%   { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* Continuous pulse for ending-soon auctions */
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ============================================================
+   Global base styles
+   ============================================================ */
+@layer base {
+  * {
+    box-sizing: border-box;
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply antialiased;
+  }
+
+  html {
+    @apply font-sans;
+  }
+}

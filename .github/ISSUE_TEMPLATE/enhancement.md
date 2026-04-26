@@ -23,8 +23,5 @@ Detailed description of the proposed implementation
 ## Alternatives Considered
 Other approaches that were evaluated
 
-## Effort Estimate
-[Small / Medium / Large]
-
 ## Priority
 [High / Medium / Low]
