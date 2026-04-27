@@ -1,0 +1,16 @@
+package com.bidnow.notification.domain.enums;
+
+public enum NotificationType {
+    BID_PLACED,
+    BID_OUTBID,
+    AUCTION_ENDING_SOON,
+    AUCTION_WON,
+    AUCTION_LOST,
+    AUCTION_CANCELLED,
+    PAYMENT_REMINDER,
+    PAYMENT_RECEIVED,
+    DEPOSIT_REFUNDED,
+    DEPOSIT_FORFEITED,
+    WATCHLIST_ITEM_STARTING,
+    SYSTEM_ANNOUNCEMENT
+}
