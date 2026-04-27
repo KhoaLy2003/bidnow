@@ -2,6 +2,7 @@ package com.bidnow.notification.service;
 
 import com.bidnow.notification.domain.entity.NotificationTemplate;
 import com.bidnow.notification.dto.request.TemplateRequest;
+import com.bidnow.notification.dto.request.criteria.TemplateCriteria;
 import com.bidnow.notification.dto.response.TemplateResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,5 +42,5 @@ public interface TemplateService {
 
     TemplateResponse getTemplate(UUID id);
 
-    Page<TemplateResponse> getTemplates(Pageable pageable);
+    Page<TemplateResponse> getTemplates(TemplateCriteria criteria, Pageable pageable);
 }
