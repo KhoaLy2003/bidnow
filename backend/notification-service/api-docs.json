@@ -20,6 +20,51 @@
         "summary": "Get paginated list of notification templates",
         "parameters": [
           {
+            "name": "types",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "EMAIL",
+                  "SMS",
+                  "PUSH"
+                ]
+              }
+            },
+            "description": "Filter by notification types (multiple values supported, e.g., ?types=EMAIL,SMS)"
+          },
+          {
+            "name": "languages",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "EN",
+                  "VI"
+                ]
+              }
+            },
+            "description": "Filter by languages (multiple values supported, e.g., ?languages=EN,VI)"
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
