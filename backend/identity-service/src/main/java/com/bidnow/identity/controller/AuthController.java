@@ -1,7 +1,9 @@
 package com.bidnow.identity.controller;
 
 import com.bidnow.common.dto.ApiResponse;
+import com.bidnow.identity.dto.request.LoginRequest;
 import com.bidnow.identity.dto.request.RegisterRequest;
+import com.bidnow.identity.dto.response.LoginResponse;
 import com.bidnow.identity.dto.response.RegisterResponse;
 import com.bidnow.identity.service.AuthService;
 import jakarta.validation.Valid;
@@ -25,5 +27,11 @@ public class AuthController {
         RegisterResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("User registered successfully", response));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
