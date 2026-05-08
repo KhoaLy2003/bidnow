@@ -41,6 +41,7 @@ This epic encompasses all functionality related to creating, managing, and opera
 ✅ Seller dashboard to view active and historical auctions
 ✅ Automated auction closure triggered by scheduler
 ✅ Winner determination and notification event emission
+✅ User registration for participation with mandatory deposit lock
 ✅ Handling auctions with no bids (mark as FAILED)
 ✅ Admin auction cancellation with refund triggering
 ✅ Audit logging for all state transitions

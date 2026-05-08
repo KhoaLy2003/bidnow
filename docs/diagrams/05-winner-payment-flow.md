@@ -31,18 +31,19 @@ sequenceDiagram
         WS->>DB_WS: Transfer (winning_bid_amount - fee) to Seller Wallet
         WS->>DB_WS: Transfer fee to Platform Wallet
         WS->>DB_WS: Update HOLD transaction to COMPLETED
+        WS->>AS: PUT /api/v1/auctions/{id}/status (Update status to COMPLETED)
+        AS->>DB_AS: Update Auction Status = COMPLETED
+        AS-->>WS: 200 OK
         WS->>MQ: Publish PAYMENT_COMPLETED event
         
         WS-->>GW: 200 OK (Payment Success)
         GW-->>App: Display Success UI
         
-        %% Update Auction State & Notify
-        MQ-->>AS: Consume PAYMENT_COMPLETED
-        AS->>AS: Update Auction Status = COMPLETED
-        
-        MQ-->>NS: Consume PAYMENT_COMPLETED
-        NS->>NS: Send Emails (Payment Receipt to Winner, Payout Alert to Seller)
-    end
+        %% Async Notifications
+        par Async Notifications
+            MQ-->>NS: Consume PAYMENT_COMPLETED
+            NS->>NS: Send Emails (Payment Receipt to Winner, Payout Alert to Seller)
+        end
     
     Note over WS, AS: Automated Forfeit Flow (If deadline missed)
     
@@ -53,9 +54,11 @@ sequenceDiagram
             WS->>DB_WS: Deduct locked deposit from Winner Wallet (Penalty)
             WS->>DB_WS: Create FORFEIT transaction (Transfer to Seller or Platform)
             WS->>DB_WS: Update transaction status = FAILED
+            WS->>AS: PUT /api/v1/auctions/{id}/status (Update status to FAILED/SELECT_NEXT)
+            AS->>DB_AS: Update Auction Status
+            AS-->>WS: 200 OK
             WS->>MQ: Publish PAYMENT_FAILED / DEPOSIT_FORFEITED
             
-            MQ-->>AS: Consume event -> Update Auction Status = FAILED (or select next winner)
             MQ-->>NS: Consume event -> Notify Winner (Penalty applied), Notify Seller (Auction failed)
         end
     end

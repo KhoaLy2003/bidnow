@@ -74,20 +74,20 @@ Flow:
 
 ### **Phase 1.2: Auction Deposit Logic**
 
-#### Feature 4: **Lock Deposit for Bidding**
+#### Feature 4: **Lock Deposit for Participation**
 
 ```
-Trigger: User places first bid on an auction
+Trigger: User registers to participate in an auction
 
 Flow:
-1. Bidding Service → Request deposit lock từ Wallet Service
+1. Auction Service → Request deposit lock từ Wallet Service
 2. Wallet Service calculates required deposit:
-   - Option A: Fixed amount (e.g., 50,000 VND)
+   - Fixed amount (e.g., 50,000 VND)
    - Option B: 10% of starting price
 3. Check if balance >= deposit
 4. Create LOCKED transaction
 5. available_balance = total_balance - locked_amount
-6. Return success → Bidding Service allows bid
+6. Return success → Auction Service confirms registration
 ```
 
 **Edge cases:**

@@ -30,28 +30,19 @@ sequenceDiagram
             AS->>MQ: Publish AUCTION_CANCELLED (no bids)
         else Has Winner
             AS->>DB_AS: Update status = ENDED_WAITING_PAYMENT, set WinnerID
-            AS->>MQ: Publish AUCTION_ENDED_WITH_WINNER (AuctionID, WinnerID, Amount, LoserIDs)
-        end
+        AS->>WS: POST /api/v1/wallets/auctions/{id}/settle (Settle deposits)
+        WS->>DB_WS: Release Losers' deposits
+        WS->>DB_WS: Convert Winner's deposit to HOLD
+        WS-->>AS: 200 OK
+        
+        AS->>MQ: Publish AUCTION_ENDED_WITH_WINNER (For notifications)
     end
     
     %% Post-closure Async Processes
-    par Wallet Handling
-        MQ-->>WS: Consume AUCTION_ENDED_WITH_WINNER
-        loop For each LoserID
-            WS->>DB_WS: Find locked deposit for AuctionID
-            WS->>DB_WS: Release deposit (available_balance += amount)
-            WS->>DB_WS: Create REFUND transaction
-        end
-        WS->>MQ: Publish DEPOSIT_REFUNDED events
-        
-        WS->>DB_WS: Find Winner locked deposit
-        WS->>DB_WS: Convert lock to HOLD / PENDING_PAYMENT (48h deadline)
-        WS->>MQ: Publish PAYMENT_REQUIRED event
-        
-    and Notification Handling
-        MQ-->>NS: Consume AUCTION_ENDED_WITH_WINNER, PAYMENT_REQUIRED, DEPOSIT_REFUNDED
+    par Notification Handling
+        MQ-->>NS: Consume AUCTION_ENDED_WITH_WINNER
         NS->>Users: Send WebSocket "Auction Ended" updates
-        NS->>Users: Send Email "You Won!" (to Winner) with payment link
-        NS->>Users: Send Email "You Lost, Deposit Refunded" (to Losers)
+        NS->>Users: Send Email "You Won!" (to Winner)
+        NS->>Users: Send Email "You Lost" (to Losers)
     end
 ```

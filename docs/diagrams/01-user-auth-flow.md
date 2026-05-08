@@ -26,15 +26,15 @@ sequenceDiagram
     else Email available
         ID->>ID: Hash password
         ID->>DB_ID: Save user credentials
+        ID->>US: POST /api/v1/users/profiles (Sync create profile)
+        US->>DB_US: Create default user profile
+        US-->>ID: 201 Created
         ID->>MQ: Publish USER_REGISTERED event
         ID-->>GW: 201 Created (User ID)
         GW-->>App: Registration successful message
 
         %% Async tasks
-        par Async Profile Creation
-            MQ-->>US: Consume USER_REGISTERED event
-            US->>DB_US: Create default user profile
-        and Async Welcome Email
+        par Async Welcome Email
             MQ-->>NS: Consume USER_REGISTERED event
             NS->>NS: Render Welcome Email Template
             NS->>User: Send Email (SMTP)

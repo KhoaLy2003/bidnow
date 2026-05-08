@@ -30,16 +30,15 @@ sequenceDiagram
         BS-->>GW: 400 Bad Request (Bid too low)
         GW-->>App: Display Error
     else Valid Bid
-        %% Deposit Lock
-        BS->>WS: Request Deposit Lock (UserID, AuctionID, Amount/Fixed Fee)
-        WS-->>BS: return Success/Insufficient Funds
-        
-        alt Insufficient Funds
-            BS-->>GW: 400 Bad Request (Deposit required)
-            GW-->>App: Prompt to Top-up Wallet
-        else Lock Successful
-            %% Accept Bid
-            BS->>DB_BS: Save Bid Record
+    BS->>AS: Check Registration (UserID, AuctionID)
+    AS-->>BS: return Registered/Not Registered
+    
+    alt Not Registered
+        BS-->>GW: 403 Forbidden (Registration required)
+        GW-->>App: Prompt to Register and pay deposit
+    else Registered
+        %% Accept Bid
+        BS->>DB_BS: Save Bid Record
             BS->>Redis: SET new current_highest_bid
             BS->>MQ: Publish BID_PLACED event
             BS-->>GW: 200 OK (Bid Accepted)
