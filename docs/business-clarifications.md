@@ -31,5 +31,16 @@ This document tracks the key business decisions and clarifications made during t
     - Real-time Web/In-app notifications.
     - Email notifications for critical updates (outbid, winning, payment reminders).
 
+## 6. User Registration & Verification
+- **Verification Method:** Email OTP (One-Time Password).
+- **OTP Details:**
+    - Length: 6 digits.
+    - Expiry: 5-10 minutes.
+    - Rate Limiting: Maximum 3-5 attempts for verification before requiring a new OTP request.
+- **Account Status:**
+    - `PENDING_VERIFICATION`: Initial status after registration form submission.
+    - `ACTIVE`: Status after successful OTP verification.
+    - Only `ACTIVE` accounts can log in and participate in auctions.
+
 ---
 *Last updated: 2026-04-18*

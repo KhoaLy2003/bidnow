@@ -8,7 +8,8 @@ CREATE TABLE identity_users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     is_email_verified BOOLEAN DEFAULT FALSE,
-    email_verification_token VARCHAR(255),
+    verification_otp VARCHAR(6),
+    otp_expires_at TIMESTAMP,
     password_reset_token VARCHAR(255),
     password_reset_expires_at TIMESTAMP,
     last_login_at TIMESTAMP,
@@ -30,7 +31,8 @@ CREATE INDEX idx_identity_users_email_verified ON identity_users(is_email_verifi
 | email | VARCHAR(255) | UNIQUE, NOT NULL | User's email address |
 | password_hash | VARCHAR(255) | NOT NULL | Hashed password |
 | is_email_verified | BOOLEAN | DEFAULT FALSE | Email verification status |
-| email_verification_token | VARCHAR(255) | | Token for email verification |
+| verification_otp | VARCHAR(6) | | 6-digit OTP for email verification |
+| otp_expires_at | TIMESTAMP | | Expiration time for OTP |
 | password_reset_token | VARCHAR(255) | | Token for password reset |
 | password_reset_expires_at | TIMESTAMP | | Expiration time for password reset token |
 | last_login_at | TIMESTAMP | | Last login timestamp |

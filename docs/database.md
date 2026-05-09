@@ -4,16 +4,19 @@ This document describes the database schema for the BidNow auction system. Follo
 
 ---
 
-## 1. User Service (`user_`)
-**Purpose:** Manages user accounts and profile data.
+## 1. Identity & User Services
+**Purpose:** Manages authentication (Identity) and user profiles (User).
 
-### user_users
+### identity_users
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | id | UUID | PRIMARY KEY | Unique user identifier |
 | email | VARCHAR(255) | UNIQUE, NOT NULL | User's email (login) |
 | password_hash | VARCHAR(255) | NOT NULL | Hashed password |
-| status | VARCHAR(20) | NOT NULL | ACTIVE, INACTIVE, BANNED |
+| is_email_verified| BOOLEAN | DEFAULT FALSE | Email verification status |
+| verification_otp| VARCHAR(6) | | 6-digit OTP for email verification |
+| otp_expires_at | TIMESTAMP | | Expiration time for OTP |
+| is_active | BOOLEAN | DEFAULT TRUE | Account active status |
 | created_at | TIMESTAMP | DEFAULT NOW() | Account creation time |
 | updated_at | TIMESTAMP | DEFAULT NOW() | Last update time |
 
