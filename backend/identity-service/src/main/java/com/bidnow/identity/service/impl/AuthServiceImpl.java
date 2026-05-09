@@ -1,6 +1,7 @@
 package com.bidnow.identity.service.impl;
 
 import com.bidnow.common.constant.ErrorCodes;
+import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.UnauthorizedException;
 import com.bidnow.identity.domain.entity.RefreshToken;
@@ -9,6 +10,7 @@ import com.bidnow.identity.dto.request.LoginRequest;
 import com.bidnow.identity.dto.request.RegisterRequest;
 import com.bidnow.identity.dto.response.LoginResponse;
 import com.bidnow.identity.dto.response.RegisterResponse;
+import com.bidnow.identity.feign.UserServiceClient;
 import com.bidnow.identity.kafka.IdentityKafkaProducer;
 import com.bidnow.identity.mapper.UserMapper;
 import com.bidnow.identity.repository.RefreshTokenRepository;
@@ -40,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final IdentityKafkaProducer kafkaProducer;
     private final UserMapper userMapper;
     private final JwtService jwtService;
+    private final UserServiceClient userServiceClient;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -64,7 +67,11 @@ public class AuthServiceImpl implements AuthService {
 
         user = userRepository.save(user);
 
-        // TODO: Publish UserRegisteredEvent to Kafka
+        userServiceClient.createUserProfile(CreateUserProfileRequest.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .build());
+
         log.info("User registered successfully: {}", user.getEmail());
         return userMapper.toRegisterResponse(user);
     }
