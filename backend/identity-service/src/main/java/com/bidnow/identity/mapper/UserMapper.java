@@ -2,12 +2,18 @@ package com.bidnow.identity.mapper;
 
 import com.bidnow.identity.domain.entity.User;
 import com.bidnow.identity.dto.response.RegisterResponse;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface UserMapper {
+@Component
+public class UserMapper {
 
-    @Mapping(source = "id", target = "userId")
-    RegisterResponse toRegisterResponse(User user);
+    public RegisterResponse toRegisterResponse(User user) {
+        return RegisterResponse.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .isEmailVerified(user.getIsEmailVerified())
+                .isActive(user.getIsActive())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
 }

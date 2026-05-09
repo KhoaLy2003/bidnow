@@ -1,11 +1,10 @@
 package com.bidnow.identity.domain.entity;
 
 import com.bidnow.common.entity.BaseEntity;
-import com.bidnow.identity.domain.enums.UserRole;
-import com.bidnow.identity.domain.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -24,23 +23,30 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-    @Column(nullable = false, name = "first_name")
-    private String firstName;
+    @Column(name = "is_email_verified")
+    private Boolean isEmailVerified;
 
-    @Column(nullable = false, name = "last_name")
-    private String lastName;
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
 
-    @Column
-    private String phone;
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
+    @Column(name = "password_reset_expires_at")
+    private LocalDateTime passwordResetExpiresAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserStatus status;
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
 }

@@ -1,6 +1,5 @@
 package com.bidnow.identity.dto.response;
 
-import com.bidnow.identity.domain.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,5 +21,5 @@ public class LoginResponse {
     private long expiresIn;
     private UUID userId;
     private String email;
-    private UserRole role;
+    private String refreshToken;
 }
