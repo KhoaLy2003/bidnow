@@ -7,6 +7,7 @@ import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.util.PaginationUtils;
 import com.bidnow.notification.dto.request.EmailTestRequest;
 import com.bidnow.notification.dto.request.TemplateRequest;
+import com.bidnow.notification.dto.request.criteria.TemplateCriteria;
 import com.bidnow.notification.dto.response.TemplateResponse;
 import com.bidnow.notification.repository.NotificationTemplateRepository;
 import com.bidnow.notification.service.EmailService;
@@ -58,13 +59,14 @@ public class AdminTemplateController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TemplateResponse>>> getTemplates(
+            TemplateCriteria criteria,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
         Pageable pageable = PaginationUtils.getPageable(page, size, sortBy, sortDir);
-        Page<TemplateResponse> resultPage = templateService.getTemplates(pageable);
+        Page<TemplateResponse> resultPage = templateService.getTemplates(criteria, pageable);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.of(resultPage)));
     }
 
@@ -72,10 +74,10 @@ public class AdminTemplateController {
     public ResponseEntity<ApiResponse<String>> testTemplate(
             @PathVariable UUID id,
             @Valid @RequestBody EmailTestRequest request) {
-
+        
         var template = templateRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Template not found with id: " + id, ErrorCodes.NOT_FOUND));
-
+        
         emailService.sendTemplateEmail(request.getRecipientEmail(), template, request.getVariables());
         return ResponseEntity.ok(ApiResponse.success("Test email dispatched to " + request.getRecipientEmail()));
     }

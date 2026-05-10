@@ -1,0 +1,87 @@
+package com.bidnow.identity.controller;
+
+import com.bidnow.common.dto.ApiResponse;
+import com.bidnow.identity.dto.request.LoginRequest;
+import com.bidnow.identity.dto.request.RefreshTokenRequest;
+import com.bidnow.identity.dto.request.RegisterRequest;
+import com.bidnow.identity.dto.request.ResendOtpRequest;
+import com.bidnow.identity.dto.request.VerifyOtpRequest;
+import com.bidnow.identity.dto.response.LoginResponse;
+import com.bidnow.identity.dto.response.RegisterResponse;
+import com.bidnow.identity.dto.response.ResendOtpResponse;
+import com.bidnow.identity.dto.response.VerifyOtpResponse;
+import com.bidnow.identity.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    /**
+     * Phase 1 – Issue #36
+     * Accepts registration form, generates OTP, saves user as PENDING_VERIFICATION,
+     * and emits USER_VERIFICATION_REQUESTED event.
+     * Returns 202 Accepted to indicate that email verification is required.
+     */
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        RegisterResponse response = authService.register(request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.<RegisterResponse>builder()
+                        .status(HttpStatus.ACCEPTED.value())
+                        .message("Registration successful. Please check your email for the OTP to verify your account.")
+                        .data(response)
+                        .build());
+    }
+
+    /**
+     * Phase 2 – Issue #37
+     * Validates the 6-digit OTP, activates the account, creates the user profile,
+     * and emits USER_REGISTERED event (triggers Welcome Email).
+     * Returns 200 OK on success.
+     */
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<VerifyOtpResponse>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        VerifyOtpResponse response = authService.verifyOtp(request);
+        return ResponseEntity.ok(ApiResponse.success("Email verified successfully. Your account is now active.", response));
+    }
+
+    /**
+     * Resend a fresh OTP to the user's email.
+     * Only allowed when the account is PENDING_VERIFICATION and the previous OTP has already expired.
+     * Also resets the failed-attempt counter so the user gets a clean slate.
+     */
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<ResendOtpResponse>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        ResendOtpResponse response = authService.resendOtp(request);
+        return ResponseEntity.ok(ApiResponse.success("A new OTP has been sent to your email.", response));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        LoginResponse response = authService.refresh(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.noContent().build();
+    }
+}

@@ -1,5 +1,6 @@
 server:
   port: 8084
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -29,7 +30,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  api-docs:
+    path: /api/v1/bids/v3/api-docs
+  swagger-ui:
+    enabled: false

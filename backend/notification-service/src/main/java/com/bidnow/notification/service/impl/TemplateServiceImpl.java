@@ -2,10 +2,13 @@ package com.bidnow.notification.service.impl;
 
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.common.specification.SearchOperator;
+import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.notification.domain.entity.NotificationTemplate;
 import com.bidnow.notification.domain.enums.NotificationChannel;
 import com.bidnow.notification.domain.enums.NotificationLanguage;
 import com.bidnow.notification.dto.request.TemplateRequest;
+import com.bidnow.notification.dto.request.criteria.TemplateCriteria;
 import com.bidnow.notification.dto.response.TemplateResponse;
 import com.bidnow.notification.repository.NotificationTemplateRepository;
 import com.bidnow.notification.service.TemplateService;
@@ -14,6 +17,7 @@ import org.apache.commons.text.StringSubstitutor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.UUID;
@@ -104,8 +108,32 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public Page<TemplateResponse> getTemplates(Pageable pageable) {
-        return templateRepository.findAll(pageable).map(this::mapToResponse);
+    public Page<TemplateResponse> getTemplates(TemplateCriteria criteria, Pageable pageable) {
+        SpecificationBuilder<NotificationTemplate> builder = SpecificationBuilder.forEntity();
+
+        if (criteria.getTypes() != null && !criteria.getTypes().isEmpty()) {
+            builder.withIn("type", criteria.getTypes().stream()
+                    .map(NotificationChannel::valueOf)
+                    .collect(Collectors.toList()));
+        }
+
+        if (criteria.getLanguages() != null && !criteria.getLanguages().isEmpty()) {
+            builder.withIn("language", criteria.getLanguages().stream()
+                    .map(NotificationLanguage::valueOf)
+                    .collect(Collectors.toList()));
+        }
+
+        builder.withIfPresent("active", SearchOperator.EQUAL, criteria.getActive());
+
+        if (StringUtils.hasText(criteria.getSearch())) {
+            String likePattern = "%" + criteria.getSearch().toLowerCase() + "%";
+            builder.orGroup(or -> or
+                    .withLike("name", likePattern)
+                    .withLike("subject", likePattern)
+            );
+        }
+
+        return templateRepository.findAll(builder.build(), pageable).map(this::mapToResponse);
     }
 
     private TemplateResponse mapToResponse(NotificationTemplate template) {
