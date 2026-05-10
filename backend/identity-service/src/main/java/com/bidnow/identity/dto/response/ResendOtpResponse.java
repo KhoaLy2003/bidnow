@@ -6,18 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterResponse {
+public class ResendOtpResponse {
 
-    private UUID userId;
     private String email;
-    private String accountStatus;
-    private Boolean isEmailVerified;
-    private Boolean isActive;
-    private LocalDateTime createdAt;
+    /** New OTP expiry time after resend. */
+    private LocalDateTime otpExpiresAt;
 }

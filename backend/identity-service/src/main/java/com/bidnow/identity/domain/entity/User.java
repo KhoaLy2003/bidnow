@@ -1,6 +1,7 @@
 package com.bidnow.identity.domain.entity;
 
 import com.bidnow.common.entity.BaseEntity;
+import com.bidnow.identity.domain.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,6 +29,20 @@ public class User extends BaseEntity {
 
     @Column(name = "is_email_verified")
     private Boolean isEmailVerified;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_status", nullable = false, length = 30)
+    private AccountStatus accountStatus;
+
+    @Column(name = "verification_otp", length = 6)
+    private String verificationOtp;
+
+    @Column(name = "otp_expires_at")
+    private LocalDateTime otpExpiresAt;
+
+    @Column(name = "otp_failed_attempts", nullable = false)
+    @Builder.Default
+    private Integer otpFailedAttempts = 0;
 
     @Column(name = "email_verification_token")
     private String emailVerificationToken;

@@ -16,6 +16,7 @@
       "post": {
         "tags": ["Auth Controller"],
         "summary": "Register a new user account",
+        "description": "Submits the registration form, generates a 6-digit OTP, saves the user as PENDING_VERIFICATION, and emits a verification email event. Returns 202 Accepted — the account is not yet active until the OTP is verified via /verify-otp.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -27,8 +28,8 @@
           "required": true
         },
         "responses": {
-          "201": {
-            "description": "User registered successfully",
+          "202": {
+            "description": "Registration accepted. OTP sent to email — verification required.",
             "content": {
               "application/json": {
                 "schema": {
@@ -39,6 +40,168 @@
           },
           "400": {
             "description": "Validation error or email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/verify-otp": {
+      "post": {
+        "tags": ["Auth Controller"],
+        "summary": "Verify email OTP to activate account",
+        "description": "Validates the 6-digit OTP sent to the user's email. On success, activates the account and triggers the welcome email. Returns 400 with distinct error codes for invalid OTP, expired OTP, or exceeded retry limit.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully, account is now active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVerifyOtpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OTP, expired OTP, max attempts exceeded, or account not pending verification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "invalidOtp": {
+                    "summary": "Wrong OTP entered",
+                    "value": {
+                      "timestamp": "2026-05-09T10:00:00Z",
+                      "status": 400,
+                      "errorCode": "OTP_INVALID",
+                      "message": "Invalid OTP",
+                      "path": "/api/v1/auth/verify-otp"
+                    }
+                  },
+                  "expiredOtp": {
+                    "summary": "OTP has passed its 10-minute expiry",
+                    "value": {
+                      "timestamp": "2026-05-09T10:00:00Z",
+                      "status": 400,
+                      "errorCode": "OTP_EXPIRED",
+                      "message": "OTP has expired",
+                      "path": "/api/v1/auth/verify-otp"
+                    }
+                  },
+                  "maxAttempts": {
+                    "summary": "5 failed attempts reached",
+                    "value": {
+                      "timestamp": "2026-05-09T10:00:00Z",
+                      "status": 400,
+                      "errorCode": "OTP_MAX_ATTEMPTS",
+                      "message": "Maximum OTP verification attempts exceeded. Please register again.",
+                      "path": "/api/v1/auth/verify-otp"
+                    }
+                  },
+                  "accountNotPending": {
+                    "summary": "Account already active or not in PENDING_VERIFICATION state",
+                    "value": {
+                      "timestamp": "2026-05-09T10:00:00Z",
+                      "status": 400,
+                      "errorCode": "ACCOUNT_NOT_PENDING",
+                      "message": "Account is not pending verification",
+                      "path": "/api/v1/auth/verify-otp"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user found for the given email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/resend-otp": {
+      "post": {
+        "tags": ["Auth Controller"],
+        "summary": "Resend OTP verification email",
+        "description": "Issues a fresh 6-digit OTP and sends it to the user's email. Only allowed when the account is in PENDING_VERIFICATION state and the previous OTP has already expired. Resets the failed-attempt counter so the user gets a clean slate.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendOtpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "New OTP sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseResendOtpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Account not pending verification, or current OTP is still valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "otpNotExpired": {
+                    "summary": "Previous OTP has not expired yet",
+                    "value": {
+                      "timestamp": "2026-05-09T10:00:00Z",
+                      "status": 400,
+                      "errorCode": "OTP_NOT_EXPIRED",
+                      "message": "Current OTP is still valid. Please wait until it expires before requesting a new one.",
+                      "path": "/api/v1/auth/resend-otp"
+                    }
+                  },
+                  "accountNotPending": {
+                    "summary": "Account is already active or in another state",
+                    "value": {
+                      "timestamp": "2026-05-09T10:00:00Z",
+                      "status": 400,
+                      "errorCode": "ACCOUNT_NOT_PENDING",
+                      "message": "Account is not pending verification",
+                      "path": "/api/v1/auth/resend-otp"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No user found for the given email",
             "content": {
               "application/json": {
                 "schema": {
@@ -86,7 +249,7 @@
             }
           },
           "401": {
-            "description": "Invalid credentials, account disabled, or account temporarily locked",
+            "description": "Invalid credentials, account not yet verified (PENDING_VERIFICATION), account disabled, or account temporarily locked",
             "content": {
               "application/json": {
                 "schema": {
@@ -207,15 +370,127 @@
             "type": "string",
             "format": "email"
           },
+          "accountStatus": {
+            "type": "string",
+            "enum": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "BANNED"],
+            "example": "PENDING_VERIFICATION"
+          },
           "isEmailVerified": {
-            "type": "boolean"
+            "type": "boolean",
+            "example": false
           },
           "isActive": {
-            "type": "boolean"
+            "type": "boolean",
+            "example": false
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "VerifyOtpRequest": {
+        "type": "object",
+        "required": ["email", "otp"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "otp": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "description": "6-digit numeric OTP sent to the user's email",
+            "example": "482910"
+          }
+        }
+      },
+      "VerifyOtpResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "accountStatus": {
+            "type": "string",
+            "enum": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "BANNED"],
+            "example": "ACTIVE"
+          },
+          "isEmailVerified": {
+            "type": "boolean",
+            "example": true
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ResendOtpRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "ResendOtpResponse": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "otpExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Expiry time of the newly issued OTP (10 minutes from now)"
+          }
+        }
+      },
+      "ApiResponseResendOtpResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "A new OTP has been sent to your email."
+          },
+          "data": {
+            "$ref": "#/components/schemas/ResendOtpResponse"
+          }
+        }
+      },
+      "ApiResponseVerifyOtpResponse": {        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "Email verified successfully. Your account is now active."
+          },
+          "data": {
+            "$ref": "#/components/schemas/VerifyOtpResponse"
           }
         }
       },

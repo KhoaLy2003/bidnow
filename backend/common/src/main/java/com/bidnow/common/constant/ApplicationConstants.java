@@ -10,5 +10,9 @@ public class ApplicationConstants {
     public static final String DEFAULT_SORT_BY = "id";
     public static final String DEFAULT_SORT_DIRECTION = "asc";
 
+    //OTP
+    public static final int OTP_LENGTH = 6;
+    public static final int OTP_BOUND = 1_000_000; // 000000 – 999999
+
     private ApplicationConstants() {}
 }
