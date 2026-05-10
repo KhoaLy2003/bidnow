@@ -2,6 +2,7 @@ package com.bidnow.identity.controller;
 
 import com.bidnow.common.dto.ApiResponse;
 import com.bidnow.identity.dto.request.LoginRequest;
+import com.bidnow.identity.dto.request.RefreshTokenRequest;
 import com.bidnow.identity.dto.request.RegisterRequest;
 import com.bidnow.identity.dto.response.LoginResponse;
 import com.bidnow.identity.dto.response.RegisterResponse;
@@ -33,5 +34,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        LoginResponse response = authService.refresh(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.noContent().build();
     }
 }
