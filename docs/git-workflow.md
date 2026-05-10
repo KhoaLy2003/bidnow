@@ -9,13 +9,14 @@
 ## Table of Contents
 
 1. [Branch Naming Conventions](#branch-naming-conventions)
-2. [Commit Message Standards](#commit-message-standards)
-3. [Pull Request Guidelines](#pull-request-guidelines)
-4. [Code Review Process](#code-review-process)
-5. [Merge Strategy](#merge-strategy)
-6. [Git Workflow](#git-workflow)
-7. [Best Practices](#best-practices)
-8. [Common Commands Reference](#common-commands-reference)
+2. [GitHub Issue Naming Conventions](#github-issue-naming-conventions)
+3. [Commit Message Standards](#commit-message-standards)
+4. [Pull Request Guidelines](#pull-request-guidelines)
+5. [Code Review Process](#code-review-process)
+6. [Merge Strategy](#merge-strategy)
+7. [Git Workflow](#git-workflow)
+8. [Best Practices](#best-practices)
+9. [Common Commands Reference](#common-commands-reference)
 
 ---
 
@@ -104,6 +105,34 @@ To maintain a clear and organized project management structure, all GitHub issue
 ```
 
 ### Type Definitions
+| Type        | Purpose                                  |
+| ----------- | ---------------------------------------- |
+| `[EPIC]`    | Large body of work that can be broken down |
+| `[STORY]`   | A user story delivering business value     |
+| `[ENHANCE]` | Improvements to existing features        |
+| `[TASK]`    | Technical or maintenance tasks           |
+| `[BUG]`     | Defect report and fix                    |
+| `[INFRA]`   | Infrastructure or DevOps related         |
+| `[DOCS]`    | Documentation changes                    |
+
+### Scope Definitions
+
+| Scope       | Module/Service                           |
+| ----------- | ---------------------------------------- |
+| `[AUTH]`    | Identity, User Management, Authentication |
+| `[AUCTION]` | Auction Lifecycle and Management         |
+| `[NOTIFY]`  | Notifications and Messaging              |
+| `[WALLET]`  | Payments, Balance, and Transactions      |
+| `[INFRA]`   | Cross-cutting Infrastructure             |
+| `[SEARCH]`  | Public Discovery and Search              |
+
+### Examples
+
+- `[EPIC][AUTH] User Management & Authentication`
+- `[STORY][AUCTION] Seller Auction Management`
+- `[ENHANCE][AUTH] Email OTP Registration (Phase 1)`
+- `[BUG][NOTIFY] Fix WebSocket connection timeout`
+=======
 - `[EPIC]`, `[STORY]`, `[ENHANCE]`, `[TASK]`, `[BUG]`, `[INFRA]`, `[DOCS]`
 
 ### Scope Definitions

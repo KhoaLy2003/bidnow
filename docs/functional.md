@@ -20,6 +20,7 @@ Describe all roles that interact with the system.
 
 ### 1. User Management & Authentication
 - Users must be able to register with email and password.
+    - **Verification**: New accounts must be verified via a One-Time Password (OTP) sent to the registered email before they can log in or participate in auctions.
 - Users must be able to log in and maintain a secure session.
 - Users must be able to update their profile (avatar, display name, contact info).
 - System must prevent users from bidding on their own auctions.
