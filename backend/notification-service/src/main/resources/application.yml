@@ -1,5 +1,6 @@
 server:
   port: 8086
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -37,11 +38,16 @@ spring:
     properties:
       mail:
         smtp:
-          auth: false
+          auth: true
           starttls:
             enable: true
 
+mail:
+  from: ${MAIL_FROM}
+
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
@@ -50,7 +56,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  api-docs:
+    path: /api/v1/notifications/v3/api-docs
+  swagger-ui:
+    enabled: false

@@ -45,7 +45,28 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Identity Service
+        url: /api/v1/auth/v3/api-docs
+      - name: User Service
+        url: /api/v1/users/v3/api-docs
+      - name: Auction Service
+        url: /api/v1/auctions/v3/api-docs
+      - name: Bidding Service
+        url: /api/v1/bids/v3/api-docs
+      - name: Wallet Service
+        url: /api/v1/wallets/v3/api-docs
+      - name: Notification Service
+        url: /api/v1/notifications/v3/api-docs
+    display-request-duration: true
+    groups-order: ASC
+  api-docs:
+    path: /v3/api-docs

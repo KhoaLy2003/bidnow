@@ -12,12 +12,11 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterResponse {
+public class VerifyOtpResponse {
 
     private UUID userId;
     private String email;
     private String accountStatus;
     private Boolean isEmailVerified;
-    private Boolean isActive;
-    private LocalDateTime createdAt;
+    private LocalDateTime verifiedAt;
 }

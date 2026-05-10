@@ -6,5 +6,6 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
 
     <include file="db/changelog/migrations/V1_001__init_schema.sql"/>
+    <include file="/db/changelog/migrations/02-add-otp-columns.sql"/>
 
 </databaseChangeLog>

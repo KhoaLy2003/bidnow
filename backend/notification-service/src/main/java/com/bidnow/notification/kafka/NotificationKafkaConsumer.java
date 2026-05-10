@@ -5,6 +5,7 @@ import com.bidnow.common.dto.event.AuctionEndedEvent;
 import com.bidnow.common.dto.event.BidPlacedEvent;
 import com.bidnow.common.dto.event.PaymentEvent;
 import com.bidnow.common.dto.event.UserRegisteredEvent;
+import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
 import com.bidnow.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,12 @@ import org.springframework.stereotype.Component;
 public class NotificationKafkaConsumer {
 
     private final NotificationService notificationService;
+
+    @KafkaListener(topics = "user-verification-requested-topic", groupId = "${spring.kafka.consumer.group-id}")
+    public void consumeUserVerificationRequested(UserVerificationRequestedEvent event) {
+        log.info("Received UserVerificationRequestedEvent for user: {}", event.getUserId());
+        notificationService.handleUserVerificationRequested(event);
+    }
 
     @KafkaListener(topics = "user-registered-topic", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeUserRegistered(UserRegisteredEvent event) {

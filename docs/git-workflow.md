@@ -93,6 +93,45 @@ These branches are protected and require pull requests:
 
 ---
 
+## GitHub Issue Naming Conventions
+
+To maintain a clear and organized project management structure, all GitHub issues must follow a standardized naming convention. This ensures that every issue is easily identifiable by its type and scope at a glance.
+
+### Format
+
+```
+[TYPE][SCOPE] Title
+```
+
+### Type Definitions
+- `[EPIC]`, `[STORY]`, `[ENHANCE]`, `[TASK]`, `[BUG]`, `[INFRA]`, `[DOCS]`
+
+### Scope Definitions
+- `[AUTH]`, `[AUCTION]`, `[NOTIFY]`, `[WALLET]`, `[INFRA]`, `[SEARCH]`
+
+---
+
+## Database Migration Conventions (Liquibase)
+
+To ensure consistency and avoid ID conflicts in our microservices architecture, all Liquibase changesets must follow these rules.
+
+### Changeset ID Format
+
+```sql
+-- changeset {author}:{timestamp_ms}
+```
+
+- **Author:** Your GitHub username or team name.
+- **Timestamp:** Current time in milliseconds. Get it via PowerShell:
+  `[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()`
+
+### File Naming Convention
+
+New migration files should follow the pattern: `V{version}_{sequence}__<description>.sql`
+Example: `V1_003__add_otp_support.sql`
+
+---
+
 ## Commit Message Standards
 
 ### Format
