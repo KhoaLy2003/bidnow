@@ -10,6 +10,7 @@ import com.bidnow.notification.service.TemplateService;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.SimpleMailMessage;
@@ -30,12 +31,15 @@ public class EmailServiceImpl implements EmailService {
     private final TemplateService templateService;
     private final EmailLogRepository emailLogRepository;
 
+    @Value("${mail.from}")
+    private String fromEmail;
+
     @Override
     public void sendSimpleEmail(String to, String subject, String content) {
         log.info("Sending simple email to: {}", to);
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@bidnow.com");
+            message.setFrom(fromEmail);
             message.setTo(to);
             message.setSubject(subject);
             message.setText(content);
@@ -66,12 +70,12 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom("no-reply@bidnow.com");
+            helper.setFrom(fromEmail);
             helper.setTo(to);
             helper.setSubject(subject);
 
             if (htmlBody != null) {
-                helper.setText(textBody, htmlBody); // Fallback text, Primary HTML
+                helper.setText(textBody, htmlBody);
             } else {
                 helper.setText(textBody, false);
             }

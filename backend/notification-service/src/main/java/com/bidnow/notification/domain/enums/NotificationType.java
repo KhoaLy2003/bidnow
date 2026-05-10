@@ -1,6 +1,8 @@
 package com.bidnow.notification.domain.enums;
 
 public enum NotificationType {
+    USER_REGISTERED,
+    OTP_VERIFICATION,
     BID_PLACED,
     BID_OUTBID,
     AUCTION_ENDING_SOON,
