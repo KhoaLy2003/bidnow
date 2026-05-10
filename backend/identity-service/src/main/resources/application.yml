@@ -22,12 +22,6 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-  cloud:
-    openfeign:
-      client:
-        config:
-          user-service:
-            url: ${USER_SERVICE_URL:http://localhost:8082}
 
 jwt:
   secret: ${JWT_SECRET}
