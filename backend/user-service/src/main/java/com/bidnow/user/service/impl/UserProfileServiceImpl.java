@@ -77,4 +77,13 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         return userProfileMapper.toResponse(profile, roles, preferences);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileResponse getMyProfile(UUID userId) {
+        // Delegates to the same lookup — the distinction is that the caller
+        // (controller) resolves userId from the trusted X-User-Id header,
+        // not from a client-supplied path variable.
+        return getUserProfile(userId);
+    }
 }

@@ -1,6 +1,9 @@
 server:
   port: 8080
 
+jwt:
+  secret: ${JWT_SECRET}
+
 spring:
   application:
     name: api-gateway
@@ -35,6 +38,27 @@ spring:
           uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowedOrigins:
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+        default-filters:
+          - name: DeduplicateResponseHeader
+            args:
+              name: Access-Control-Allow-Origin Access-Control-Allow-Credentials
+              strategy: RETAIN_FIRST
 
 eureka:
   client:

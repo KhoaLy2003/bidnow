@@ -4,20 +4,36 @@ import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { Input }  from '@/components/ui/input'
-import { Label }  from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+
+import { authService } from '@/services/auth.service'
+import { toast } from 'sonner'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
-    await new Promise<void>((r) => setTimeout(r, 800))
-    setIsLoading(false)
-    router.push('/')
+    setError(null)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+
+    try {
+      await authService.register(email, password)
+      toast.success('Registration successful! Please check your email for OTP.')
+      router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -28,21 +44,23 @@ export default function RegisterPage() {
           <p className="mt-1 text-sm text-muted-foreground">Join BidNow and start bidding</p>
         </div>
 
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Full name</Label>
-            <Input id="name" type="text" placeholder="Jane Doe" required />
-          </div>
-          <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="you@example.com" required />
+            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="8+ characters" required minLength={8} />
+            <Input id="password" name="password" type="password" placeholder="8+ characters" required minLength={8} />
           </div>
           <Button type="submit" variant="brand" className="w-full h-11 mt-1" disabled={isLoading}>
-            {isLoading && <Loader2 className="size-4 animate-spin" />}
+            {isLoading && <Loader2 className="size-4 animate-spin mr-2" />}
             Create account
           </Button>
         </form>

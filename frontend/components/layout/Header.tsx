@@ -1,42 +1,58 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Gavel, User, LogOut, Settings, ListOrdered } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Gavel, User, LogOut, Settings, ListOrdered } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu'
-import { SearchBar }         from '@/components/shared/SearchBar'
-import { UserAvatar }        from '@/components/shared/UserAvatar'
-import { WalletBadge }       from '@/components/wallet/WalletBadge'
-import { NotificationBell }  from '@/components/notification/NotificationBell'
-import { cn } from '@/lib/utils'
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu";
+import { SearchBar } from "@/components/shared/SearchBar";
+import { UserAvatar } from "@/components/shared/UserAvatar";
+import { WalletBadge } from "@/components/wallet/WalletBadge";
+import { NotificationBell } from "@/components/notification/NotificationBell";
+import { cn } from "@/lib/utils";
+
+import { useAuthStore } from "@/store/authStore";
+import { authService } from "@/services/auth.service";
+import { useRouter } from "next/navigation";
 
 const NAV_LINKS = [
-  { label: 'Browse',   href: '/auctions' },
-  { label: 'My Bids',  href: '/my-bids' },
-  { label: 'Sell',     href: '/sell' },
-] as const
-
-// Placeholder — replace with real auth context
-const MOCK_USER = { name: 'Hiep Nguyen', avatarUrl: undefined as string | undefined }
+  { label: "Browse", href: "/auctions" },
+  { label: "My Bids", href: "/my-bids" },
+  { label: "Sell", href: "/sell" },
+] as const;
 
 export function Header() {
-  const [scrolled, setScrolled] = useState(false)
+  const router = useRouter();
+  const { user, isAuthenticated, logout, refreshToken } = useAuthStore();
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleLogout = async () => {
+    if (refreshToken) {
+      await authService.logout(refreshToken, useAuthStore.getState().accessToken);
+    }
+    logout();
+    router.push("/login");
+  };
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter,box-shadow] duration-150',
-        scrolled && 'backdrop-blur-sm shadow-sm',
+        "sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter,box-shadow] duration-150",
+        scrolled && "backdrop-blur-sm shadow-sm",
       )}
     >
       <div className="mx-auto flex h-full max-w-[var(--container-xl)] items-center gap-4 px-4">
@@ -44,14 +60,23 @@ export function Header() {
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <Gavel className="size-5 text-[var(--color-text-brand)]" />
           <span className="hidden font-semibold sm:inline-block">
-            Bid<span className="text-[var(--color-text-brand)] font-bold">Now</span>
+            Bid
+            <span className="text-[var(--color-text-brand)] font-bold">
+              Now
+            </span>
           </span>
         </Link>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
           {NAV_LINKS.map(({ label, href }) => (
-            <Button key={href} variant="ghost" size="sm" render={<Link href={href} />} nativeButton={false}>
+            <Button
+              key={href}
+              variant="ghost"
+              size="sm"
+              render={<Link href={href} />}
+              nativeButton={false}
+            >
               {label}
             </Button>
           ))}
@@ -62,46 +87,142 @@ export function Header() {
 
         {/* Right controls */}
         <div className="ml-auto flex items-center gap-1 shrink-0">
-          <WalletBadge />
-          <NotificationBell />
+          {isAuthenticated ? (
+            <>
+              <WalletBadge />
+              <NotificationBell />
 
-          {/* User menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" size="icon" className="rounded-full" />
-              }
-            >
-              <UserAvatar name={MOCK_USER.name} avatarUrl={MOCK_USER.avatarUrl} size="sm" />
-              <span className="sr-only">Account menu</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="end" sideOffset={8}>
-              <DropdownMenuLabel className="font-normal">
-                <p className="font-medium text-sm">{MOCK_USER.name}</p>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/profile" className="flex items-center gap-2" />}>
-                <User className="size-4" /> Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/my-bids" className="flex items-center gap-2" />}>
-                <ListOrdered className="size-4" /> My Bids
-              </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/settings" className="flex items-center gap-2" />}>
-                <Settings className="size-4" /> Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" className="gap-2">
-                <LogOut className="size-4" /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              {/* User menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full"
+                    />
+                  }
+                >
+                  <UserAvatar name={user?.email || "User"} size="sm" />
+                  <span className="sr-only">Account menu</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="bottom"
+                  align="end"
+                  sideOffset={8}
+                  className="w-64 p-2 shadow-xl border-border/50 backdrop-blur-md"
+                >
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="p-2 font-normal">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar name={user?.email || "User"} size="lg" />
+                          <div className="flex flex-col min-w-0">
+                            <p className="font-semibold text-sm truncate">
+                              {user?.email?.split("@")[0]}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {user?.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="bg-accent/50 rounded-md p-2 flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Status
+                          </span>
+                          <span className="text-[10px] font-bold uppercase text-green-500">
+                            Verified
+                          </span>
+                        </div>
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
 
-          {/* Sell CTA — desktop */}
-          <Button variant="brand" size="sm" className="hidden md:inline-flex ml-1" render={<Link href="/sell" />} nativeButton={false}>
-            Sell
-          </Button>
+                  <DropdownMenuSeparator className="my-2" />
+
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      render={
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-2"
+                        />
+                      }
+                      className="py-2.5"
+                    >
+                      <User className="size-4" /> Profile
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      render={
+                        <Link
+                          href="/my-bids"
+                          className="flex items-center gap-2"
+                        />
+                      }
+                      className="py-2.5"
+                    >
+                      <ListOrdered className="size-4" /> My Bids
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      render={
+                        <Link
+                          href="/settings"
+                          className="flex items-center gap-2"
+                        />
+                      }
+                      className="py-2.5"
+                    >
+                      <Settings className="size-4" /> Settings
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuSeparator className="my-2" />
+
+                  <DropdownMenuItem
+                    variant="destructive"
+                    className="gap-2 cursor-pointer py-2.5"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="size-4" /> Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Sell CTA — desktop */}
+              <Button
+                variant="brand"
+                size="sm"
+                className="hidden md:inline-flex ml-1"
+                render={<Link href="/sell" />}
+                nativeButton={false}
+              >
+                Sell
+              </Button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href="/login" />}
+                nativeButton={false}
+              >
+                Sign in
+              </Button>
+              <Button
+                variant="brand"
+                size="sm"
+                render={<Link href="/register" />}
+                nativeButton={false}
+              >
+                Join
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>
-  )
+  );
 }
