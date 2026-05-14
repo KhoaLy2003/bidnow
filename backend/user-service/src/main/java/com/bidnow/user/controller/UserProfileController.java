@@ -3,6 +3,7 @@
  */
 package com.bidnow.user.controller;
 
+import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.ApiResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
@@ -22,6 +23,10 @@ public class UserProfileController {
 
     private final UserProfileService userProfileService;
 
+    /**
+     * Internal endpoint called by identity-service (via Feign) after registration.
+     * Not exposed to external clients.
+     */
     @PostMapping("/internal/profiles")
     public ResponseEntity<ApiResponse<UserProfileResponse>> createUserProfile(
             @Valid @RequestBody CreateUserProfileRequest request) {
@@ -34,6 +39,22 @@ public class UserProfileController {
                         .build());
     }
 
+    /**
+     * Returns the profile of the currently authenticated user.
+     * The userId is resolved from the X-User-Id header injected by the API Gateway
+     * after JWT validation — the client never supplies the ID directly.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(
+            @AuthenticatedUserId UUID userId) {
+        UserProfileResponse response = userProfileService.getMyProfile(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Admin / internal lookup by explicit userId.
+     * Kept for service-to-service calls; should not be exposed publicly via the gateway.
+     */
     @GetMapping("/{userId}/profile")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getUserProfile(@PathVariable UUID userId) {
         UserProfileResponse response = userProfileService.getUserProfile(userId);

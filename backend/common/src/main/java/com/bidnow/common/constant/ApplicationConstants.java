@@ -14,5 +14,9 @@ public class ApplicationConstants {
     public static final int OTP_LENGTH = 6;
     public static final int OTP_BOUND = 1_000_000; // 000000 – 999999
 
+    //Auth
+    public static final String X_USER_ID_HEADER = "X-User-Id";
+    public static final String BEARER_PREFIX = "Bearer ";
+
     private ApplicationConstants() {}
 }

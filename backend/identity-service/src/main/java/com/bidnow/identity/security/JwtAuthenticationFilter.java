@@ -1,5 +1,6 @@
 package com.bidnow.identity.security;
 
+import com.bidnow.common.constant.ApplicationConstants;
 import com.bidnow.identity.domain.entity.User;
 import com.bidnow.identity.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -30,7 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader == null || !authHeader.startsWith(ApplicationConstants.BEARER_PREFIX)) {
             filterChain.doFilter(request, response);
             return;
         }
