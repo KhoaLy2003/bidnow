@@ -1,6 +1,6 @@
 package com.bidnow.identity.controller;
 
-import com.bidnow.common.dto.ApiResponse;
+import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.identity.dto.request.LoginRequest;
 import com.bidnow.identity.dto.request.RefreshTokenRequest;
 import com.bidnow.identity.dto.request.RegisterRequest;
@@ -34,10 +34,10 @@ public class AuthController {
      * Returns 202 Accepted to indicate that email verification is required.
      */
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<BaseResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
         RegisterResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.<RegisterResponse>builder()
+                .body(BaseResponse.<RegisterResponse>builder()
                         .status(HttpStatus.ACCEPTED.value())
                         .message("Registration successful. Please check your email for the OTP to verify your account.")
                         .data(response)
@@ -51,9 +51,9 @@ public class AuthController {
      * Returns 200 OK on success.
      */
     @PostMapping("/verify-otp")
-    public ResponseEntity<ApiResponse<VerifyOtpResponse>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+    public ResponseEntity<BaseResponse<VerifyOtpResponse>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
         VerifyOtpResponse response = authService.verifyOtp(request);
-        return ResponseEntity.ok(ApiResponse.success("Email verified successfully. Your account is now active.", response));
+        return ResponseEntity.ok(BaseResponse.success("Email verified successfully. Your account is now active.", response));
     }
 
     /**
@@ -62,21 +62,21 @@ public class AuthController {
      * Also resets the failed-attempt counter so the user gets a clean slate.
      */
     @PostMapping("/resend-otp")
-    public ResponseEntity<ApiResponse<ResendOtpResponse>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+    public ResponseEntity<BaseResponse<ResendOtpResponse>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
         ResendOtpResponse response = authService.resendOtp(request);
-        return ResponseEntity.ok(ApiResponse.success("A new OTP has been sent to your email.", response));
+        return ResponseEntity.ok(BaseResponse.success("A new OTP has been sent to your email.", response));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<BaseResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<BaseResponse<LoginResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         LoginResponse response = authService.refresh(request.getRefreshToken());
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 
     @PostMapping("/logout")

@@ -1,0 +1,213 @@
+{
+  "info": {
+    "name": "BidNow - Media Service API",
+    "_postman_id": "bidnow-media-service-v1",
+    "description": "API collection for the BidNow media-service. Covers server-side upload, presigned client upload, and presigned download URL generation.\n\nBase URL: http://localhost:8080 (via API Gateway)\n\nAll endpoints except presigned-url generation require a valid JWT Bearer token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "API Gateway base URL"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT Bearer token from identity-service login"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Media",
+      "description": "Endpoints for file management via AWS S3",
+      "item": [
+        {
+          "name": "Upload File (Server-Side)",
+          "id": "media-upload-server-side",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "Image file to upload (JPEG, PNG, WebP — max 10 MB)",
+                  "src": []
+                },
+                {
+                  "key": "entityId",
+                  "value": "",
+                  "type": "text",
+                  "description": "Optional: UUID of the entity this file belongs to (e.g. auctionId)",
+                  "disabled": true
+                },
+                {
+                  "key": "entityType",
+                  "value": "AUCTION_ITEM",
+                  "type": "text",
+                  "description": "Optional: entity type label (e.g. AUCTION_ITEM, USER_AVATAR)",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/media/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "upload"
+              ]
+            },
+            "description": "Uploads a file through the media-service. The server validates the MIME type (image/jpeg, image/png, image/webp), enforces the 10 MB size limit, resizes the image to a maximum of 1920px on its longest side while preserving aspect ratio, then uploads the processed image to S3.\n\nThe saved asset metadata is returned, including the s3Key needed for download."
+          },
+          "response": [
+            {
+              "name": "201 - Upload Successful",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"File uploaded successfully\",\n  \"data\": {\n    \"id\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\",\n    \"originalName\": \"product-photo.jpg\",\n    \"s3Key\": \"uploads/3fa85f64-5717-4562-b3fc-2c963f66afa6/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg\",\n    \"contentType\": \"image/jpeg\",\n    \"fileSize\": 204800,\n    \"width\": 1280,\n    \"height\": 720,\n    \"createdAt\": \"2026-05-14T20:00:00\"\n  }\n}"
+            },
+            {
+              "name": "400 - Invalid File Type",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Unsupported file type: application/pdf. Allowed types: [image/jpeg, image/png, image/webp]\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate Presigned Upload URL (Client-Side Direct Upload)",
+          "id": "media-presigned-upload-url",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/media/presigned-url?fileName=product-photo.jpg&contentType=image/jpeg",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "presigned-url"
+              ],
+              "query": [
+                {
+                  "key": "fileName",
+                  "value": "product-photo.jpg",
+                  "description": "Original name of the file being uploaded"
+                },
+                {
+                  "key": "contentType",
+                  "value": "image/jpeg",
+                  "description": "MIME type: image/jpeg | image/png | image/webp"
+                }
+              ]
+            },
+            "description": "Generates a short-lived S3 presigned PUT URL (valid 15 minutes). The client uses this URL to upload the file directly to S3 — the file NEVER passes through the media-service server.\n\n**Comparison vs. Server-Side Upload:**\n- ✅ Faster — no bandwidth overhead on the server\n- ✅ Cheaper — no compute cost for file transfer\n- ❌ No server-side image processing (resizing/compression)\n- ❌ No MIME validation enforced at server level\n\nAfter the client uploads, it should save the returned s3Key for future reference."
+          },
+          "response": [
+            {
+              "name": "200 - Presigned URL Generated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Presigned URL generated\",\n  \"data\": {\n    \"uploadUrl\": \"https://bidnow-media.s3.ap-southeast-1.amazonaws.com/uploads/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=...\",\n    \"s3Key\": \"uploads/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg\",\n    \"expiresAt\": \"2026-05-14T20:15:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 - Unsupported Content Type",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Unsupported content type: application/pdf\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Presigned Download URL",
+          "id": "media-presigned-download-url",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/media/download?s3Key=uploads/3fa85f64-5717-4562-b3fc-2c963f66afa6/a1b2c3d4.jpg",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "download"
+              ],
+              "query": [
+                {
+                  "key": "s3Key",
+                  "value": "uploads/3fa85f64-5717-4562-b3fc-2c963f66afa6/a1b2c3d4.jpg",
+                  "description": "The S3 object key returned from the upload endpoint"
+                }
+              ]
+            },
+            "description": "Generates a presigned S3 GET URL (valid 1 hour) for the given s3Key. Use the s3Key from the upload response.\n\nThe client can use this URL to:\n- Display the image in the browser (img src)\n- Trigger a file download"
+          },
+          "response": [
+            {
+              "name": "200 - Download URL Generated",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Download URL generated\",\n  \"data\": \"https://bidnow-media.s3.ap-southeast-1.amazonaws.com/uploads/3fa85f64-5717-4562-b3fc-2c963f66afa6/a1b2c3d4.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&...\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 package com.bidnow.user.controller;
 
 import com.bidnow.common.annotation.AuthenticatedUserId;
-import com.bidnow.common.dto.ApiResponse;
+import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 import com.bidnow.user.service.UserProfileService;
@@ -28,11 +28,11 @@ public class UserProfileController {
      * Not exposed to external clients.
      */
     @PostMapping("/internal/profiles")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> createUserProfile(
+    public ResponseEntity<BaseResponse<UserProfileResponse>> createUserProfile(
             @Valid @RequestBody CreateUserProfileRequest request) {
         UserProfileResponse response = userProfileService.createUserProfile(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.<UserProfileResponse>builder()
+                .body(BaseResponse.<UserProfileResponse>builder()
                         .status(HttpStatus.CREATED.value())
                         .message("User profile created successfully")
                         .data(response)
@@ -45,10 +45,10 @@ public class UserProfileController {
      * after JWT validation — the client never supplies the ID directly.
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(
+    public ResponseEntity<BaseResponse<UserProfileResponse>> getMyProfile(
             @AuthenticatedUserId UUID userId) {
         UserProfileResponse response = userProfileService.getMyProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 
     /**
@@ -56,8 +56,8 @@ public class UserProfileController {
      * Kept for service-to-service calls; should not be exposed publicly via the gateway.
      */
     @GetMapping("/{userId}/profile")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> getUserProfile(@PathVariable UUID userId) {
+    public ResponseEntity<BaseResponse<UserProfileResponse>> getUserProfile(@PathVariable UUID userId) {
         UserProfileResponse response = userProfileService.getUserProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(BaseResponse.success(response));
     }
 }
