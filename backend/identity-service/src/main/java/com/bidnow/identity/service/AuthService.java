@@ -11,9 +11,14 @@ import com.bidnow.identity.dto.response.VerifyOtpResponse;
 
 public interface AuthService {
     RegisterResponse register(RegisterRequest request);
+
     VerifyOtpResponse verifyOtp(VerifyOtpRequest request);
+
     ResendOtpResponse resendOtp(ResendOtpRequest request);
+
     LoginResponse login(LoginRequest request);
+
     LoginResponse refresh(String refreshToken);
+
     void logout(String refreshToken);
 }

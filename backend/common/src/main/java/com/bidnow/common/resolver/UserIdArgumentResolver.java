@@ -27,9 +27,9 @@ public class UserIdArgumentResolver implements HandlerMethodArgumentResolver {
                                   ModelAndViewContainer mavContainer,
                                   @NonNull NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
-        
+
         String userId = webRequest.getHeader(ApplicationConstants.X_USER_ID_HEADER);
-        
+
         if (userId == null || userId.isBlank()) {
             return null;
         }
@@ -38,7 +38,7 @@ public class UserIdArgumentResolver implements HandlerMethodArgumentResolver {
         if (parameter.getParameterType().equals(UUID.class)) {
             return UUID.fromString(userId);
         }
-        
+
         return userId;
     }
 }

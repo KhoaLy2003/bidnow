@@ -5,6 +5,7 @@ package com.bidnow.media.controller;
 
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
+import com.bidnow.common.enums.MediaEntityType;
 import com.bidnow.media.dto.response.MediaUploadResponse;
 import com.bidnow.media.dto.response.PresignedUrlResponse;
 import com.bidnow.media.service.MediaService;
@@ -63,8 +64,8 @@ public class MediaController {
             @AuthenticatedUserId UUID ownerId,
             @Parameter(description = "Optional: ID of the entity this file belongs to (e.g. auctionId)")
             @RequestParam(required = false) UUID entityId,
-            @Parameter(description = "Optional: Type of the entity (e.g. AUCTION_ITEM, USER_AVATAR)")
-            @RequestParam(required = false) String entityType
+            @Parameter(description = "Optional: Type of the entity (e.g. USER_AVATAR, AUCTION_ITEM)")
+            @RequestParam(required = false) MediaEntityType entityType
     ) {
         log.info("Received server-side upload request from user={}, entityId={}, entityType={}",
                 ownerId, entityId, entityType);

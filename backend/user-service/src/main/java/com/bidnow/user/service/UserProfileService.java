@@ -4,6 +4,7 @@
 package com.bidnow.user.service;
 
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
+import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 
 import java.util.UUID;
@@ -20,4 +21,6 @@ public interface UserProfileService {
      * never from a client-supplied path variable.
      */
     UserProfileResponse getMyProfile(UUID userId);
+
+    UserProfileResponse updateMyProfile(UUID userId, UpdateUserProfileRequest request);
 }

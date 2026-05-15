@@ -11,6 +11,7 @@ import com.bidnow.user.domain.entity.UserPreferences;
 import com.bidnow.user.domain.entity.UserProfile;
 import com.bidnow.user.domain.entity.UserRole;
 import com.bidnow.user.domain.enums.UserRoleType;
+import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 import com.bidnow.user.mapper.UserProfileMapper;
 import com.bidnow.user.repository.UserPreferencesRepository;
@@ -85,5 +86,22 @@ public class UserProfileServiceImpl implements UserProfileService {
         // (controller) resolves userId from the trusted X-User-Id header,
         // not from a client-supplied path variable.
         return getUserProfile(userId);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse updateMyProfile(UUID userId, UpdateUserProfileRequest request) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("User profile not found", ErrorCodes.NOT_FOUND));
+
+        userProfileMapper.updateProfileFromRequest(request, profile);
+
+        userProfileRepository.save(profile);
+
+        List<UserRole> roles = userRoleRepository.findByUserId(userId);
+        UserPreferences preferences = userPreferencesRepository.findByUserId(userId).orElse(null);
+
+        log.info("Updated user profile for userId: {}", userId);
+        return userProfileMapper.toResponse(profile, roles, preferences);
     }
 }

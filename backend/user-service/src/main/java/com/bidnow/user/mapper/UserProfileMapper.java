@@ -6,13 +6,16 @@ package com.bidnow.user.mapper;
 import com.bidnow.user.domain.entity.UserPreferences;
 import com.bidnow.user.domain.entity.UserProfile;
 import com.bidnow.user.domain.entity.UserRole;
+import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import java.util.List;
 
-@Component
-public class UserProfileMapper {
+@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+public abstract class UserProfileMapper {
 
     public UserProfileResponse toResponse(UserProfile profile, List<UserRole> roles, UserPreferences preferences) {
         UserProfileResponse.UserProfileResponseBuilder builder = UserProfileResponse.builder()
@@ -40,4 +43,6 @@ public class UserProfileMapper {
 
         return builder.build();
     }
+
+    public abstract void updateProfileFromRequest(UpdateUserProfileRequest request, @MappingTarget UserProfile profile);
 }

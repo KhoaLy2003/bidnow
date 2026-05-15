@@ -1,12 +1,16 @@
-import * as React from 'react'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { mediaService } from '@/services/media.service'
+import { useAuthStore } from '@/store/authStore'
 
 interface UserAvatarProps {
-  name:       string
+  name: string
   avatarUrl?: string
-  isOnline?:  boolean
-  size?:      'xs' | 'sm' | 'default' | 'lg' | 'xl'
+  isOnline?: boolean
+  size?: 'xs' | 'sm' | 'default' | 'lg' | 'xl'
   className?: string
 }
 
@@ -33,23 +37,57 @@ function getInitials(name: string): string {
 }
 
 const SIZE_CLASS: Record<NonNullable<UserAvatarProps['size']>, string> = {
-  xs:      'size-5 text-[10px]',
-  sm:      'size-6 text-xs',
+  xs: 'size-5 text-[10px]',
+  sm: 'size-6 text-xs',
   default: 'size-8 text-sm',
-  lg:      'size-10 text-sm',
-  xl:      'size-16 text-base',
+  lg: 'size-10 text-sm',
+  xl: 'h-32 w-32 text-2xl',
 }
 
 export function UserAvatar({
   name, avatarUrl, isOnline, size = 'default', className,
 }: UserAvatarProps) {
-  const initials  = getInitials(name)
-  const bgColor   = hashColor(name)
+  const initials = getInitials(name)
+  const bgColor = hashColor(name)
+  const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined)
+  const accessToken = useAuthStore((s) => s.accessToken)
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveAvatar = async () => {
+      if (!avatarUrl) {
+        setResolvedUrl(undefined);
+        return;
+      }
+
+      // If it looks like an S3 key from our media service
+      if (avatarUrl.startsWith('uploads/')) {
+        try {
+          if (!accessToken) return;
+          const url = await mediaService.getDownloadUrl(accessToken, avatarUrl);
+          if (isMounted) setResolvedUrl(url);
+        } catch (error) {
+          console.error("Failed to load avatar url", error);
+          if (isMounted) setResolvedUrl(undefined);
+        }
+      } else {
+        // It's already a full HTTP URL or relative path
+        if (isMounted) setResolvedUrl(avatarUrl);
+      }
+    };
+
+    resolveAvatar();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [avatarUrl]);
 
   return (
     <div className={cn('relative inline-flex shrink-0', className)}>
       <Avatar className={SIZE_CLASS[size]}>
-        {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
+        {resolvedUrl && <AvatarImage src={resolvedUrl} alt={name} />}
         <AvatarFallback
           className="font-medium text-white"
           style={{ backgroundColor: bgColor }}

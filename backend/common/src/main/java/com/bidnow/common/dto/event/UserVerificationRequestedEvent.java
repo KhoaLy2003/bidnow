@@ -19,7 +19,9 @@ import java.util.UUID;
 public class UserVerificationRequestedEvent {
     private UUID userId;
     private String email;
-    /** The plain-text 6-digit OTP to be delivered via email. */
+    /**
+     * The plain-text 6-digit OTP to be delivered via email.
+     */
     private String otp;
     private LocalDateTime otpExpiresAt;
     private LocalDateTime requestedAt;

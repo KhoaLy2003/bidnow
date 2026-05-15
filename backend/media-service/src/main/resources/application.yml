@@ -2,6 +2,12 @@ server:
   port: 8086
   forward-headers-strategy: framework
 
+logging:
+  level:
+    root: INFO
+    com.example.mediaservice: DEBUG
+    org.apache.kafka.clients.NetworkClient: ERROR
+
 spring:
   application:
     name: media-service
@@ -30,6 +36,8 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+        reconnect.backoff.ms: 5000
+        reconnect.backoff.max.ms: 30000
   mail:
     host: ${MAIL_HOST}
     port: ${MAIL_PORT}
@@ -71,6 +79,8 @@ management:
         include: health, info
   endpoint:
     health:
+      kafka:
+        enabled: true
       show-details: always
 
 springdoc:

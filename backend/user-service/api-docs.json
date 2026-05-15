@@ -14,7 +14,9 @@
   "paths": {
     "/api/v1/users/internal/profiles": {
       "post": {
-        "tags": ["User Profile Controller"],
+        "tags": [
+          "User Profile Controller"
+        ],
         "summary": "Create a new user profile (internal service call)",
         "requestBody": {
           "content": {
@@ -52,7 +54,9 @@
     },
     "/api/v1/users/{userId}/profile": {
       "get": {
-        "tags": ["User Profile Controller"],
+        "tags": [
+          "User Profile Controller"
+        ],
         "summary": "Get user profile by user ID",
         "parameters": [
           {
@@ -94,7 +98,10 @@
     "schemas": {
       "CreateUserProfileRequest": {
         "type": "object",
-        "required": ["userId", "email"],
+        "required": [
+          "userId",
+          "email"
+        ],
         "properties": {
           "userId": {
             "type": "string",
@@ -141,7 +148,11 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["GUEST", "USER", "ADMIN"]
+              "enum": [
+                "GUEST",
+                "USER",
+                "ADMIN"
+              ]
             }
           },
           "language": {

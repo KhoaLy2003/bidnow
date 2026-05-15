@@ -3,6 +3,7 @@
  */
 package com.bidnow.media.service;
 
+import com.bidnow.common.enums.MediaEntityType;
 import com.bidnow.media.dto.response.MediaUploadResponse;
 import com.bidnow.media.dto.response.PresignedUrlResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,10 +18,10 @@ public interface MediaService {
      * @param file       the uploaded multipart file
      * @param ownerId    the ID of the authenticated user uploading the file
      * @param entityId   optional ID of the domain object this file belongs to
-     * @param entityType optional type of the domain object (e.g. "AUCTION_ITEM")
+     * @param entityType optional type of the domain object (e.g. {@link MediaEntityType#AUCTION_ITEM})
      * @return metadata of the stored asset
      */
-    MediaUploadResponse uploadFile(MultipartFile file, UUID ownerId, UUID entityId, String entityType);
+    MediaUploadResponse uploadFile(MultipartFile file, UUID ownerId, UUID entityId, MediaEntityType entityType);
 
     /**
      * Generates a pre-signed S3 URL for direct client-to-S3 upload.

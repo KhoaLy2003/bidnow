@@ -3,11 +3,13 @@
  */
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.enums.MediaEntityType;
 import com.bidnow.media.domain.entity.MediaAsset;
 import com.bidnow.media.dto.response.MediaUploadResponse;
 import com.bidnow.media.dto.response.PresignedUrlResponse;
 import com.bidnow.media.repository.MediaAssetRepository;
 import com.bidnow.media.service.MediaService;
+import com.bidnow.media.strategy.UploadEventStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -46,6 +48,7 @@ public class MediaServiceImpl implements MediaService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final MediaAssetRepository mediaAssetRepository;
+    private final UploadEventStrategyFactory uploadEventStrategyFactory;
 
     @Value("${aws.s3.BUCKET_NAME}")
     private String bucketName;
@@ -55,7 +58,7 @@ public class MediaServiceImpl implements MediaService {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
-    public MediaUploadResponse uploadFile(MultipartFile file, UUID ownerId, UUID entityId, String entityType) {
+    public MediaUploadResponse uploadFile(MultipartFile file, UUID ownerId, UUID entityId, MediaEntityType entityType) {
         validateFile(file);
 
         try {
@@ -78,7 +81,7 @@ public class MediaServiceImpl implements MediaService {
             MediaAsset asset = MediaAsset.builder()
                     .ownerId(ownerId)
                     .entityId(entityId)
-                    .entityType(entityType)
+                    .entityType(entityType != null ? entityType.name() : null)
                     .originalName(file.getOriginalFilename())
                     .s3Key(s3Key)
                     .contentType(file.getContentType())
@@ -89,6 +92,11 @@ public class MediaServiceImpl implements MediaService {
                     .build();
 
             MediaAsset saved = mediaAssetRepository.save(asset);
+
+            // Dispatch post-upload event via Strategy Pattern — no if-blocks needed
+            if (entityType != null && ownerId != null) {
+                uploadEventStrategyFactory.dispatch(entityType, ownerId, entityId, s3Key);
+            }
 
             return MediaUploadResponse.builder()
                     .id(saved.getId())

@@ -25,4 +25,28 @@ export const userService = {
 
     return response.json();
   },
+
+  /**
+   * Updates the profile of the currently authenticated user.
+   */
+  async updateMyProfile(
+    accessToken: string,
+    data: import("@/types/user-profile").UpdateUserProfileRequest
+  ): Promise<ApiResponse<UserProfileResponse>> {
+    const response = await fetch(`${API_URL}/api/v1/users/me`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw error;
+    }
+
+    return response.json();
+  },
 };
