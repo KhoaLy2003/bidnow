@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/services/auth.service";
+import { useProfile } from "@/hooks/useProfile";
 import { useRouter } from "next/navigation";
 
 const NAV_LINKS = [
@@ -32,6 +33,7 @@ const NAV_LINKS = [
 export function Header() {
   const router = useRouter();
   const { user, isAuthenticated, logout, refreshToken } = useAuthStore();
+  const { profile } = useProfile();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -103,7 +105,11 @@ export function Header() {
                     />
                   }
                 >
-                  <UserAvatar name={user?.email || "User"} size="sm" />
+                  <UserAvatar
+                    name={user?.email || "User"}
+                    avatarUrl={profile?.avatarUrl ?? undefined}
+                    size="sm"
+                  />
                   <span className="sr-only">Account menu</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -116,7 +122,11 @@ export function Header() {
                     <DropdownMenuLabel className="p-2 font-normal">
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-3">
-                          <UserAvatar name={user?.email || "User"} size="lg" />
+                          <UserAvatar
+                            name={user?.email || "User"}
+                            avatarUrl={profile?.avatarUrl ?? undefined}
+                            size="lg"
+                          />
                           <div className="flex flex-col min-w-0">
                             <p className="font-semibold text-sm truncate">
                               {user?.email?.split("@")[0]}

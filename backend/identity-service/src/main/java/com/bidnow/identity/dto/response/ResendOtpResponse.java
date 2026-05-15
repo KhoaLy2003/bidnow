@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 public class ResendOtpResponse {
 
     private String email;
-    /** New OTP expiry time after resend. */
+    /**
+     * New OTP expiry time after resend.
+     */
     private LocalDateTime otpExpiresAt;
 }

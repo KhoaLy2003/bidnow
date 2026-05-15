@@ -14,7 +14,9 @@
   "paths": {
     "/api/v1/auth/register": {
       "post": {
-        "tags": ["Auth Controller"],
+        "tags": [
+          "Auth Controller"
+        ],
         "summary": "Register a new user account",
         "description": "Submits the registration form, generates a 6-digit OTP, saves the user as PENDING_VERIFICATION, and emits a verification email event. Returns 202 Accepted — the account is not yet active until the OTP is verified via /verify-otp.",
         "requestBody": {
@@ -53,7 +55,9 @@
     },
     "/api/v1/auth/verify-otp": {
       "post": {
-        "tags": ["Auth Controller"],
+        "tags": [
+          "Auth Controller"
+        ],
         "summary": "Verify email OTP to activate account",
         "description": "Validates the 6-digit OTP sent to the user's email. On success, activates the account and triggers the welcome email. Returns 400 with distinct error codes for invalid OTP, expired OTP, or exceeded retry limit.",
         "requestBody": {
@@ -144,7 +148,9 @@
     },
     "/api/v1/auth/resend-otp": {
       "post": {
-        "tags": ["Auth Controller"],
+        "tags": [
+          "Auth Controller"
+        ],
         "summary": "Resend OTP verification email",
         "description": "Issues a fresh 6-digit OTP and sends it to the user's email. Only allowed when the account is in PENDING_VERIFICATION state and the previous OTP has already expired. Resets the failed-attempt counter so the user gets a clean slate.",
         "requestBody": {
@@ -215,7 +221,9 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "tags": ["Auth Controller"],
+        "tags": [
+          "Auth Controller"
+        ],
         "summary": "Authenticate user and issue tokens",
         "requestBody": {
           "content": {
@@ -263,7 +271,9 @@
     },
     "/api/v1/auth/refresh": {
       "post": {
-        "tags": ["Auth Controller"],
+        "tags": [
+          "Auth Controller"
+        ],
         "summary": "Refresh access token using a valid refresh token",
         "requestBody": {
           "content": {
@@ -301,7 +311,9 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "tags": ["Auth Controller"],
+        "tags": [
+          "Auth Controller"
+        ],
         "summary": "Revoke the provided refresh token",
         "requestBody": {
           "content": {
@@ -325,7 +337,10 @@
     "schemas": {
       "RegisterRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -339,7 +354,10 @@
       },
       "LoginRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -352,7 +370,9 @@
       },
       "RefreshTokenRequest": {
         "type": "object",
-        "required": ["refreshToken"],
+        "required": [
+          "refreshToken"
+        ],
         "properties": {
           "refreshToken": {
             "type": "string"
@@ -372,7 +392,12 @@
           },
           "accountStatus": {
             "type": "string",
-            "enum": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "BANNED"],
+            "enum": [
+              "PENDING_VERIFICATION",
+              "ACTIVE",
+              "SUSPENDED",
+              "BANNED"
+            ],
             "example": "PENDING_VERIFICATION"
           },
           "isEmailVerified": {
@@ -391,7 +416,10 @@
       },
       "VerifyOtpRequest": {
         "type": "object",
-        "required": ["email", "otp"],
+        "required": [
+          "email",
+          "otp"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -418,7 +446,12 @@
           },
           "accountStatus": {
             "type": "string",
-            "enum": ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "BANNED"],
+            "enum": [
+              "PENDING_VERIFICATION",
+              "ACTIVE",
+              "SUSPENDED",
+              "BANNED"
+            ],
             "example": "ACTIVE"
           },
           "isEmailVerified": {
@@ -433,7 +466,9 @@
       },
       "ResendOtpRequest": {
         "type": "object",
-        "required": ["email"],
+        "required": [
+          "email"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -475,7 +510,8 @@
           }
         }
       },
-      "ApiResponseVerifyOtpResponse": {        "type": "object",
+      "ApiResponseVerifyOtpResponse": {
+        "type": "object",
         "properties": {
           "timestamp": {
             "type": "string",

@@ -24,7 +24,7 @@
         <module>auction-service</module>
         <module>bidding-service</module>
         <module>wallet-service</module>
-        <module>notification-service</module>
+        <module>media-service</module>
     </modules>
 
     <properties>

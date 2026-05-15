@@ -1,0 +1,311 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "BidNow Media Service API",
+    "description": "API documentation for Media operations in Media Service — file upload, presigned URLs, and download.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8086",
+      "description": "Local server (direct)"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "Local server (via API Gateway)"
+    }
+  ],
+  "paths": {
+    "/api/v1/media/upload": {
+      "post": {
+        "tags": [
+          "Media Controller"
+        ],
+        "summary": "Upload a file (server-side)",
+        "description": "The file passes through the media-service for validation, resizing (max 1920px), and then is uploaded to S3. Allowed types: image/jpeg, image/png, image/webp. Max size: 10 MB.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Image file to upload (JPEG, PNG, WebP — max 10 MB)"
+                  },
+                  "entityId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional: UUID of the entity this file belongs to (e.g. auctionId)"
+                  },
+                  "entityType": {
+                    "type": "string",
+                    "description": "Optional: type label for the entity (e.g. AUCTION_ITEM, USER_AVATAR)"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseMediaUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file type or file exceeds size limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseString"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid JWT token"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/media/presigned-url": {
+      "get": {
+        "tags": [
+          "Media Controller"
+        ],
+        "summary": "Generate a presigned upload URL (client-side direct upload)",
+        "description": "Returns a short-lived S3 presigned PUT URL (valid 15 minutes). The client uploads the file directly to S3 using this URL — the file never passes through the media-service server. Note: no server-side resizing or MIME enforcement is applied.",
+        "parameters": [
+          {
+            "name": "fileName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Original file name — used to derive the S3 object extension"
+          },
+          {
+            "name": "contentType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+              ]
+            },
+            "description": "MIME type of the file to be uploaded"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Presigned URL generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePresignedUrlResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsupported content type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseString"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid JWT token"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/media/download": {
+      "get": {
+        "tags": [
+          "Media Controller"
+        ],
+        "summary": "Get a presigned download URL",
+        "description": "Returns a presigned S3 GET URL (valid 1 hour) for the given s3Key. Use the s3Key returned from the upload endpoint. The URL can be used directly as an image src or to trigger a file download.",
+        "parameters": [
+          {
+            "name": "s3Key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The S3 object key returned from the upload endpoint (e.g. uploads/userId/fileId.jpg)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Download URL generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseString"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid JWT token"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "MediaUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "s3Key": {
+            "type": "string",
+            "description": "S3 object key — use this to request a download URL"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "fileSize": {
+            "type": "integer",
+            "format": "int64",
+            "description": "File size in bytes (after server-side processing)"
+          },
+          "width": {
+            "type": "integer",
+            "description": "Image width in pixels after processing"
+          },
+          "height": {
+            "type": "integer",
+            "description": "Image height in pixels after processing"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PresignedUrlResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "description": "Short-lived S3 presigned PUT URL — use HTTP PUT to upload the file directly to this URL"
+          },
+          "s3Key": {
+            "type": "string",
+            "description": "S3 object key assigned to the file — save this for generating download URLs later"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Expiry time of the presigned URL (15 minutes from generation)"
+          }
+        }
+      },
+      "ApiResponseMediaUploadResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MediaUploadResponse"
+          }
+        }
+      },
+      "ApiResponsePresignedUrlResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PresignedUrlResponse"
+          }
+        }
+      },
+      "ApiResponseString": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

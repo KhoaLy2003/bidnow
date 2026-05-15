@@ -17,5 +17,6 @@ public class ErrorCodes {
     public static final String ACCOUNT_NOT_PENDING = "ACCOUNT_NOT_PENDING";
     public static final String OTP_NOT_EXPIRED = "OTP_NOT_EXPIRED";
 
-    private ErrorCodes() {}
+    private ErrorCodes() {
+    }
 }

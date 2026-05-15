@@ -34,10 +34,10 @@ spring:
           uri: lb://wallet-service
           predicates:
             - Path=/api/v1/wallets/**
-        - id: notification-service
-          uri: lb://notification-service
+        - id: media-service
+          uri: lb://media-service
           predicates:
-            - Path=/api/v1/notifications/**
+            - Path=/api/v1/media/**
       globalcors:
         cors-configurations:
           "[/**]":
@@ -88,8 +88,8 @@ springdoc:
         url: /api/v1/bids/v3/api-docs
       - name: Wallet Service
         url: /api/v1/wallets/v3/api-docs
-      - name: Notification Service
-        url: /api/v1/notifications/v3/api-docs
+      - name: Media Service
+        url: /api/v1/media/v3/api-docs
     display-request-duration: true
     groups-order: ASC
   api-docs:

@@ -49,8 +49,7 @@ public class GenericSpecification<T> implements Specification<T> {
 
             case LESS_THAN -> cb.lessThan((Path<Comparable>) path, (Comparable) criteria.getValue());
 
-            case LESS_THAN_OR_EQUAL ->
-                    cb.lessThanOrEqualTo((Path<Comparable>) path, (Comparable) criteria.getValue());
+            case LESS_THAN_OR_EQUAL -> cb.lessThanOrEqualTo((Path<Comparable>) path, (Comparable) criteria.getValue());
 
             case IS_NULL -> cb.isNull(path);
 

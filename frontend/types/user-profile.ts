@@ -18,3 +18,14 @@ export interface UserProfileResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UpdateUserProfileRequest {
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  phoneNumber?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  postalCode?: string | null;
+  bio?: string | null;
+}

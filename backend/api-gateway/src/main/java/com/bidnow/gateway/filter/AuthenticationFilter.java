@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -34,6 +35,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private static final String X_USER_ID_HEADER = "X-User-Id";
     private static final String BEARER_PREFIX = "Bearer ";
 
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
     /**
      * Paths that do NOT require a valid JWT.
      */
@@ -44,7 +47,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/resend-otp",
             "/api/v1/auth/refresh",
             "/api/v1/auth/logout",
-            "/actuator"
+            "/actuator",
+            "/**/v3/api-docs/**",
+            "/**/swagger-ui/**"
     );
 
     private final JwtUtil jwtUtil;
@@ -96,6 +101,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublicPath(String path) {
-        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+        return PUBLIC_PATHS.stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 }
