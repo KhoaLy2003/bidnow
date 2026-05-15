@@ -1,0 +1,15 @@
+target/
+!**/target/*.jar
+*.iml
+.idea/
+.git/
+.gitignore
+.mvn/
+mvnw
+mvnw.cmd
+Dockerfile
+docker-compose.yml
+node_modules/
+.next/
+out/
+build/

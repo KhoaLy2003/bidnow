@@ -1,0 +1,240 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "BidNow User Service API",
+    "description": "API documentation for User Profile management in User Service",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8082",
+      "description": "Local server"
+    }
+  ],
+  "paths": {
+    "/api/v1/users/internal/profiles": {
+      "post": {
+        "tags": [
+          "User Profile Controller"
+        ],
+        "summary": "Create a new user profile (internal service call)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "User profile created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or profile already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{userId}/profile": {
+      "get": {
+        "tags": [
+          "User Profile Controller"
+        ],
+        "summary": "Get user profile by user ID",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseUserProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateUserProfileRequest": {
+        "type": "object",
+        "required": [
+          "userId",
+          "email"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "UserProfileResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "GUEST",
+                "USER",
+                "ADMIN"
+              ]
+            }
+          },
+          "language": {
+            "type": "string",
+            "default": "en"
+          },
+          "timezone": {
+            "type": "string",
+            "default": "UTC"
+          },
+          "currency": {
+            "type": "string",
+            "default": "USD"
+          },
+          "emailNotifications": {
+            "type": "boolean",
+            "default": true
+          },
+          "pushNotifications": {
+            "type": "boolean",
+            "default": true
+          },
+          "smsNotifications": {
+            "type": "boolean",
+            "default": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiResponseUserProfileResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UserProfileResponse"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Field-level validation errors (only present on 400 validation failures)"
+          }
+        }
+      }
+    }
+  }
+}

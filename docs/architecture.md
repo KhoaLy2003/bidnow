@@ -36,7 +36,7 @@
 ### Core Services
 
 1. **API Gateway**: The entry point for all client requests. Handles routing, rate limiting, and initial security checks.
-2. **Identity Service**: Manages user registration, login, and JWT token issuance/validation.
+2. **Identity Service**: Manages user registration (including email OTP verification), login, and JWT token issuance/validation.
 3. **User Service**: Manages user profiles, preferences, and account metadata.
 4. **Auction Service**: Handles the lifecycle of auction listings (Creation, Active, Closure). Manage "Buy It Now" logic.
 5. **Bidding Service**: The high-performance engine for placing bids, calculating auto-bids, and managing the "Anti-sniping" time extensions.
