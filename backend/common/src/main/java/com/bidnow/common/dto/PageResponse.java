@@ -3,6 +3,7 @@
  */
 package com.bidnow.common.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,8 +16,12 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Paginated response wrapper")
 public class PageResponse<T> {
+    @Schema(description = "List of data items")
     private List<T> data;
+
+    @Schema(description = "Pagination metadata")
     private PaginationMeta pagination;
 
     public static <T> PageResponse<T> of(Page<T> page) {

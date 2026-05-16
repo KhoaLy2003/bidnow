@@ -33,6 +33,7 @@ import java.util.List;
 public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     private static final String X_USER_ID_HEADER = "X-User-Id";
+    private static final String X_USER_ROLES_HEADER = "X-User-Roles";
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -80,16 +81,21 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String userId = jwtUtil.extractUserId(token);
+        String roles = jwtUtil.extractRoles(token);
 
-        // Mutate the request to add X-User-Id; strip any client-supplied value first
+        // Mutate the request to add headers; strip any client-supplied values first
         ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                 .headers(headers -> {
                     headers.remove(X_USER_ID_HEADER); // prevent header spoofing
+                    headers.remove(X_USER_ROLES_HEADER);
                     headers.add(X_USER_ID_HEADER, userId);
+                    if (roles != null) {
+                        headers.add(X_USER_ROLES_HEADER, roles);
+                    }
                 })
                 .build();
 
-        log.info("Authenticated request for userId={} path={}", userId, path);
+        log.info("Authenticated request for userId={} roles={} path={}", userId, roles, path);
 
         return chain.filter(exchange.mutate().request(mutatedRequest).build());
     }

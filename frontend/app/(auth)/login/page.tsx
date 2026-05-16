@@ -27,9 +27,14 @@ export default function LoginPage() {
     const password = formData.get('password') as string
 
     try {
-      const response = await authService.login(email, password)
-      setAuth(response.data)
-      router.push('/')
+      const result = await authService.login(email, password)
+      setAuth(result.data)
+      
+      if (result.data.role === 'ADMIN') {
+        router.push('/admin/users')
+      } else {
+        router.push('/')
+      }
     } catch (err: any) {
       setError(err.message || 'Invalid email or password')
     } finally {

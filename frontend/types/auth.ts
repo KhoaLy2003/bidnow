@@ -1,6 +1,9 @@
+export type { ApiResponse } from "./api";
+
 export interface User {
   id: string;
   email: string;
+  role: 'USER' | 'ADMIN';
   accountStatus: 'PENDING_VERIFICATION' | 'ACTIVE' | 'SUSPENDED' | 'BANNED';
   isEmailVerified: boolean;
   isActive: boolean;
@@ -12,14 +15,8 @@ export interface LoginResponse {
   expiresIn: number;
   userId: string;
   email: string;
+  role: 'USER' | 'ADMIN';
   refreshToken: string;
-}
-
-export interface ApiResponse<T> {
-  timestamp: string;
-  status: number;
-  message: string;
-  data: T;
 }
 
 export interface RegisterResponse {

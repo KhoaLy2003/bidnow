@@ -26,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
           user: {
             id: response.userId,
             email: response.email,
+            role: response.role,
             // These will be updated from profile if needed
             accountStatus: 'ACTIVE', 
             isEmailVerified: true,

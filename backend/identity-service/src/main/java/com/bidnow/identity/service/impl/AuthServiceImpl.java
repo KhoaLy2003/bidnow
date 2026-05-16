@@ -271,6 +271,7 @@ public class AuthServiceImpl implements AuthService {
                 .expiresIn(jwtExpiration)
                 .userId(user.getId())
                 .email(user.getEmail())
+                .role(user.getRole())
                 .refreshToken(rawRefreshToken)
                 .build();
     }
@@ -317,6 +318,7 @@ public class AuthServiceImpl implements AuthService {
                 .expiresIn(jwtExpiration)
                 .userId(user.getId())
                 .email(user.getEmail())
+                .role(user.getRole())
                 .refreshToken(newRawToken)
                 .build();
     }

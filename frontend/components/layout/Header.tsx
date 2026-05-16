@@ -91,125 +91,143 @@ export function Header() {
         <div className="ml-auto flex items-center gap-1 shrink-0">
           {isAuthenticated ? (
             <>
-              <WalletBadge />
-              <NotificationBell />
+              {user?.role !== 'ADMIN' && (
+                <>
+                  <WalletBadge />
+                  <NotificationBell />
+                </>
+              )}
 
               {/* User menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full"
+              {user?.role !== 'ADMIN' ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full"
+                      />
+                    }
+                  >
+                    <UserAvatar
+                      name={user?.email || "User"}
+                      avatarUrl={profile?.avatarUrl ?? undefined}
+                      size="sm"
                     />
-                  }
-                >
-                  <UserAvatar
-                    name={user?.email || "User"}
-                    avatarUrl={profile?.avatarUrl ?? undefined}
-                    size="sm"
-                  />
-                  <span className="sr-only">Account menu</span>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="bottom"
-                  align="end"
-                  sideOffset={8}
-                  className="w-64 p-2 shadow-xl border-border/50 backdrop-blur-md"
-                >
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="p-2 font-normal">
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-3">
-                          <UserAvatar
-                            name={user?.email || "User"}
-                            avatarUrl={profile?.avatarUrl ?? undefined}
-                            size="lg"
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <p className="font-semibold text-sm truncate">
-                              {user?.email?.split("@")[0]}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {user?.email}
-                            </p>
+                    <span className="sr-only">Account menu</span>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    side="bottom"
+                    align="end"
+                    sideOffset={8}
+                    className="w-64 p-2 shadow-xl border-border/50 backdrop-blur-md"
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="p-2 font-normal">
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-3">
+                            <UserAvatar
+                              name={user?.email || "User"}
+                              avatarUrl={profile?.avatarUrl ?? undefined}
+                              size="lg"
+                            />
+                            <div className="flex flex-col min-w-0">
+                              <p className="font-semibold text-sm truncate">
+                                {user?.email?.split("@")[0]}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {user?.email}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="bg-accent/50 rounded-md p-2 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Status
+                            </span>
+                            <span className="text-[10px] font-bold uppercase text-green-500">
+                              Verified
+                            </span>
                           </div>
                         </div>
-                        <div className="bg-accent/50 rounded-md p-2 flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            Status
-                          </span>
-                          <span className="text-[10px] font-bold uppercase text-green-500">
-                            Verified
-                          </span>
-                        </div>
-                      </div>
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
+                      </DropdownMenuLabel>
+                    </DropdownMenuGroup>
 
-                  <DropdownMenuSeparator className="my-2" />
+                    <DropdownMenuSeparator className="my-2" />
 
-                  <DropdownMenuGroup>
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        render={
+                          <Link
+                            href="/profile"
+                            className="flex items-center gap-2"
+                          />
+                        }
+                        className="py-2.5"
+                      >
+                        <User className="size-4" /> Profile
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        render={
+                          <Link
+                            href="/my-bids"
+                            className="flex items-center gap-2"
+                          />
+                        }
+                        className="py-2.5"
+                      >
+                        <ListOrdered className="size-4" /> My Bids
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        render={
+                          <Link
+                            href="/settings"
+                            className="flex items-center gap-2"
+                          />
+                        }
+                        className="py-2.5"
+                      >
+                        <Settings className="size-4" /> Settings
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+
+                    <DropdownMenuSeparator className="my-2" />
+
                     <DropdownMenuItem
-                      render={
-                        <Link
-                          href="/profile"
-                          className="flex items-center gap-2"
-                        />
-                      }
-                      className="py-2.5"
+                      variant="destructive"
+                      className="gap-2 cursor-pointer py-2.5"
+                      onClick={handleLogout}
                     >
-                      <User className="size-4" /> Profile
+                      <LogOut className="size-4" /> Sign out
                     </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      render={
-                        <Link
-                          href="/my-bids"
-                          className="flex items-center gap-2"
-                        />
-                      }
-                      className="py-2.5"
-                    >
-                      <ListOrdered className="size-4" /> My Bids
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      render={
-                        <Link
-                          href="/settings"
-                          className="flex items-center gap-2"
-                        />
-                      }
-                      className="py-2.5"
-                    >
-                      <Settings className="size-4" /> Settings
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-
-                  <DropdownMenuSeparator className="my-2" />
-
-                  <DropdownMenuItem
-                    variant="destructive"
-                    className="gap-2 cursor-pointer py-2.5"
-                    onClick={handleLogout}
-                  >
-                    <LogOut className="size-4" /> Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <LogOut className="size-4" />
+                  Sign out
+                </Button>
+              )}
 
               {/* Sell CTA — desktop */}
-              <Button
-                variant="brand"
-                size="sm"
-                className="hidden md:inline-flex ml-1"
-                render={<Link href="/sell" />}
-                nativeButton={false}
-              >
-                Sell
-              </Button>
+              {user?.role !== 'ADMIN' && (
+                <Button
+                  variant="brand"
+                  size="sm"
+                  className="hidden md:inline-flex ml-1"
+                  render={<Link href="/sell" />}
+                  nativeButton={false}
+                >
+                  Sell
+                </Button>
+              )}
             </>
           ) : (
             <div className="flex items-center gap-2">
