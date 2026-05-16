@@ -1,6 +1,7 @@
 package com.bidnow.identity.domain.entity;
 
 import com.bidnow.common.entity.BaseEntity;
+import com.bidnow.common.enums.Role;
 import com.bidnow.identity.domain.enums.AccountStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -44,6 +45,14 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "account_status", nullable = false, length = 30)
     private AccountStatus accountStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.USER;
+
+    @Column(name = "status_reason")
+    private String statusReason;
 
     @Column(name = "verification_otp", length = 6)
     private String verificationOtp;

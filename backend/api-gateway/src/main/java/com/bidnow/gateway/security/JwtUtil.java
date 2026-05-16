@@ -50,6 +50,13 @@ public class JwtUtil {
         return parseClaims(token).getSubject();
     }
 
+    /**
+     * Extracts roles from a valid token.
+     */
+    public String extractRoles(String token) {
+        return parseClaims(token).get("role", String.class);
+    }
+
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)

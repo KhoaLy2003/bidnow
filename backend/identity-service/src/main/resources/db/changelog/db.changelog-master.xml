@@ -7,5 +7,6 @@
 
     <include file="db/changelog/migrations/V1_001__init_schema.sql"/>
     <include file="/db/changelog/migrations/02-add-otp-columns.sql"/>
+    <include file="/db/changelog/migrations/03-add-role-and-seed-admin.sql"/>
 
 </databaseChangeLog>

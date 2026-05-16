@@ -1,5 +1,6 @@
 package com.bidnow.identity.dto.response;
 
+import com.bidnow.common.enums.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,6 +31,9 @@ public class LoginResponse {
 
     @Schema(description = "User email address", example = "john.doe@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
+
+    @Schema(description = "User role", example = "USER", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Role role;
 
     @Schema(description = "JWT refresh token", example = "eyJhbGciOiJIUzI1NiJ9...", requiredMode = Schema.RequiredMode.REQUIRED)
     private String refreshToken;
