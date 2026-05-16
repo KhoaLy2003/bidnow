@@ -9,6 +9,14 @@ import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 import com.bidnow.user.service.UserProfileService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +34,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@Tag(name = "User Profile", description = "Endpoints for managing user profiles and preferences")
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
@@ -34,6 +43,7 @@ public class UserProfileController {
      * Internal endpoint called by identity-service (via Feign) after registration.
      * Not exposed to external clients.
      */
+    @Operation(summary = "Create user profile (Internal)", description = "Internal endpoint used by identity-service to create a profile after user registration.", hidden = true)
     @PostMapping("/internal/profiles")
     public ResponseEntity<BaseResponse<UserProfileResponse>> createUserProfile(
             @Valid @RequestBody CreateUserProfileRequest request) {
@@ -51,8 +61,17 @@ public class UserProfileController {
      * The userId is resolved from the X-User-Id header injected by the API Gateway
      * after JWT validation — the client never supplies the ID directly.
      */
+    @Operation(summary = "Get current user profile", description = "Fetches the profile details of the currently authenticated user.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile fetched successfully",
+                    content = @Content(schema = @Schema(implementation = UserProfileResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Profile not found")
+    })
     @GetMapping("/me")
     public ResponseEntity<BaseResponse<UserProfileResponse>> getMyProfile(
+            @Parameter(description = "Authenticated user ID (injected by gateway)", hidden = true)
             @AuthenticatedUserId UUID userId) {
         UserProfileResponse response = userProfileService.getMyProfile(userId);
         return ResponseEntity.ok(BaseResponse.success(response));
@@ -61,8 +80,17 @@ public class UserProfileController {
     /**
      * Updates the profile of the currently authenticated user.
      */
+    @Operation(summary = "Update current user profile", description = "Updates the profile details (display name, avatar, phone, preferences) of the currently authenticated user.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile updated successfully",
+                    content = @Content(schema = @Schema(implementation = UserProfileResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     @PutMapping("/me")
     public ResponseEntity<BaseResponse<UserProfileResponse>> updateMyProfile(
+            @Parameter(description = "Authenticated user ID (injected by gateway)", hidden = true)
             @AuthenticatedUserId UUID userId,
             @Valid @RequestBody UpdateUserProfileRequest request) {
         UserProfileResponse response = userProfileService.updateMyProfile(userId, request);
@@ -73,8 +101,16 @@ public class UserProfileController {
      * Admin / internal lookup by explicit userId.
      * Kept for service-to-service calls; should not be exposed publicly via the gateway.
      */
+    @Operation(summary = "Get user profile by ID (Internal/Admin)", description = "Fetches a user profile by its explicit UUID. Primarily for internal service-to-service communication.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile fetched successfully",
+                    content = @Content(schema = @Schema(implementation = UserProfileResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Profile not found")
+    })
     @GetMapping("/{userId}/profile")
-    public ResponseEntity<BaseResponse<UserProfileResponse>> getUserProfile(@PathVariable UUID userId) {
+    public ResponseEntity<BaseResponse<UserProfileResponse>> getUserProfile(
+            @Parameter(description = "UUID of the user", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable UUID userId) {
         UserProfileResponse response = userProfileService.getUserProfile(userId);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
