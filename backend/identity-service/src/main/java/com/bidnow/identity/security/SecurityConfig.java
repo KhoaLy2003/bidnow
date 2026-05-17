@@ -1,5 +1,6 @@
 package com.bidnow.identity.security;
 
+import com.bidnow.common.constant.SecurityConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,8 +29,12 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/actuator/**", "/api/v1/users/internal/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(SecurityConstants.PUBLIC_ENDPOINTS)
+                        .permitAll()
+                        .requestMatchers("/api/v1/users/internal/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
