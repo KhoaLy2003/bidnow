@@ -1,15 +1,13 @@
 package com.bidnow.media.controller;
 
-import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.common.dto.PageResponse;
-import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.util.PaginationUtils;
 import com.bidnow.media.dto.request.EmailTestRequest;
+import com.bidnow.media.dto.request.SendTemplateEmailRequest;
 import com.bidnow.media.dto.request.TemplateRequest;
 import com.bidnow.media.dto.request.criteria.TemplateCriteria;
 import com.bidnow.media.dto.response.TemplateResponse;
-import com.bidnow.media.repository.NotificationTemplateRepository;
 import com.bidnow.media.service.EmailService;
 import com.bidnow.media.service.TemplateService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,11 +40,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Tag(name = "Admin Notification Templates", description = "Endpoints for administrators to manage and test notification templates")
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminTemplateController {
 
     private final TemplateService templateService;
     private final EmailService emailService;
-    private final NotificationTemplateRepository templateRepository;
 
     @Operation(summary = "Create template", description = "Creates a new notification template (Email/In-app).")
     @ApiResponses(value = {
@@ -129,10 +128,25 @@ public class AdminTemplateController {
             @PathVariable UUID id,
             @Valid @RequestBody EmailTestRequest request) {
 
-        var template = templateRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Template not found with id: " + id, ErrorCodes.NOT_FOUND));
-
-        emailService.sendTemplateEmail(request.getRecipientEmail(), template, request.getVariables());
+        emailService.sendTestEmail(id, request.getRecipientEmail(), request.getVariables());
         return ResponseEntity.ok(BaseResponse.success("Test email dispatched to " + request.getRecipientEmail()));
+    }
+
+    @Operation(summary = "Send template email to group", description = "Sends an email template to all active users or specific users based on the request configuration.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Emails dispatched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input or variables"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required"),
+            @ApiResponse(responseCode = "404", description = "Template not found")
+    })
+    @PostMapping("/{id}/send")
+    public ResponseEntity<BaseResponse<String>> sendTemplateToGroup(
+            @Parameter(description = "UUID of the template to send", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable UUID id,
+            @Valid @RequestBody SendTemplateEmailRequest request) {
+
+        int sentCount = emailService.sendTemplateEmailToGroup(id, request);
+        return ResponseEntity.ok(BaseResponse.success(String.format("Successfully sent template email to %d recipients", sentCount)));
     }
 }

@@ -6,7 +6,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, LayoutDashboard, History, Settings } from 'lucide-react'
+import { FileText, History, LayoutDashboard, Mail, Settings, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +15,8 @@ import { Separator } from '@/components/ui/separator'
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Users, label: 'User Management', href: '/admin/users' },
+  { icon: FileText, label: 'Email Templates', href: '/admin/templates' },
+  { icon: Mail, label: 'Email Logs', href: '/admin/email-logs' },
   { icon: History, label: 'Auction Monitoring', href: '/admin/auctions' },
   { icon: Settings, label: 'System Settings', href: '/admin/settings' },
 ]

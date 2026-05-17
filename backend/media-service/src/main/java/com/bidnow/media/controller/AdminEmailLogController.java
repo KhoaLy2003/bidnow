@@ -3,6 +3,7 @@ package com.bidnow.media.controller;
 import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.common.dto.PageResponse;
 import com.bidnow.common.util.PaginationUtils;
+import com.bidnow.media.dto.request.criteria.EmailLogCriteria;
 import com.bidnow.media.dto.response.EmailLogResponse;
 import com.bidnow.media.service.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +33,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Tag(name = "Admin Email Logs", description = "Endpoints for administrators to view and retry email delivery logs")
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminEmailLogController {
 
     private final EmailService emailService;
@@ -44,13 +47,14 @@ public class AdminEmailLogController {
     })
     @GetMapping
     public ResponseEntity<BaseResponse<PageResponse<EmailLogResponse>>> getEmailLogs(
+            EmailLogCriteria criteria,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
         Pageable pageable = PaginationUtils.getPageable(page, size, sortBy, sortDir);
-        Page<EmailLogResponse> resultPage = emailService.getEmailLogs(pageable);
+        Page<EmailLogResponse> resultPage = emailService.getEmailLogs(criteria, pageable);
         return ResponseEntity.ok(BaseResponse.success(PageResponse.of(resultPage)));
     }
 
