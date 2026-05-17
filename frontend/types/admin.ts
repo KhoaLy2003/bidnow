@@ -41,3 +41,73 @@ export interface AdminUserProfileResponse {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type NotificationTemplateType = "EMAIL" | "IN_APP" | "PUSH" | "SMS";
+
+export type NotificationTemplateLanguage = "EN" | "VI";
+
+export type EmailDeliveryStatus = "SENT" | "FAILED" | "PENDING" | "RETRY";
+
+export interface NotificationTemplateResponse {
+  id: string;
+  name: string;
+  type: NotificationTemplateType;
+  language: NotificationTemplateLanguage;
+  subject?: string | null;
+  bodyHtml?: string | null;
+  bodyText: string;
+  variables?: string[] | null;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NotificationTemplateRequest {
+  name: string;
+  type: NotificationTemplateType;
+  language: NotificationTemplateLanguage;
+  subject?: string | null;
+  bodyHtml?: string | null;
+  bodyText: string;
+  variables?: string[] | null;
+  active: boolean;
+}
+
+export interface TemplateFilters {
+  type?: NotificationTemplateType | "ALL";
+  language?: NotificationTemplateLanguage | "ALL";
+  active?: boolean | "ALL";
+  search?: string;
+}
+
+export interface EmailLogFilters {
+  recipientEmail?: string;
+  templateName?: string;
+  status?: EmailDeliveryStatus | "ALL";
+  search?: string;
+}
+
+export interface EmailTestRequest {
+  recipientEmail: string;
+  variables?: Record<string, unknown>;
+}
+
+export interface EmailLogResponse {
+  id: string;
+  notificationId?: string | null;
+  recipientEmail: string;
+  subject: string;
+  templateName: string;
+  status: EmailDeliveryStatus;
+  failureReason?: string | null;
+  retryCount: number;
+  sentAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SendTemplateEmailRequest {
+  sendToAllActive?: boolean;
+  recipientEmails?: string[];
+  variables?: Record<string, unknown>;
+}

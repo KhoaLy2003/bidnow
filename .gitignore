@@ -38,4 +38,10 @@ Thumbs.db
 .agent/
 .gemini/
 
-#Docs
+# Docs
+
+# Custom Ignores
+_backup/
+**/_backup/
+**/.*/
+!/.github/
