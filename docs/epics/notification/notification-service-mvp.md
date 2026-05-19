@@ -1,4 +1,4 @@
-## 📋 Scope Finalized - Notification Service MVP
+## 📋 Scope Finalized - Media Service MVP
 
 ### **A. Channels Implementation**
 
@@ -93,7 +93,7 @@ Message:
 ```
 Service A → Emit Event → Message Broker (RabbitMQ/Kafka)
                                ↓
-                     Notification Service
+                     Media Service
                                ↓
                     ┌─────────┴─────────┐
                     ↓                   ↓
@@ -115,7 +115,7 @@ Admin Dashboard:
 - See failure reason (invalid email, SMTP error, etc.)
 ```
 
-#### **3. Database Schema (Notification Service)**
+#### **3. Database Schema (Media Service)**
 
 **Table: notifications**
 
@@ -180,7 +180,7 @@ Available variables:
 
 ---
 
-### **D. API Endpoints (Notification Service)**
+### **D. API Endpoints (Media Service)**
 
 ```
 # For Users
@@ -247,9 +247,9 @@ PUT    /api/v1/admin/templates/{id}       # Update template
 
 ## 📝 Issues to Create
 
-### **Issue #1: Notification Service - Core Infrastructure**
+### **Issue #1: Media Service - Core Infrastructure**
 
-- Setup Notification Service module
+- Setup Media Service module
 - Database schema (notifications, email_logs, notification_templates)
 - Event listener setup (consume from message broker)
 - WebSocket infrastructure for real-time push

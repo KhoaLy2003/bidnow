@@ -123,7 +123,7 @@ This document describes the database schema for the BidNow auction system. Follo
 
 ---
 
-## 5. Notification Service (`notification_`)
+## 5. Media Service (`media_`)
 **Purpose:** History of user notifications.
 
 ### notification_notifications

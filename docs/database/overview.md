@@ -7,4 +7,4 @@
 - `auction_` - Auction Service
 - `bid_` - Bidding Service
 - `wallet_` - Wallet & Payment Service
-- `notif_` - Notification Service
+- `media_` - Media Service

@@ -37,7 +37,7 @@ spring:
         - id: media-service
           uri: lb://media-service
           predicates:
-            - Path=/api/v1/media/**, /api/v1/admin/templates/**, /api/v1/admin/email-logs/**
+            - Path=/api/v1/media/**, /api/v1/admin/templates/**, /api/v1/admin/email-logs/**, /api/v1/admin/audit-logs
       globalcors:
         cors-configurations:
           "[/**]":

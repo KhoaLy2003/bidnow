@@ -19,22 +19,22 @@ especially for the bidding engine).
 5. **Auction Service**: Handles the lifecycle of auction listings (creation, updates, and closure).
 6. **Bidding Service**: High-performance engine for bid placement and auto-bidding logic.
 7. **Wallet & Payment Service**: Manages user funds, escrow for bids, and transaction history.
-8. **Notification Service**: Handles system alerts and real-time push notifications.
+8. **Media Service**: Handles email notifications, templates, media assets, and audit log storage.
 9. **Common Library**: A shared module containing standardized DTOs, exception handlers, and base JPA entities used
    across all services.
 
 ### Port Mapping
 
-| Service                | Port | Description          |
-|:-----------------------|:-----|:---------------------|
-| `discovery-service`    | 8761 | Eureka Dashboard     |
-| `api-gateway`          | 8080 | Entry point for APIs |
-| `identity-service`     | 8081 | Auth & Identity      |
-| `user-service`         | 8082 | Profile management   |
-| `auction-service`      | 8083 | Auction listings     |
-| `bidding-service`      | 8084 | Bidding engine       |
-| `wallet-service`       | 8085 | Financial ledger     |
-| `notification-service` | 8086 | User notifications   |
+| Service             | Port | Description           |
+|:--------------------|:-----|:----------------------|
+| `discovery-service` | 8761 | Eureka Dashboard      |
+| `api-gateway`       | 8080 | Entry point for APIs  |
+| `identity-service`  | 8081 | Auth & Identity       |
+| `user-service`      | 8082 | Profile management    |
+| `auction-service`   | 8083 | Auction listings      |
+| `bidding-service`   | 8084 | Bidding engine        |
+| `wallet-service`    | 8085 | Financial ledger      |
+| `media-service`     | 8086 | Media & notifications |
 
 ---
 
@@ -86,16 +86,16 @@ and healthy by calling its health endpoint.
 
 ### Health Endpoint Table
 
-| Service                | Health URL                                                                     | Expected Status    |
-|:-----------------------|:-------------------------------------------------------------------------------|:-------------------|
-| `discovery-service`    | [http://localhost:8761/actuator/health](http://localhost:8761/actuator/health) | `{"status": "UP"}` |
-| `api-gateway`          | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | `{"status": "UP"}` |
-| `identity-service`     | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) | `{"status": "UP"}` |
-| `user-service`         | [http://localhost:8082/actuator/health](http://localhost:8082/actuator/health) | `{"status": "UP"}` |
-| `auction-service`      | [http://localhost:8083/actuator/health](http://localhost:8083/actuator/health) | `{"status": "UP"}` |
-| `bidding-service`      | [http://localhost:8084/actuator/health](http://localhost:8084/actuator/health) | `{"status": "UP"}` |
-| `wallet-service`       | [http://localhost:8085/actuator/health](http://localhost:8085/actuator/health) | `{"status": "UP"}` |
-| `notification-service` | [http://localhost:8086/actuator/health](http://localhost:8086/actuator/health) | `{"status": "UP"}` |
+| Service             | Health URL                                                                     | Expected Status    |
+|:--------------------|:-------------------------------------------------------------------------------|:-------------------|
+| `discovery-service` | [http://localhost:8761/actuator/health](http://localhost:8761/actuator/health) | `{"status": "UP"}` |
+| `api-gateway`       | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) | `{"status": "UP"}` |
+| `identity-service`  | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) | `{"status": "UP"}` |
+| `user-service`      | [http://localhost:8082/actuator/health](http://localhost:8082/actuator/health) | `{"status": "UP"}` |
+| `auction-service`   | [http://localhost:8083/actuator/health](http://localhost:8083/actuator/health) | `{"status": "UP"}` |
+| `bidding-service`   | [http://localhost:8084/actuator/health](http://localhost:8084/actuator/health) | `{"status": "UP"}` |
+| `wallet-service`    | [http://localhost:8085/actuator/health](http://localhost:8085/actuator/health) | `{"status": "UP"}` |
+| `media-service`     | [http://localhost:8086/actuator/health](http://localhost:8086/actuator/health) | `{"status": "UP"}` |
 
 ### Verification via Command Line
 

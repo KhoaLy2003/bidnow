@@ -17,6 +17,7 @@ const sidebarItems = [
   { icon: Users, label: 'User Management', href: '/admin/users' },
   { icon: FileText, label: 'Email Templates', href: '/admin/templates' },
   { icon: Mail, label: 'Email Logs', href: '/admin/email-logs' },
+  { icon: History, label: 'Audit Logs', href: '/admin/audit-logs' },
   { icon: History, label: 'Auction Monitoring', href: '/admin/auctions' },
   { icon: Settings, label: 'System Settings', href: '/admin/settings' },
 ]

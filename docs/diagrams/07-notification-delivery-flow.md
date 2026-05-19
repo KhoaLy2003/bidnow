@@ -5,7 +5,7 @@ sequenceDiagram
     autonumber
     participant Src as Source Service (e.g. Bidding, Auction)
     participant MQ as Message Broker (RabbitMQ)
-    participant NS as Notification Service
+    participant NS as Media Service
     participant DB_NS as Notification DB
     participant WS_Server as WebSocket Server (Socket.io)
     participant SMTP as Email Provider (SendGrid/AWS SES)

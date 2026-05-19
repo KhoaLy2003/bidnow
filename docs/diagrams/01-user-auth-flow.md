@@ -11,7 +11,7 @@ sequenceDiagram
     participant DB_ID as Identity DB
     participant DB_US as User DB
     participant MQ as Message Broker (Kafka/RabbitMQ)
-    participant NS as Notification Service
+    participant NS as Media Service
 
     %% Registration Flow
     Note over User, NS: User Registration (Phase 1: Submit Form)

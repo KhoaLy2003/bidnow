@@ -46,7 +46,7 @@
 - Wallet Service receives event and:
   - Refunds deposits to ALL bidders who participated
   - Does NOT penalize the seller (admin cancellation is not seller's fault)
-- Notification Service sends:
+- Media Service sends:
   - Email to seller: "Your auction was cancelled by admin - Reason: [reason]"
   - Email to all bidders: "Auction you participated in was cancelled - Your deposit has been refunded"
   - In-app notification to seller and bidders
@@ -143,7 +143,7 @@ GET    /api/v1/admin/auctions/flagged         - List flagged auctions (future)
 
 - ✅ Identity Service: Admin role validation
 - ✅ Wallet Service: Must listen to `AUCTION_CANCELLED` events
-- ✅ Notification Service: Must listen to `AUCTION_CANCELLED` events
+- ✅ Media Service: Must listen to `AUCTION_CANCELLED` events
 
 ---
 
@@ -176,7 +176,7 @@ GET    /api/v1/admin/auctions/flagged         - List flagged auctions (future)
 
 - ⚠️ Bidding Service: Must emit `BID_PLACED` events (for anti-sniping)
 - ⚠️ Wallet Service: Must consume `AUCTION_ENDED`, `AUCTION_CANCELLED` events (for refunds)
-- ⚠️ Notification Service: Must consume all auction events (for emails/WebSockets)
+- ⚠️ Media Service: Must consume all auction events (for emails/WebSockets)
 
 ---
 

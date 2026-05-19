@@ -19,7 +19,7 @@ Dựa trên functional requirements, tôi thấy Auction Service cần handle:
 - **Đóng auction tự động** (Auto-close)
   - Scheduled job kiểm tra end time
   - Xác định winner (highest bidder)
-  - Trigger events cho Wallet Service (refund losers) và Notification Service
+  - Trigger events cho Wallet Service (refund losers) và Media Service
 
 ### 2. **Anti-Sniping Logic**
 
@@ -49,7 +49,7 @@ Dựa trên functional requirements, tôi thấy Auction Service cần handle:
 
 - **Bidding Service**: Nhận events về bids mới → update current price, check anti-sniping
 - **Wallet Service**: Validate seller có đủ quyền tạo auction không? (có thể cần deposit từ seller)
-- **Notification Service**: Emit events khi auction ends, cancelled, etc.
+- **Media Service**: Emit events khi auction ends, cancelled, etc.
 - **Identity Service**: Validate ownership (user chỉ được manage auctions của mình)
 
 ---

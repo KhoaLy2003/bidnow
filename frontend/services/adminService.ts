@@ -1,5 +1,7 @@
 import { type ApiResponse, type PageResponse } from "@/types/api";
 import {
+  AuditLogFilters,
+  AuditLogResponse,
   type AdminUserProfileResponse,
   type AdminUserResponse,
   type AdminUserSortField,
@@ -230,5 +232,46 @@ export const adminService = {
     );
 
     return parseResponse<PageResponse<EmailLogResponse>>(response);
+  },
+
+  async getAuditLogs(
+    accessToken: string,
+    filters: AuditLogFilters = {},
+    page = 0,
+    size = 20,
+    sortBy = "createdAt",
+    sortDir: SortDirection = "desc"
+  ): Promise<PageResponse<AuditLogResponse>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sortBy,
+      sortDir,
+    });
+
+    if (filters.actorEmail?.trim()) {
+      params.append("actorEmail", filters.actorEmail.trim());
+    }
+
+    if (filters.action) {
+      params.append("action", filters.action);
+    }
+
+    if (filters.fromDate) {
+      params.append("fromDate", filters.fromDate);
+    }
+
+    if (filters.toDate) {
+      params.append("toDate", filters.toDate);
+    }
+
+    const response = await fetch(
+      `${API_URL}/api/v1/admin/audit-logs?${params.toString()}`,
+      {
+        headers: authHeaders(accessToken),
+      }
+    );
+
+    return parseResponse<PageResponse<AuditLogResponse>>(response);
   },
 };

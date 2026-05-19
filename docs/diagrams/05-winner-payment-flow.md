@@ -10,7 +10,7 @@ sequenceDiagram
     participant DB_WS as Wallet DB
     participant AS as Auction Service
     participant MQ as Message Broker
-    participant NS as Notification Service
+    participant NS as Media Service
 
     Note over Winner, NS: Winner Payment Flow (within 48h deadline)
     
