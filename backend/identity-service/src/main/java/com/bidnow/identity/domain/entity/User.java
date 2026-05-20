@@ -1,5 +1,6 @@
 package com.bidnow.identity.domain.entity;
 
+import com.bidnow.common.annotation.MaskPii;
 import com.bidnow.common.entity.BaseEntity;
 import com.bidnow.common.enums.Role;
 import com.bidnow.identity.domain.enums.AccountStatus;
@@ -36,6 +37,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @MaskPii
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -54,6 +56,7 @@ public class User extends BaseEntity {
     @Column(name = "status_reason")
     private String statusReason;
 
+    @MaskPii
     @Column(name = "verification_otp", length = 6)
     private String verificationOtp;
 
@@ -64,9 +67,11 @@ public class User extends BaseEntity {
     @Builder.Default
     private Integer otpFailedAttempts = 0;
 
+    @MaskPii
     @Column(name = "email_verification_token")
     private String emailVerificationToken;
 
+    @MaskPii
     @Column(name = "password_reset_token")
     private String passwordResetToken;
 
@@ -84,4 +89,17 @@ public class User extends BaseEntity {
 
     @Column(name = "is_active")
     private Boolean isActive;
+
+    private User cloneUser(User user) {
+        return User.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .isEmailVerified(user.getIsEmailVerified())
+                .isActive(user.getIsActive())
+                .accountStatus(user.getAccountStatus())
+                .verificationOtp(user.getVerificationOtp())
+                .otpExpiresAt(user.getOtpExpiresAt())
+                .otpFailedAttempts(user.getOtpFailedAttempts())
+                .build();
+    }
 }

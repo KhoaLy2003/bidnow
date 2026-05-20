@@ -1,12 +1,15 @@
 package com.bidnow.identity.service.impl;
 
+import com.bidnow.common.annotation.Audit;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.event.UserRegisteredEvent;
 import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
+import com.bidnow.common.enums.AuditAction;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.exception.UnauthorizedException;
+import com.bidnow.common.util.AuditContextHolder;
 import com.bidnow.common.util.StringUtils;
 import com.bidnow.identity.domain.entity.RefreshToken;
 import com.bidnow.identity.domain.entity.User;
@@ -67,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.CREATE, entityType = "User", reason = "User registered")
     public RegisterResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email already registered", ErrorCodes.INVALID_INPUT);
@@ -89,6 +93,8 @@ public class AuthServiceImpl implements AuthService {
 
         user = userRepository.save(user);
 
+        AuditContextHolder.setNewState(user);
+
         kafkaProducer.publishUserVerificationRequestedEvent(
                 UserVerificationRequestedEvent.builder()
                         .userId(user.getId())
@@ -109,6 +115,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.STATE_CHANGE, entityType = "User", reason = "User email verified")
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCodes.NOT_FOUND));
@@ -139,6 +146,17 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Invalid OTP", ErrorCodes.OTP_INVALID);
         }
 
+        // Snapshot old state before modifications for audit delta
+        AuditContextHolder.setOldState(User.builder()
+                .id(user.getId())
+                .isEmailVerified(user.getIsEmailVerified())
+                .isActive(user.getIsActive())
+                .accountStatus(user.getAccountStatus())
+                .verificationOtp(user.getVerificationOtp())
+                .otpExpiresAt(user.getOtpExpiresAt())
+                .otpFailedAttempts(user.getOtpFailedAttempts())
+                .build());
+
         // Scenario 1: Valid OTP — activate account and clear OTP fields
         user.setIsEmailVerified(true);
         user.setIsActive(true);
@@ -147,6 +165,7 @@ public class AuthServiceImpl implements AuthService {
         user.setOtpExpiresAt(null);
         user.setOtpFailedAttempts(0);
         user = userRepository.save(user);
+        AuditContextHolder.setNewState(user);
 
         // Synchronously create default profile in User Service
         userServiceClient.createUserProfile(CreateUserProfileRequest.builder()
@@ -154,7 +173,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .build());
 
-        // Emit USER_REGISTERED event (triggers Welcome Email in Notification Service)
+        // Emit USER_REGISTERED event (triggers Welcome Email in Media Service)
         kafkaProducer.publishUserRegisteredEvent(
                 UserRegisteredEvent.builder()
                         .userId(user.getId())
@@ -173,6 +192,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.STATE_CHANGE, entityType = "User", reason = "OTP resent")
     public ResendOtpResponse resendOtp(ResendOtpRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCodes.NOT_FOUND));
@@ -192,10 +212,20 @@ public class AuthServiceImpl implements AuthService {
         String otp = StringUtils.generateOtp();
         LocalDateTime otpExpiresAt = LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES);
 
+        AuditContextHolder.setOldState(User.builder()
+                .isEmailVerified(user.getIsEmailVerified())
+                .isActive(user.getIsActive())
+                .accountStatus(user.getAccountStatus())
+                .verificationOtp(user.getVerificationOtp())
+                .otpExpiresAt(user.getOtpExpiresAt())
+                .otpFailedAttempts(user.getOtpFailedAttempts())
+                .build());
+
         user.setVerificationOtp(otp);
         user.setOtpExpiresAt(otpExpiresAt);
-        user.setOtpFailedAttempts(0); // reset failed counter on resend
-        userRepository.save(user);
+        user.setOtpFailedAttempts(0);
+        user = userRepository.save(user);
+        AuditContextHolder.setNewState(user);
 
         kafkaProducer.publishUserVerificationRequestedEvent(
                 UserVerificationRequestedEvent.builder()
@@ -220,6 +250,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.LOGIN, entityType = "User", reason = "User logged in", captureDelta = false)
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials", ErrorCodes.UNAUTHORIZED));
@@ -247,10 +278,17 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Invalid credentials", ErrorCodes.UNAUTHORIZED);
         }
 
+        AuditContextHolder.setOldState(User.builder()
+                .lastLoginAt(user.getLastLoginAt())
+                .failedLoginAttempts(user.getFailedLoginAttempts())
+                .lockedUntil(user.getLockedUntil())
+                .build());
+
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
+        AuditContextHolder.setNewState(user);
 
         String accessToken = jwtService.generateToken(user);
         String rawRefreshToken = UUID.randomUUID().toString();
@@ -325,6 +363,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.LOGOUT, entityType = "User", reason = "User logged out", captureDelta = false)
     public void logout(String rawRefreshToken) {
         String tokenHash = DigestUtils.md5DigestAsHex(rawRefreshToken.getBytes());
         refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {

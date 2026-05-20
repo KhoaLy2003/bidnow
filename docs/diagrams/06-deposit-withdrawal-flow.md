@@ -9,7 +9,7 @@ sequenceDiagram
     participant WS as Wallet Service
     participant DB_WS as Wallet DB
     participant VNPay as VNPay Gateway
-    participant NS as Notification Service
+    participant NS as Media Service
 
     Note over User, NS: Deposit (Top-up) Flow
     

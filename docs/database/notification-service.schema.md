@@ -1,4 +1,4 @@
-## 6. Notification Service Tables
+## 6. Media Service Tables
 
 ### notif_notifications
 

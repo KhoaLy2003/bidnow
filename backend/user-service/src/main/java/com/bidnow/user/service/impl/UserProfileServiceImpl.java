@@ -3,10 +3,13 @@
  */
 package com.bidnow.user.service.impl;
 
+import com.bidnow.common.annotation.Audit;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
+import com.bidnow.common.enums.AuditAction;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.common.util.AuditContextHolder;
 import com.bidnow.user.domain.entity.UserPreferences;
 import com.bidnow.user.domain.entity.UserProfile;
 import com.bidnow.user.domain.entity.UserRole;
@@ -38,6 +41,7 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.CREATE, entityType = "UserProfile", reason = "User profile created")
     public UserProfileResponse createUserProfile(CreateUserProfileRequest request) {
         if (userProfileRepository.existsByUserId(request.getUserId())) {
             throw new BadRequestException("User profile already exists", ErrorCodes.INVALID_INPUT);
@@ -47,6 +51,7 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .userId(request.getUserId())
                 .build();
         profile = userProfileRepository.save(profile);
+        AuditContextHolder.setNewState(profile);
 
         UserRole role = UserRole.builder()
                 .userId(request.getUserId())
@@ -82,21 +87,32 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     @Transactional(readOnly = true)
     public UserProfileResponse getMyProfile(UUID userId) {
-        // Delegates to the same lookup — the distinction is that the caller
-        // (controller) resolves userId from the trusted X-User-Id header,
-        // not from a client-supplied path variable.
         return getUserProfile(userId);
     }
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.UPDATE, entityType = "UserProfile", reason = "User profile updated")
     public UserProfileResponse updateMyProfile(UUID userId, UpdateUserProfileRequest request) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new NotFoundException("User profile not found", ErrorCodes.NOT_FOUND));
 
+        AuditContextHolder.setOldState(UserProfile.builder()
+                .displayName(profile.getDisplayName())
+                .avatarUrl(profile.getAvatarUrl())
+                .phoneNumber(profile.getPhoneNumber())
+                .address(profile.getAddress())
+                .city(profile.getCity())
+                .country(profile.getCountry())
+                .postalCode(profile.getPostalCode())
+                .bio(profile.getBio())
+                .build());
+
         userProfileMapper.updateProfileFromRequest(request, profile);
 
         userProfileRepository.save(profile);
+
+        AuditContextHolder.setNewState(profile);
 
         List<UserRole> roles = userRoleRepository.findByUserId(userId);
         UserPreferences preferences = userPreferencesRepository.findByUserId(userId).orElse(null);

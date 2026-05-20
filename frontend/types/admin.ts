@@ -111,3 +111,43 @@ export interface SendTemplateEmailRequest {
   recipientEmails?: string[];
   variables?: Record<string, unknown>;
 }
+
+export type AuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "STATE_CHANGE"
+  | "LOGIN"
+  | "LOGOUT"
+  | "ADMIN_ACTION";
+
+export interface AuditLogDelta {
+  [key: string]: {
+    old: any;
+    new: any;
+  };
+}
+
+export interface AuditLogResponse {
+  id: string;
+  correlationId?: string;
+  entityType: string;
+  entityId: string;
+  action: AuditAction;
+  actorId?: string;
+  actorType?: string;
+  actorEmail?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  delta?: AuditLogDelta;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface AuditLogFilters {
+  actorEmail?: string;
+  action?: AuditAction;
+  fromDate?: string;
+  toDate?: string;
+}

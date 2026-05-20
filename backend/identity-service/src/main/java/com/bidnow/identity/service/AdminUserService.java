@@ -1,8 +1,11 @@
 package com.bidnow.identity.service;
 
+import com.bidnow.common.annotation.Audit;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
+import com.bidnow.common.enums.AuditAction;
 import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.common.util.AuditContextHolder;
 import com.bidnow.common.util.PaginationUtils;
 import com.bidnow.identity.domain.entity.User;
 import com.bidnow.identity.dto.request.UpdateUserStatusRequest;
@@ -39,19 +42,23 @@ public class AdminUserService {
     }
 
     @Transactional
+    @Audit(action = AuditAction.ADMIN_ACTION, entityType = "User", reason = "Admin changed user status")
     public AdminUserResponse updateUserStatus(UUID targetUserId, UUID adminId, UpdateUserStatusRequest request) {
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + targetUserId, ErrorCodes.NOT_FOUND));
+
+        AuditContextHolder.setOldState(User.builder()
+                .accountStatus(user.getAccountStatus())
+                .statusReason(user.getStatusReason())
+                .build());
 
         log.info("Admin {} updating status of user {} to {}", adminId, targetUserId, request.getStatus());
 
         user.setAccountStatus(request.getStatus());
         user.setStatusReason(request.getReason());
 
-        // If banned or suspended, we might want to revoke tokens, but for now we just update status
-        // and let the filter handle the status check on next request.
-
         userRepository.save(user);
+        AuditContextHolder.setNewState(user);
 
         return userMapper.toAdminResponse(user);
     }

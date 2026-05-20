@@ -41,7 +41,7 @@
 4. **Auction Service**: Handles the lifecycle of auction listings (Creation, Active, Closure). Manage "Buy It Now" logic.
 5. **Bidding Service**: The high-performance engine for placing bids, calculating auto-bids, and managing the "Anti-sniping" time extensions.
 6. **Wallet & Payment Service**: Manages the internal wallet, escrow (deposits), and final transaction processing.
-7. **Notification Service**: Listens to system events (from Messaging) and pushes updates via WebSockets or Email.
+7. **Media Service**: Handles email notifications, templates, media assets, and audit log storage.
 
 ---
 
@@ -53,7 +53,7 @@
 2. **Gateway** → Validates JWT (via Identity Service) and routes to the target microservice.
 3. **Microservice** → Executes business logic and persists data to its local **PostgreSQL** instance.
 4. **Events** → Service emits an event (e.g., `BID_PLACED`) to the **Message Broker**.
-5. **Consumers** → **Notification Service** picks up the event and broadcasts it via **WebSocket**.
+5. **Consumers** → **Media Service** picks up the event and broadcasts it via **WebSocket**.
 
 ### Real-time Communication
 
@@ -81,7 +81,7 @@ graph TD
         Auction[Auction Service]
         Bidding[Bidding Service]
         Wallet[Wallet Service]
-        Notify[Notification Service]
+        Notify[Media Service]
     end
 
     subgraph Infrastructure [Shared Infrastructure]
@@ -95,7 +95,7 @@ graph TD
         DB_Auc[(Auction DB)]
         DB_Bid[(Bidding DB)]
         DB_Wal[(Wallet DB)]
-        DB_Not[(Notification DB)]
+        DB_Not[(Media DB)]
     end
 
     %% Connections

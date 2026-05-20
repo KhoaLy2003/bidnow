@@ -163,14 +163,14 @@ services:
       discovery-service:
         condition: service_healthy
 
-  notification-service:
+  media-service:
     build:
       context: ./backend
-      dockerfile: notification-service/Dockerfile
-    container_name: bidnow-notification
+      dockerfile: media-service/Dockerfile
+    container_name: bidnow-media
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/notification_db
+      - DB_URL=jdbc:postgresql://db:5432/media_db
       - DB_USERNAME=bidnow
       - DB_PASSWORD=bidnow
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -195,6 +195,18 @@ services:
       - NEXT_PUBLIC_API_URL=http://api-gateway:8080
     depends_on:
       - api-gateway
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: bidnow-kafka-ui
+    ports:
+      - "8090:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=bidnow-kafka
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      kafka:
+        condition: service_started
 
   # --- TOOLS ---
   mailpit:

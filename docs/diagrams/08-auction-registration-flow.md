@@ -13,7 +13,7 @@ sequenceDiagram
     participant DB_AS as Auction DB
     participant DB_WS as Wallet DB
     participant MQ as Message Broker
-    participant NS as Notification Service
+    participant NS as Media Service
 
     Note over User, NS: Registration & Deposit Lock Process
     

@@ -1,8 +1,8 @@
 package com.bidnow.identity.security;
 
 import com.bidnow.common.constant.ApplicationConstants;
-import com.bidnow.identity.domain.entity.User;
-import com.bidnow.identity.repository.UserRepository;
+import com.bidnow.common.dto.UserDto;
+import com.bidnow.identity.service.InternalUserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,7 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserRepository userRepository;
+    private final InternalUserService internalUserService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String userId = jwtService.extractUserId(token);
-        User user = userRepository.findById(UUID.fromString(userId)).orElse(null);
+        UserDto user = internalUserService.getUserById(UUID.fromString(userId)).orElse(null);
 
         if (user != null && Boolean.TRUE.equals(user.getIsActive())
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
