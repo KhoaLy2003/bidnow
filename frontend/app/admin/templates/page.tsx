@@ -266,7 +266,7 @@ export default function AdminTemplatesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Email Templates</h1>
+          <h1 className="text-2xl font-medium">Email Templates</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage existing multilingual email templates and send test deliveries.
           </p>

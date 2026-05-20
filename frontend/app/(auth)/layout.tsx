@@ -6,8 +6,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-bg-elevated)] px-4">
       <Link href="/" className="mb-8 flex items-center gap-2">
         <Gavel className="size-6 text-[var(--color-text-brand)]" />
-        <span className="text-xl font-semibold">
-          Bid<span className="text-[var(--color-text-brand)] font-bold">Now</span>
+        <span className="text-xl font-medium">
+          Bid<span className="text-[var(--color-text-brand)] font-medium">Now</span>
         </span>
       </Link>
       {children}

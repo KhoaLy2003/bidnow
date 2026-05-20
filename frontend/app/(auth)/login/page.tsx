@@ -44,9 +44,9 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="rounded-xl border bg-card p-8 shadow-sm flex flex-col gap-6">
+      <div className="rounded-xl border bg-card p-8 flex flex-col gap-6">
         <div className="text-center">
-          <h1 className="font-display font-bold text-[length:var(--font-size-xl)]">Welcome back</h1>
+          <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">Welcome back</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to your account</p>
         </div>
 

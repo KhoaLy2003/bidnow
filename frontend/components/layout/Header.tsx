@@ -53,17 +53,17 @@ export function Header() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter,box-shadow] duration-150",
-        scrolled && "backdrop-blur-sm shadow-sm",
+        "sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]",
+        scrolled && "backdrop-blur-sm",
       )}
     >
       <div className="mx-auto flex h-full max-w-[var(--container-xl)] items-center gap-4 px-4">
         {/* Wordmark */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <Gavel className="size-5 text-[var(--color-text-brand)]" />
-          <span className="hidden font-semibold sm:inline-block">
+          <span className="hidden font-medium sm:inline-block">
             Bid
-            <span className="text-[var(--color-text-brand)] font-bold">
+            <span className="text-[var(--color-text-brand)] font-medium">
               Now
             </span>
           </span>
@@ -121,7 +121,7 @@ export function Header() {
                     side="bottom"
                     align="end"
                     sideOffset={8}
-                    className="w-64 p-2 shadow-xl border-border/50 backdrop-blur-md"
+                    className="w-64 p-2 border-border/50 backdrop-blur-md"
                   >
                     <DropdownMenuGroup>
                       <DropdownMenuLabel className="p-2 font-normal">
@@ -133,7 +133,7 @@ export function Header() {
                               size="lg"
                             />
                             <div className="flex flex-col min-w-0">
-                              <p className="font-semibold text-sm truncate">
+                              <p className="font-medium text-sm truncate">
                                 {user?.email?.split("@")[0]}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
@@ -142,10 +142,10 @@ export function Header() {
                             </div>
                           </div>
                           <div className="bg-accent/50 rounded-md p-2 flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            <span className="text-[10px] font-medium uppercase text-muted-foreground">
                               Status
                             </span>
-                            <span className="text-[10px] font-bold uppercase text-green-500">
+                            <span className="text-[10px] font-medium uppercase text-[var(--color-success-default)]">
                               Verified
                             </span>
                           </div>

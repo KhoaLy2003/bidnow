@@ -113,7 +113,7 @@ export function BidForm({
         {/* Collapsible max-bid input */}
         <div
           className={cn(
-            'overflow-hidden transition-all duration-250',
+            'overflow-hidden transition-[max-height,opacity] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]',
             autoBid ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0',
           )}
         >

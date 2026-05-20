@@ -59,7 +59,7 @@ export function BidHistory({ items, onLoadMore, hasMore, className }: BidHistory
                 </div>
                 <span
                   className={cn(
-                    'font-mono font-semibold text-sm shrink-0',
+                    'font-mono font-medium text-sm shrink-0',
                     item.isWinning && 'text-[var(--color-success-text)]',
                   )}
                 >

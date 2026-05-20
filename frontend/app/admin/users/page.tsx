@@ -250,7 +250,7 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">User Management</h1>
+          <h1 className="text-2xl font-medium text-foreground">User Management</h1>
           <p className="text-sm text-muted-foreground">
             Monitor and moderate {totalElements} registered users on the platform.
           </p>
@@ -389,7 +389,7 @@ export default function UserManagementPage() {
                   >
                     <TableCell className="px-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex size-10 items-center justify-center rounded-full border bg-accent text-sm font-semibold text-accent-foreground">
+                        <div className="flex size-10 items-center justify-center rounded-full border bg-accent text-sm font-medium text-accent-foreground">
                           {user.email.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -500,11 +500,11 @@ export default function UserManagementPage() {
             <ScrollArea className="max-h-[65vh] pr-3">
               <div className="space-y-6">
                 <div className="flex items-start gap-4 rounded-lg border p-4">
-                  <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-semibold text-accent-foreground">
+                  <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-medium text-accent-foreground">
                     {(profileUser?.email ?? '?').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
-                    <h3 className="truncate text-lg font-semibold">
+                    <h3 className="truncate text-lg font-medium">
                       {userDetails?.displayName || profileUser?.email?.split('@')[0] || 'Unknown user'}
                     </h3>
                     <p className="flex items-center gap-2 truncate text-sm text-muted-foreground">
@@ -584,7 +584,7 @@ export default function UserManagementPage() {
 
           <div className="space-y-5">
             <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex size-10 items-center justify-center rounded-full bg-muted font-semibold">
+              <div className="flex size-10 items-center justify-center rounded-full bg-muted font-medium">
                 {selectedUser?.email.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">

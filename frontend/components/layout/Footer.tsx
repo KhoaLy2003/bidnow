@@ -30,8 +30,8 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
             <Link href="/" className="flex items-center gap-2">
               <Gavel className="size-5 text-[var(--color-text-brand)]" />
-              <span className="text-base font-semibold">
-                Bid<span className="text-[var(--color-text-brand)] font-bold">Now</span>
+              <span className="text-base font-medium">
+                Bid<span className="text-[var(--color-text-brand)] font-medium">Now</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
@@ -42,7 +42,7 @@ export function Footer() {
           {/* Link columns */}
           {Object.entries(LINKS).map(([section, links]) => (
             <div key={section} className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-medium uppercase text-muted-foreground">
                 {section}
               </p>
               <ul className="flex flex-col gap-2">

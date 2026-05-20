@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[background-color,border-color,color] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
@@ -21,19 +21,19 @@ const badgeVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         // Auction state variants
         active:
-          "bg-auction-active-bg text-auction-active-text border-auction-active-border font-semibold tracking-wide uppercase",
+          "bg-auction-active-bg text-auction-active-text border-auction-active-border font-medium uppercase",
         "ending-soon":
-          "bg-auction-ending-bg text-auction-ending-text border-auction-ending-border font-semibold tracking-wide uppercase",
+          "bg-auction-ending-bg text-auction-ending-text border-auction-ending-border font-medium uppercase",
         critical:
-          "bg-auction-critical-bg text-auction-critical-text border-auction-critical-border font-semibold tracking-wide uppercase",
+          "bg-auction-critical-bg text-auction-critical-text border-auction-critical-border font-medium uppercase",
         closed:
-          "bg-auction-closed-bg text-auction-closed-text border-auction-closed-border font-semibold tracking-wide uppercase",
+          "bg-auction-closed-bg text-auction-closed-text border-auction-closed-border font-medium uppercase",
         won:
-          "bg-auction-won-bg text-auction-won-text border-auction-won-border font-semibold tracking-wide uppercase",
+          "bg-auction-won-bg text-auction-won-text border-auction-won-border font-medium uppercase",
         lost:
-          "bg-auction-lost-bg text-auction-lost-text border-auction-lost-border font-semibold tracking-wide uppercase",
+          "bg-auction-lost-bg text-auction-lost-text border-auction-lost-border font-medium uppercase",
         outbid:
-          "bg-auction-outbid-bg text-auction-outbid-text border-auction-outbid-border font-semibold tracking-wide uppercase",
+          "bg-auction-outbid-bg text-auction-outbid-text border-auction-outbid-border font-medium uppercase",
       },
     },
     defaultVariants: {

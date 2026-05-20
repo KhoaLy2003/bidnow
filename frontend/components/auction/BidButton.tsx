@@ -23,7 +23,7 @@ export function BidButton({
   return (
     <Button
       variant="brand"
-      className={cn('h-12 w-full font-semibold text-base', className)}
+      className={cn('h-12 w-full font-medium text-base', className)}
       disabled={disabled || isLoading}
       onClick={onClick}
     >

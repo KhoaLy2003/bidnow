@@ -18,9 +18,9 @@ const SIZE_CLASSES = {
 } as const
 
 const STATE_CLASSES = {
-  normal:   'font-mono font-bold text-muted-foreground',
-  warning:  'font-mono font-bold text-[var(--color-warning-text)] bg-[var(--color-auction-ending-bg)] rounded-full px-2 py-0.5',
-  critical: 'font-mono font-extrabold text-[var(--color-danger-text)] bg-[var(--color-auction-critical-bg)] border-2 border-[var(--color-auction-critical-border)] rounded-full px-2 py-0.5',
+  normal:   'font-mono font-medium text-muted-foreground',
+  warning:  'font-mono font-medium text-[var(--color-warning-text)] bg-[var(--color-auction-ending-bg)] rounded-full px-2 py-0.5',
+  critical: 'font-mono font-medium text-[var(--color-danger-text)] bg-[var(--color-auction-critical-bg)] border-2 border-[var(--color-auction-critical-border)] rounded-full px-2 py-0.5',
 } as const
 
 export function CountdownTimer({ endsAt, size = 'md', className }: CountdownTimerProps) {

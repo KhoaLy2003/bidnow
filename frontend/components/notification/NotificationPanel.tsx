@@ -29,7 +29,7 @@ export function NotificationPanel() {
           <Bell className="size-4" />
           <span className="font-medium text-sm">Notifications</span>
           {unreadCount > 0 && (
-            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -66,7 +66,7 @@ export function NotificationPanel() {
                   )}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className={cn('text-sm', !n.isRead && 'font-semibold')}>
+                  <p className={cn('text-sm', !n.isRead && 'font-medium')}>
                     {n.title}
                   </p>
                   <p className="text-xs text-muted-foreground line-clamp-2">

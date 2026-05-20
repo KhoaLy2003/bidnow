@@ -47,7 +47,7 @@ export function CurrentBidDisplay({
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <span className="text-xs tracking-widest text-muted-foreground uppercase font-medium">
+      <span className="text-xs text-muted-foreground uppercase font-medium">
         Current Bid
       </span>
 
@@ -64,7 +64,7 @@ export function CurrentBidDisplay({
           <span
             aria-hidden
             className={cn(
-              'absolute inset-0 font-mono font-bold leading-none',
+              'absolute inset-0 font-mono font-medium leading-none',
               PRICE_SIZE[size],
               '[animation:price-roll-out_250ms_ease-in_forwards]',
             )}
@@ -75,7 +75,7 @@ export function CurrentBidDisplay({
         {/* Current price */}
         <span
           className={cn(
-            'block font-mono font-bold leading-none',
+            'block font-mono font-medium leading-none',
             PRICE_SIZE[size],
             animating && '[animation:price-roll-in_250ms_ease-out_forwards]',
           )}

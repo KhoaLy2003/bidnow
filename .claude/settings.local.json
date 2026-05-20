@@ -7,7 +7,17 @@
       "mcp__stitch__generate_screen_from_text",
       "mcp__stitch__list_screens",
       "mcp__stitch__get_project",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "mcp__github__list_issue_types",
+      "mcp__github__issue_read",
+      "mcp__github__issue_write",
+      "Bash(Get-ChildItem -Path \"F:\\\\Khoa-TonyRay\\\\learning\\\\projects\\\\bidnow\\\\frontend\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName)",
+      "Bash(Select-String -Path frontend\\\\components\\\\ui\\\\badge.tsx -Pattern \"font-semibold|tracking-wide|transition-all\")",
+      "Bash(npx tsc *)"
     ]
+  },
+  "enabledPlugins": {
+    "superpowers@superpowers-dev": true
   }
 }
