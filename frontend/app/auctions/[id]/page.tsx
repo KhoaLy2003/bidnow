@@ -53,7 +53,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
 
             <div className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
-                <h1 className="font-display font-bold text-[length:var(--font-size-2xl)] leading-snug">
+                <h1 className="font-display font-medium text-[length:var(--font-size-2xl)] leading-snug">
                   {auction.title}
                 </h1>
                 <StatusBadge status={status} className="shrink-0 mt-1" />
@@ -65,7 +65,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
 
             {/* Bid history */}
             <div className="flex flex-col gap-3">
-              <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+              <h2 className="font-medium text-sm uppercase text-muted-foreground">
                 Bid History ({auction.totalBids})
               </h2>
               <BidHistory items={bids} />

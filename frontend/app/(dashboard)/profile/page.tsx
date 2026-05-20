@@ -166,7 +166,7 @@ export default function ProfilePage() {
                   name={displayName}
                   avatarUrl={formData.avatarUrl || profile?.avatarUrl || undefined}
                   size="xl"
-                  className={`size-32 items-center justify-center transition-all ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-75'}`}
+                  className={`size-32 items-center justify-center transition-opacity duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-75'}`}
                 />
                 <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                   {isUploadingAvatar ? (
@@ -196,7 +196,7 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <>
-                    <h2 className="font-bold text-xl flex items-center justify-center gap-2">
+                    <h2 className="font-medium text-xl flex items-center justify-center gap-2">
                       {displayName}
                       {isVerified && <Shield className="size-5 text-[var(--color-text-brand)]" />}
                     </h2>
@@ -333,7 +333,7 @@ function PageHeader() {
   return (
     <div className="flex items-center gap-2">
       <User className="size-6 text-[var(--color-text-brand)]" />
-      <h1 className="font-display font-bold text-[length:var(--font-size-3xl)] tracking-tight">
+      <h1 className="font-display font-medium text-[length:var(--font-size-3xl)]">
         My Profile
       </h1>
     </div>
@@ -347,7 +347,7 @@ function InfoItem({ icon, label, value, className }: { icon: React.ReactNode, la
         {icon}
       </div>
       <div>
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase">{label}</p>
         <p className="text-sm font-medium mt-0.5">{value || "—"}</p>
       </div>
     </div>
@@ -359,7 +359,7 @@ function PreferenceItem({ icon, label, value }: { icon: React.ReactNode; label: 
     <div className="flex flex-col gap-3 p-4 rounded-xl border bg-card/50">
       <div className="flex items-center gap-2 text-muted-foreground">
         {icon}
-        <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-medium uppercase">{label}</span>
       </div>
       <span className="font-medium text-base">
         {value}

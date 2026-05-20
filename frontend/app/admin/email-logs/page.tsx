@@ -85,7 +85,7 @@ export default function AdminEmailLogsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Email Logs</h1>
+        <h1 className="text-2xl font-medium">Email Logs</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Monitor email delivery records produced by the media service.
         </p>

@@ -30,7 +30,7 @@ export default function MyBidsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2">
         <ListOrdered className="size-5 text-[var(--color-text-brand)]" />
-        <h1 className="font-display font-bold text-[length:var(--font-size-2xl)]">My Bids</h1>
+        <h1 className="font-display font-medium text-[length:var(--font-size-2xl)]">My Bids</h1>
       </div>
       <AuctionGrid auctions={MY_BIDS} />
     </div>

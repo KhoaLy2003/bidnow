@@ -15,10 +15,10 @@ export function WalletPanel() {
     <>
       {/* Balance card */}
       <div className="mx-4 rounded-xl bg-[var(--color-wallet-bg)] p-4 flex flex-col gap-1">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+        <p className="text-xs text-muted-foreground uppercase font-medium">
           Available balance
         </p>
-        <p className="font-mono font-bold text-[length:var(--font-size-price-md)] text-[var(--color-wallet-text)]">
+        <p className="font-mono font-medium text-[length:var(--font-size-price-md)] text-[var(--color-wallet-text)]">
           {formatCurrency(available)}
         </p>
         {held > 0 && (

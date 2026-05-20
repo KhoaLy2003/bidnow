@@ -39,6 +39,7 @@ Thumbs.db
 .gemini/
 
 # Docs
+docs/superpowers/
 
 # Custom Ignores
 _backup/

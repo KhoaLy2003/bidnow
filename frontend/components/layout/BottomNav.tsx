@@ -36,7 +36,7 @@ export function BottomNav() {
               <Button
                 variant="brand"
                 size="icon"
-                className="rounded-full -mt-4 [box-shadow:var(--shadow-brand)]"
+                className="rounded-full -mt-4"
                 aria-label={label}
               >
                 <Icon className="size-5" />
