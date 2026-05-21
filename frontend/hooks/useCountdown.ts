@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { deriveTimerState, type TimerState } from '@/lib/auction-utils'
+import type { TimerState } from '@/lib/auction-utils'
+
+const WARNING_THRESHOLD_SECONDS  = 5 * 60
+const CRITICAL_THRESHOLD_SECONDS = 60
 
 export function useCountdown(endsAt: Date): {
   secondsLeft: number
@@ -13,16 +16,23 @@ export function useCountdown(endsAt: Date): {
   )
 
   useEffect(() => {
-    const tick = () =>
-      setSecondsLeft(Math.max(0, Math.floor((endsAt.getTime() - Date.now()) / 1000)))
-
-    const id = setInterval(tick, 1000)
+    const id = setInterval(() => {
+      const s = Math.max(0, Math.floor((endsAt.getTime() - Date.now()) / 1000))
+      setSecondsLeft(s)
+      if (s === 0) clearInterval(id)
+    }, 1000)
     return () => clearInterval(id)
   }, [endsAt])
 
+  const timerState: TimerState =
+    secondsLeft <= 0                          ? 'normal'
+    : secondsLeft <= CRITICAL_THRESHOLD_SECONDS ? 'critical'
+    : secondsLeft <= WARNING_THRESHOLD_SECONDS  ? 'warning'
+    : 'normal'
+
   return {
     secondsLeft,
-    timerState: deriveTimerState(endsAt),
-    isExpired:  secondsLeft <= 0,
+    timerState,
+    isExpired: secondsLeft <= 0,
   }
 }

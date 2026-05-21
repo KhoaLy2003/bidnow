@@ -17,6 +17,10 @@ public class ErrorCodes {
     public static final String ACCOUNT_NOT_PENDING = "ACCOUNT_NOT_PENDING";
     public static final String OTP_NOT_EXPIRED = "OTP_NOT_EXPIRED";
 
+    // Account status
+    public static final String ACCOUNT_SUSPENDED = "ACCOUNT_SUSPENDED";
+    public static final String ACCOUNT_BANNED = "ACCOUNT_BANNED";
+
     private ErrorCodes() {
     }
 }

@@ -2,8 +2,8 @@ package com.bidnow.media.service.impl;
 
 import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
+import com.bidnow.common.exception.InternalServerException;
 import com.bidnow.common.exception.NotFoundException;
-import com.bidnow.common.specification.SearchOperator;
 import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.media.domain.entity.EmailLog;
 import com.bidnow.media.domain.entity.NotificationTemplate;
@@ -60,7 +60,7 @@ public class EmailServiceImpl implements EmailService {
             log.info("Email sent successfully to: {}", to);
         } catch (Exception e) {
             log.error("Failed to send email to: {}", to, e);
-            throw new RuntimeException("Email sending failed", e);
+            throw new InternalServerException("Email sending failed: " + e.getMessage(), ErrorCodes.UNEXPECTED_ERROR);
         }
     }
 
@@ -120,14 +120,8 @@ public class EmailServiceImpl implements EmailService {
     public Page<EmailLogResponse> getEmailLogs(EmailLogCriteria criteria, Pageable pageable) {
         SpecificationBuilder<EmailLog> builder = SpecificationBuilder.forEntity();
 
-        if (criteria.getRecipientEmail() != null && !criteria.getRecipientEmail().isEmpty()) {
-            builder.with("recipientEmail", SearchOperator.LIKE, "%" + criteria.getRecipientEmail().toLowerCase() + "%");
-        }
-
-        if (criteria.getTemplateNames() != null && !criteria.getTemplateNames().isEmpty()) {
-            builder.withIn("templateName", criteria.getTemplateNames());
-        }
-
+        builder.withLikeIfPresent("recipientEmail", criteria.getRecipientEmail());
+        builder.withInIfPresent("templateName", criteria.getTemplateNames());
         if (criteria.getStatuses() != null && !criteria.getStatuses().isEmpty()) {
             builder.withIn("status", criteria.getStatuses().stream()
                     .map(EmailStatus::valueOf)

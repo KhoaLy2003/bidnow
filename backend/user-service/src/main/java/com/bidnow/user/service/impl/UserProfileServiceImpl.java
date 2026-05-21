@@ -68,10 +68,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         userPreferencesRepository.save(preferences);
 
         log.info("Created user profile for userId: {}", request.getUserId());
-
-        List<UserRole> roles = userRoleRepository.findByUserId(request.getUserId());
-        UserPreferences savedPrefs = userPreferencesRepository.findByUserId(request.getUserId()).orElse(preferences);
-        return userProfileMapper.toResponse(profile, roles, savedPrefs);
+        return userProfileMapper.toResponse(profile, List.of(role), preferences);
     }
 
     @Override

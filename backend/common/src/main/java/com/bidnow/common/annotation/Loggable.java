@@ -17,13 +17,19 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Loggable {
 
-    /** Log level used for entry and exit messages. Exceptions always log at ERROR. */
+    /**
+     * Log level used for entry and exit messages. Exceptions always log at ERROR.
+     */
     Level level() default Level.INFO;
 
-    /** Whether to include parameter names and values in the entry log. */
+    /**
+     * Whether to include parameter names and values in the entry log.
+     */
     boolean logParameters() default true;
 
-    /** Whether to include the return value in the exit log. */
+    /**
+     * Whether to include the return value in the exit log.
+     */
     boolean logResult() default true;
 
     enum Level {

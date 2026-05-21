@@ -11,13 +11,14 @@ interface AuctionStatusEvent { status: AuctionStatus }
 interface AuctionEndEvent  { winnerId?: string; finalBid: number }
 
 export function useAuctionSocket(auctionId: string) {
-  const { currentBid, bidHistory, status, setBid, addBidToHistory, setStatus } =
-    useAuctionStore()
+  const { currentBid, bidHistory, status } = useAuctionStore()
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_SOCKET_URL
     if (!url) return
+
+    useAuctionStore.getState().reset()
 
     const socket = io(url, { autoConnect: true })
     socketRef.current = socket
@@ -25,15 +26,17 @@ export function useAuctionSocket(auctionId: string) {
     socket.emit('auction:join', auctionId)
 
     socket.on('bid:new', ({ bid }: BidNewEvent) => {
-      setBid(bid.amount)
-      addBidToHistory(bid)
+      const store = useAuctionStore.getState()
+      store.setBid(bid.amount)
+      store.addBidToHistory(bid)
     })
-    socket.on('auction:status', ({ status }: AuctionStatusEvent) => {
-      setStatus(status)
+    socket.on('auction:status', ({ status: s }: AuctionStatusEvent) => {
+      useAuctionStore.getState().setStatus(s)
     })
     socket.on('auction:end', ({ finalBid }: AuctionEndEvent) => {
-      setBid(finalBid)
-      setStatus(AuctionStatus.Closed)
+      const store = useAuctionStore.getState()
+      store.setBid(finalBid)
+      store.setStatus(AuctionStatus.Closed)
     })
 
     return () => {
@@ -41,7 +44,7 @@ export function useAuctionSocket(auctionId: string) {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [auctionId, setBid, addBidToHistory, setStatus])
+  }, [auctionId])
 
   return { currentBid, bidHistory, status }
 }

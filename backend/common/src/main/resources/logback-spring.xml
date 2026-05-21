@@ -66,8 +66,8 @@
                 <!-- custom fields -->
                 <globalCustomFields>
                     {
-                        "service":"${serviceName}",
-                        "environment":"${SPRING_PROFILES_ACTIVE:-local}"
+                    "service":"${serviceName}",
+                    "environment":"${SPRING_PROFILES_ACTIVE:-local}"
                     }
                 </globalCustomFields>
 

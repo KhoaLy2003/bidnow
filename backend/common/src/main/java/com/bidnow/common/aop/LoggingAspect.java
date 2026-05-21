@@ -38,7 +38,8 @@ public class LoggingAspect {
 
         String label = signature.getDeclaringType().getSimpleName() + "." + signature.getName();
 
-        if (loggable.logParameters()) {
+        if (loggable.logParameters()
+                && !(loggable.level() == Loggable.Level.DEBUG && !log.isDebugEnabled())) {
             String params = buildParamsString(signature.getParameterNames(), joinPoint.getArgs());
             doLog(loggable.level(), ">>> {} ({})", label, params);
         } else {
@@ -65,7 +66,9 @@ public class LoggingAspect {
         }
     }
 
-    /** Method-level annotation takes precedence over class-level. */
+    /**
+     * Method-level annotation takes precedence over class-level.
+     */
     private Loggable resolveAnnotation(MethodSignature signature) {
         Loggable methodLevel = signature.getMethod().getAnnotation(Loggable.class);
         if (methodLevel != null) return methodLevel;

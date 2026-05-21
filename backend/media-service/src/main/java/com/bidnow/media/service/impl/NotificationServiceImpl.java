@@ -10,11 +10,11 @@ import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
 import com.bidnow.media.domain.entity.NotificationTemplate;
 import com.bidnow.media.domain.enums.NotificationLanguage;
 import com.bidnow.media.repository.NotificationTemplateRepository;
-import com.bidnow.media.repository.UserPreferenceRepository;
 import com.bidnow.media.service.EmailService;
 import com.bidnow.media.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -26,11 +26,11 @@ import java.util.Optional;
 @Loggable
 public class NotificationServiceImpl implements NotificationService {
 
-    private static final String FRONTEND_BASE_URL = "http://localhost:3000";
+    @Value("${app.frontend.base-url:http://localhost:3000}")
+    private String frontendBaseUrl;
 
     private final EmailService emailService;
     private final NotificationTemplateRepository templateRepository;
-    private final UserPreferenceRepository userPreferenceRepository;
 
     // -------------------------------------------------------------------------
     // OTP Verification — triggered by USER_VERIFICATION_REQUESTED event
@@ -40,7 +40,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void handleUserVerificationRequested(UserVerificationRequestedEvent event) {
         log.info("Handling UserVerificationRequestedEvent for user: {}", event.getUserId());
 
-        NotificationLanguage lang = resolveLanguage(event.getUserId());
+        NotificationLanguage lang = resolveLanguage();
         String templateName = "OTP_VERIFICATION_" + lang.name();
 
         Optional<NotificationTemplate> templateOpt =
@@ -67,7 +67,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void handleUserRegistered(UserRegisteredEvent event) {
         log.info("Handling UserRegisteredEvent for user: {}", event.getUserId());
 
-        NotificationLanguage lang = resolveLanguage(event.getUserId());
+        NotificationLanguage lang = resolveLanguage();
         String templateName = "WELCOME_EMAIL_" + lang.name();
 
         Optional<NotificationTemplate> templateOpt =
@@ -84,7 +84,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         Map<String, Object> variables = Map.of(
                 "userName", userName,
-                "actionUrl", FRONTEND_BASE_URL + "/auctions"
+                "actionUrl", frontendBaseUrl + "/auctions"
         );
 
         emailService.sendTemplateEmail(event.getEmail(), templateOpt.get(), variables);
@@ -123,22 +123,9 @@ public class NotificationServiceImpl implements NotificationService {
     // Helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Resolves the preferred notification language for a user.
-     * Falls back to EN when no preference record exists yet
-     * (e.g. during OTP verification, before the profile is created).
-     */
-    private NotificationLanguage resolveLanguage(java.util.UUID userId) {
-        if (userId == null) {
-            return NotificationLanguage.EN;
-        }
-        return userPreferenceRepository.findByUserId(userId)
-                .map(pref -> {
-                    // typePreferences map may contain a "language" key in future;
-                    // for now we default to EN unless the preference record carries a language hint
-                    return NotificationLanguage.EN;
-                })
-                .orElse(NotificationLanguage.EN);
+    private NotificationLanguage resolveLanguage() {
+        // TODO: read language from UserPreference once the field is modelled
+        return NotificationLanguage.EN;
     }
 
     /**

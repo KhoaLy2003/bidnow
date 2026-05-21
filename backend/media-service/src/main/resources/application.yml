@@ -95,3 +95,7 @@ springdoc:
     path: /api/v1/media/v3/api-docs
   swagger-ui:
     enabled: false
+
+app:
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:3000}

@@ -1,7 +1,9 @@
 package com.bidnow.media.service.impl;
 
 import com.bidnow.common.annotation.Loggable;
+import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.event.AuditLogEvent;
+import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
 import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.media.domain.entity.AuditLog;
@@ -77,7 +79,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Transactional(readOnly = true)
     public AuditLogResponse getAuditLogById(UUID id) {
         AuditLog auditLog = auditLogRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Audit log not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Audit log not found with id: " + id, ErrorCodes.NOT_FOUND));
 
         Map<UUID, String> emailMap = resolveActorEmails(List.of(auditLog));
         return toResponse(auditLog, emailMap);

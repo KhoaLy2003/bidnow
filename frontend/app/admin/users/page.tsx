@@ -35,7 +35,7 @@ import {
   type SortDirection,
 } from '@/types/admin'
 import { useAuthStore } from '@/store/authStore'
-import { cn, formatDate } from '@/lib/utils'
+import { cn, formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -81,11 +81,7 @@ import { Textarea } from '@/components/ui/textarea'
 type StatusFilter = AdminUserStatus | 'ALL'
 type IconComponent = React.ComponentType<{ className?: string }>
 
-interface ApiError {
-  message?: string
-}
-
-const PAGE_SIZE = 10
+const PAGE_SIZE = DEFAULT_PAGE_SIZE
 
 const statusOptions: Array<{ label: string; value: StatusFilter }> = [
   { label: 'All statuses', value: 'ALL' },
@@ -128,15 +124,6 @@ const profilePlaceholderPanels: Array<{
   },
 ]
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as ApiError).message
-    if (message) return message
-  }
-
-  return fallback
-}
-
 export default function UserManagementPage() {
   const { accessToken } = useAuthStore()
   const [users, setUsers] = useState<AdminUserResponse[]>([])
@@ -177,11 +164,7 @@ export default function UserManagementPage() {
   }, [accessToken, page, sortBy, sortDirection])
 
   useEffect(() => {
-    const task = window.setTimeout(() => {
-      fetchUsers()
-    }, 0)
-
-    return () => window.clearTimeout(task)
+    fetchUsers()
   }, [fetchUsers])
 
   const filteredUsers = useMemo(() => {
@@ -243,8 +226,7 @@ export default function UserManagementPage() {
   }
 
   const hasFilters = query.trim().length > 0 || statusFilter !== 'ALL'
-  const showingStart = totalElements === 0 ? 0 : page * PAGE_SIZE + 1
-  const showingEnd = Math.min((page + 1) * PAGE_SIZE, totalElements)
+  const { start: showingStart, end: showingEnd } = getPaginationRange(page, PAGE_SIZE, totalElements)
 
   return (
     <div className="space-y-6">

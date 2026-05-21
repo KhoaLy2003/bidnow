@@ -61,8 +61,7 @@ export function NotificationPanel() {
                 <span
                   className={cn(
                     'mt-1 size-2 shrink-0 rounded-full',
-                    TYPE_COLOR[n.type],
-                    n.isRead && 'opacity-0',
+                    n.isRead ? 'invisible' : TYPE_COLOR[n.type],
                   )}
                 />
                 <div className="flex-1 min-w-0">

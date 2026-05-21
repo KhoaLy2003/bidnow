@@ -29,17 +29,19 @@ docker compose up -d
 
 Each service reads these from the environment (no `.env` file in repo):
 
-| Variable | Used by |
-|---|---|
-| `JWT_SECRET` | api-gateway, identity-service |
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | identity-service, user-service, media-service (and others with a DB) |
-| `KAFKA_BOOTSTRAP_SERVERS` | all services (default: `localhost:9092`) |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` | media-service |
-| `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_REGION`, `AWS_BUCKET_NAME`, `AWS_ENDPOINT` | media-service |
+| Variable                                                                            | Used by                                                              |
+|-------------------------------------------------------------------------------------|----------------------------------------------------------------------|
+| `JWT_SECRET`                                                                        | api-gateway, identity-service                                        |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`                                              | identity-service, user-service, media-service (and others with a DB) |
+| `KAFKA_BOOTSTRAP_SERVERS`                                                           | all services (default: `localhost:9092`)                             |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`             | media-service                                                        |
+| `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_REGION`, `AWS_BUCKET_NAME`, `AWS_ENDPOINT` | media-service                                                        |
 
 ## Architecture Overview
 
-Spring Boot 3.2.4 + Spring Cloud 2023.0.0 multi-module Maven project. Services communicate via **Eureka service discovery** (load-balanced `lb://` URIs) for async and **OpenFeign** for synchronous calls. Async messaging uses **Kafka**.
+Spring Boot 3.2.4 + Spring Cloud 2023.0.0 multi-module Maven project. Services communicate via **Eureka service
+discovery** (load-balanced `lb://` URIs) for async and **OpenFeign** for synchronous calls. Async messaging uses **Kafka
+**.
 
 ### Request flow
 
@@ -50,38 +52,46 @@ Client → API Gateway (8080)
     → downstream service reads headers via RoleHeaderFilter (from common)
 ```
 
-The gateway is the only service that touches the JWT. All downstream services trust the injected headers and use them to populate the Spring `SecurityContext` via `RoleHeaderFilter`.
+The gateway is the only service that touches the JWT. All downstream services trust the injected headers and use them to
+populate the Spring `SecurityContext` via `RoleHeaderFilter`.
 
 ### Service responsibilities
 
-| Service | Port | Key responsibility |
-|---|---|---|
-| `discovery-service` | 8761 | Eureka server |
-| `api-gateway` | 8080 | JWT validation, routing, CORS, aggregated Swagger UI |
-| `identity-service` | 8081 | Auth (register/login/OTP/refresh), JWT issuance, user credentials |
-| `user-service` | 8082 | User profiles and preferences |
-| `auction-service` | 8083 | Auction lifecycle (creation, updates, closure) |
-| `bidding-service` | 8084 | Bid placement and auto-bidding |
-| `wallet-service` | 8085 | User wallets, escrow, transaction ledger |
-| `media-service` | 8086 | Email notifications, S3 media uploads, audit log storage |
+| Service             | Port | Key responsibility                                                |
+|---------------------|------|-------------------------------------------------------------------|
+| `discovery-service` | 8761 | Eureka server                                                     |
+| `api-gateway`       | 8080 | JWT validation, routing, CORS, aggregated Swagger UI              |
+| `identity-service`  | 8081 | Auth (register/login/OTP/refresh), JWT issuance, user credentials |
+| `user-service`      | 8082 | User profiles and preferences                                     |
+| `auction-service`   | 8083 | Auction lifecycle (creation, updates, closure)                    |
+| `bidding-service`   | 8084 | Bid placement and auto-bidding                                    |
+| `wallet-service`    | 8085 | User wallets, escrow, transaction ledger                          |
+| `media-service`     | 8086 | Email notifications, S3 media uploads, audit log storage          |
 
 ### `common` module
 
 Shared library (`com.bidnow.common`) used by all services. Do not add service-specific logic here. Key contents:
 
-- **`BaseEntity`** – JPA `@MappedSuperclass` with `createdAt`/`updatedAt` (managed via JPA lifecycle hooks). All entities extend this.
-- **`BaseResponse<T>`** – wrapper for all API responses with `status`, `message`, `data`. Use `BaseResponse.success(data)`.
+- **`BaseEntity`** – JPA `@MappedSuperclass` with `createdAt`/`updatedAt` (managed via JPA lifecycle hooks). All
+  entities extend this.
+- **`BaseResponse<T>`** – wrapper for all API responses with `status`, `message`, `data`. Use
+  `BaseResponse.success(data)`.
 - **`PageResponse<T>` / `PaginationMeta`** – standard paginated response wrappers.
-- **`GlobalExceptionHandler`** – maps all `BaseException` subclasses to HTTP responses. Add new exception types by extending `BaseException`.
-- **`@AuthenticatedUserId`** – controller parameter annotation; resolved by `UserIdArgumentResolver` from the `X-User-Id` header.
-- **`SpecificationBuilder<T>`** – fluent JPA `Specification` builder for dynamic queries. Use `withIfPresent`/`withLikeIfPresent` variants to skip null values automatically.
+- **`GlobalExceptionHandler`** – maps all `BaseException` subclasses to HTTP responses. Add new exception types by
+  extending `BaseException`.
+- **`@AuthenticatedUserId`** – controller parameter annotation; resolved by `UserIdArgumentResolver` from the
+  `X-User-Id` header.
+- **`SpecificationBuilder<T>`** – fluent JPA `Specification` builder for dynamic queries. Use `withIfPresent`/
+  `withLikeIfPresent` variants to skip null values automatically.
 - **Kafka event DTOs** in `com.bidnow.common.dto.event` – all inter-service events go here.
 
 ### Audit system
 
-The `@Audit` annotation (AOP-driven via `AuditAspect`) captures before/after entity state and publishes an `AuditLogEvent` to the `audit-events` Kafka topic, consumed by `media-service` which persists it to `AuditLog`.
+The `@Audit` annotation (AOP-driven via `AuditAspect`) captures before/after entity state and publishes an
+`AuditLogEvent` to the `audit-events` Kafka topic, consumed by `media-service` which persists it to `AuditLog`.
 
 Usage pattern in service methods:
+
 ```java
 @Audit(action = AuditAction.UPDATE, entityType = "User", reason = "User updated profile")
 public UserProfile updateProfile(...) {
@@ -91,6 +101,7 @@ public UserProfile updateProfile(...) {
     return updatedEntity;
 }
 ```
+
 For events where delta is not needed (e.g., login events), use `captureDelta = false`.
 
 ### Database & migrations
@@ -102,13 +113,18 @@ For events where delta is not needed (e.g., login events), use `captureDelta = f
 
 ### OpenAPI / Swagger
 
-Individual services expose only `/v3/api-docs` (Swagger UI disabled). The **api-gateway** aggregates all docs at `http://localhost:8080/swagger-ui.html`, pulling from each service's api-docs endpoint.
+Individual services expose only `/v3/api-docs` (Swagger UI disabled). The **api-gateway** aggregates all docs at
+`http://localhost:8080/swagger-ui.html`, pulling from each service's api-docs endpoint.
 
 ### Inter-service communication patterns
 
-- **Synchronous (Feign)**: Used when a response is needed inline (e.g., identity-service calls user-service to create a profile after OTP verification). Feign clients are in a `feign/` package per service.
-- **Asynchronous (Kafka)**: Used for decoupled events. Producers are in `kafka/` packages. Topic names are constants defined in the producer class.
+- **Synchronous (Feign)**: Used when a response is needed inline (e.g., identity-service calls user-service to create a
+  profile after OTP verification). Feign clients are in a `feign/` package per service.
+- **Asynchronous (Kafka)**: Used for decoupled events. Producers are in `kafka/` packages. Topic names are constants
+  defined in the producer class.
 
 ### Security inside downstream services
 
-Each service has its own `SecurityConfig` that installs `RoleHeaderFilter` (from `common`). Role-based access is enforced via `@PreAuthorize("hasRole('ADMIN')")` etc. Internal endpoints (called service-to-service) live under `/internal/` paths and are typically permit-all in `SecurityConfig` since they are not exposed through the gateway.
+Each service has its own `SecurityConfig` that installs `RoleHeaderFilter` (from `common`). Role-based access is
+enforced via `@PreAuthorize("hasRole('ADMIN')")` etc. Internal endpoints (called service-to-service) live under
+`/internal/` paths and are typically permit-all in `SecurityConfig` since they are not exposed through the gateway.

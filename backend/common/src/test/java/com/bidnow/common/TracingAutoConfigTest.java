@@ -40,7 +40,8 @@ class TracingAutoConfigTest {
             org.springframework.cloud.netflix.eureka.EurekaClientAutoConfiguration.class,
             org.springframework.cloud.client.serviceregistry.AutoServiceRegistrationAutoConfiguration.class
     })
-    static class MinimalConfig {}
+    static class MinimalConfig {
+    }
 
     @Autowired
     private Tracer tracer;

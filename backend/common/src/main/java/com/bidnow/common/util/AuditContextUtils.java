@@ -1,6 +1,7 @@
 package com.bidnow.common.util;
 
 import com.bidnow.common.constant.ApplicationConstants;
+import com.bidnow.common.constant.SecurityConstants;
 import com.bidnow.common.dto.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.experimental.UtilityClass;
@@ -44,7 +45,7 @@ public class AuditContextUtils {
         }
         if (authentication != null && authentication.getAuthorities() != null) {
             boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                    .anyMatch(a -> a.getAuthority().equals(SecurityConstants.ROLE_ADMIN));
             return isAdmin ? "ADMIN" : "USER";
         }
         return ApplicationConstants.SYSTEM_ACTOR;
