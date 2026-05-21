@@ -6,7 +6,7 @@
 Competitive, trustworthy, fast-paced, premium.
 
 ### Wordmark
-- "Bid" in regular weight + "Now" in bold, brand color
+- "Bid" in medium weight (500) + "Now" in medium weight (500), brand color — brand distinction via color only, not weight
 - Light mode: "Bid" → `#111115`, "Now" → `#4F46E5`
 - Dark mode: "Bid" → `#F0F0F4`, "Now" → `#8483F5`
 - Optional glyph: stylized gavel SVG (32×32 viewBox) left of wordmark
@@ -268,18 +268,25 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | `--color-wallet-negative` | `#DC2626` | `#EF4444` |
 
 #### Shadow Tokens
+
+> **Tesla migration:** All box-shadows are `none`. Depth is communicated through z-index layering and opacity-based transparency only — never box-shadow. Do not use `shadow-*` Tailwind utilities in components.
+
 ```css
+/* All box-shadows intentionally zeroed — Tesla flat aesthetic */
 --shadow-none:    none;
---shadow-xs:      0 1px 2px 0 rgba(0,0,0,0.05);
---shadow-sm:      0 1px 3px 0 rgba(0,0,0,0.10), 0 1px 2px -1px rgba(0,0,0,0.10);
---shadow-md:      0 4px 6px -1px rgba(0,0,0,0.10), 0 2px 4px -2px rgba(0,0,0,0.10);
---shadow-lg:      0 10px 15px -3px rgba(0,0,0,0.10), 0 4px 6px -4px rgba(0,0,0,0.10);
---shadow-xl:      0 20px 25px -5px rgba(0,0,0,0.10), 0 8px 10px -6px rgba(0,0,0,0.10);
---shadow-2xl:     0 25px 50px -12px rgba(0,0,0,0.25);
---shadow-inner:   inset 0 2px 4px 0 rgba(0,0,0,0.05);
---shadow-brand:   0 0 0 3px rgba(99,102,241,0.20), 0 4px 14px 0 rgba(79,70,229,0.25);
---shadow-danger:  0 0 0 3px rgba(239,68,68,0.20), 0 4px 14px 0 rgba(220,38,38,0.25);
---shadow-success: 0 0 0 3px rgba(34,197,94,0.20), 0 4px 14px 0 rgba(22,163,74,0.25);
+--shadow-xs:      none;
+--shadow-sm:      none;
+--shadow-md:      none;
+--shadow-lg:      none;
+--shadow-xl:      none;
+--shadow-2xl:     none;
+--shadow-inner:   none;
+--shadow-brand:   none;
+--shadow-danger:  none;
+--shadow-success: none;
+/* Opacity-based depth tokens (used as background-color values, not box-shadow) */
+--shadow-frosted:  rgba(255,255,255,0.75);   /* frosted glass nav backdrop */
+--shadow-overlay:  rgba(128,128,128,0.65);   /* modal/dialog overlay */
 ```
 
 #### Backdrop Blur
@@ -330,13 +337,13 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | `--font-size-timer-lg` | `3rem` | 48px | Ending-soon banner |
 
 ### Font Weight
+
+> **Tesla migration:** Maximum weight is **500 (medium)**. Never use `font-semibold` (600), `font-bold` (700), or `font-extrabold` (800) in components. These utilities are banned.
+
 | Token | Value |
 |---|---|
 | `--font-weight-regular` | `400` |
 | `--font-weight-medium` | `500` |
-| `--font-weight-semibold` | `600` |
-| `--font-weight-bold` | `700` |
-| `--font-weight-extrabold` | `800` |
 
 ### Line Height
 | Token | Value | Usage |
@@ -348,14 +355,12 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | `--line-height-relaxed` | `1.625` | Long-form descriptions |
 
 ### Letter Spacing
-| Token | Value | Usage |
-|---|---|---|
-| `--letter-spacing-tighter` | `-0.04em` | Large display prices |
-| `--letter-spacing-tight` | `-0.02em` | Headings |
-| `--letter-spacing-normal` | `0em` | Default |
-| `--letter-spacing-wide` | `0.02em` | Labels, badges |
-| `--letter-spacing-wider` | `0.05em` | Uppercase micro-labels |
-| `--letter-spacing-widest` | `0.1em` | ALL-CAPS status indicators |
+
+> **Tesla migration:** `letter-spacing: 0` everywhere. Never use `tracking-wide`, `tracking-wider`, `tracking-tight`, `tracking-tighter`, or `tracking-widest` in components. Tailwind's `tracking-normal` (0) is the only permitted value. The tokens below are defined in CSS but unused in components.
+
+| Token | Value |
+|---|---|
+| `--letter-spacing-normal` | `0em` | Default — the only value used |
 
 ---
 
@@ -414,16 +419,18 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 
 ### Border Radius
 
-shadcn's `--radius` (set to `0.5rem` / 8px) drives its components. BidNow extends with a full scale:
+> **Tesla migration:** `--radius` is set to `4px` (Tesla's button radius). `rounded-md` (4px) is the standard for buttons and inputs. `rounded-xl` (12px) for larger containers. No large-radius pill buttons.
+
+shadcn's `--radius` drives its components. BidNow extends with a full scale:
 
 | Token | Value | shadcn mapping | Usage |
 |---|---|---|---|
 | `--radius-none` | `0px` | — | Square elements |
-| `--radius-xs` | `2px` | — | Badges, chips |
-| `--radius-sm` | `4px` | `calc(var(--radius) - 4px)` | Inputs, small buttons |
-| `--radius-md` | `6px` | `calc(var(--radius) - 2px)` | Default buttons, inner elements |
-| `--radius-lg` | `8px` | `var(--radius)` | **shadcn base** — cards |
-| `--radius-xl` | `12px` | `calc(var(--radius) + 4px)` | Large cards, panels |
+| `--radius-xs` | `2px` | — | Micro badges |
+| `--radius-sm` | `2px` | `calc(var(--radius) - 2px)` | — |
+| `--radius-md` | `4px` | `var(--radius)` | **shadcn base** — buttons, inputs |
+| `--radius-lg` | `8px` | `calc(var(--radius) + 4px)` | Cards |
+| `--radius-xl` | `12px` | `calc(var(--radius) + 8px)` | Large cards, panels, category cards |
 | `--radius-2xl` | `16px` | — | Modals |
 | `--radius-3xl` | `24px` | — | Hero cards |
 | `--radius-full` | `9999px` | — | Pills, avatars, tags |
@@ -451,6 +458,7 @@ shadcn's `--radius` (set to `0.5rem` / 8px) drives its components. BidNow extend
 | `--duration-extra-slow` | `500ms` | Won/lost reveal |
 | `--duration-bid-pulse` | `600ms` | Bid landed pulse |
 | `--duration-countdown` | `1000ms` | Countdown tick |
+| **`--duration-tesla`** | **`333ms`** | **Standard for all interactive transitions** |
 
 ### Easing Tokens
 | Token | Value | Usage |
@@ -462,6 +470,9 @@ shadcn's `--radius` (set to `0.5rem` / 8px) drives its components. BidNow extend
 | `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Price number roll-up |
 | `--ease-bounce-out` | `cubic-bezier(0.68, -0.55, 0.27, 1.55)` | Bounce effects |
 | `--ease-snappy` | `cubic-bezier(0.2, 0, 0, 1)` | Elevation changes |
+| **`--ease-tesla`** | **`cubic-bezier(0.5, 0, 0, 0.75)`** | **Standard for all interactive transitions** |
+
+> **Transition standard:** All interactive state transitions use `transition-[specific-properties] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]`. Never use `transition-all` or hardcoded `duration-150`/`duration-300`. Specify only the properties that actually change (e.g., `background-color,border-color,color`).
 
 ### Keyframe Animations
 | Name | Trigger | Behavior |
@@ -515,13 +526,12 @@ shadcn's `--radius` (set to `0.5rem` / 8px) drives its components. BidNow extend
 ### AuctionCard
 
 Built on top of shadcn `<Card>`:
-- Wrap `<Card>` with hover class: `group hover:-translate-y-0.5 transition-transform`
-- Hover shadow: override card shadow via `group-hover:shadow-md group-hover:border-[--color-brand-border]`
-- Image: aspect-ratio 4/3, `rounded-t-lg object-cover`; `grayscale-[60%]` when closed
+- Card transition: `transition-[border-color,opacity] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]` — no hover lift, no shadow
+- Image: aspect-ratio 4/3, `rounded-t-xl object-cover`; `grayscale-[60%]` when closed; `transition-transform duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:scale-[1.02]`
 - Status badge: absolute top-left, `<StatusBadge>` component
 - "Ending soon" banner: full-width bottom of image, `bg-[--color-auction-ending-bg]/90 backdrop-blur-sm`
-- Price: `font-mono text-[--font-size-price-sm] font-bold`
-- CTA: shadcn `<Button>` — `variant="default"` ("Place Bid") or `variant="outline"` ("View Item")
+- Price: `font-mono text-[--font-size-price-sm] font-medium`
+- CTA: shadcn `<Button>` — `variant="brand"` ("Place Bid") or `variant="outline"` ("View Item")
 - Min card width: 240px / Max: 360px
 
 ### BidInput + BidButton
@@ -533,9 +543,9 @@ Built on top of shadcn `<Card>`:
 - Error state: `aria-invalid` + shadcn `<FormMessage>` for helper text
 - Optional ±steppers: shadcn `<Button variant="ghost" size="icon">` at right
 
-**BidButton** — shadcn `<Button variant="default">`:
-- `className="h-12 w-full font-semibold"` (48px height)
-- Hover: `hover:shadow-[--shadow-brand]`
+**BidButton** — shadcn `<Button variant="brand">`:
+- `className="h-12 w-full font-medium"` (48px height)
+- No hover shadow (all shadows are `none`)
 - Active: `active:scale-[0.98]`
 - Loading: shadcn spinner pattern — `disabled` + `<Loader2 className="animate-spin" />`
 - Dynamic label: "Place Bid" → "Confirm $X.XX" on input change
@@ -551,16 +561,16 @@ Three states — all custom (no shadcn equivalent):
 
 | State | Trigger | Tailwind classes |
 |---|---|---|
-| Normal | > 5 min | `font-mono font-bold text-muted-foreground` |
-| Warning | < 5 min, > 1 min | `font-mono font-bold text-[--color-warning-text] bg-[--color-auction-ending-bg] rounded-full px-2 py-0.5` + `pulse-ring` |
-| Critical | < 1 min | `font-mono font-extrabold text-[--color-danger-text] bg-[--color-auction-critical-bg] border-2 border-[--color-auction-critical-border] rounded-full px-2 py-0.5` |
+| Normal | > 5 min | `font-mono font-medium text-muted-foreground` |
+| Warning | < 5 min, > 1 min | `font-mono font-medium text-[--color-warning-text] bg-[--color-auction-ending-bg] rounded-full px-2 py-0.5` + `pulse-ring` |
+| Critical | < 1 min | `font-mono font-medium text-[--color-danger-text] bg-[--color-auction-critical-bg] border-2 border-[--color-auction-critical-border] rounded-full px-2 py-0.5` |
 
 Format: `HH:MM:SS` (< 1 day), `Xd Xh` (longer). Anti-snipe label at critical: `"⚡ Time extends if you bid"` in `text-2xs`.
 
 ### CurrentBidDisplay
 
-- Label: `"CURRENT BID"` — `text-xs tracking-wider text-muted-foreground uppercase`
-- Price: `font-mono font-bold text-[--font-size-price-md] text-foreground`
+- Label: `"CURRENT BID"` — `text-xs text-muted-foreground uppercase` (no tracking)
+- Price: `font-mono font-medium text-[--font-size-price-md] text-foreground`
 - On new bid: `bid-pulse` + `price-roll` animations
 - "You're winning" pill: shadcn `<Badge>` with custom `won` variant
 - Outbid state: `outbid-flash` animation
@@ -570,7 +580,7 @@ Format: `HH:MM:SS` (< 1 day), `Xd Xh` (longer). Anti-snipe label at critical: `"
 
 - Container: shadcn `<ScrollArea className="max-h-80">`
 - Rows: flex — shadcn `<Avatar>` (sm) | name + relative time | amount
-- Amount: `font-mono font-semibold`
+- Amount: `font-mono font-medium`
 - Current user rows: `bg-accent`
 - Winning bid: `text-[--color-success-text]` + `<Trophy className="h-3 w-3" />`
 - Auto-bid rows: `<Bot className="h-3 w-3 text-muted-foreground" />`
@@ -600,7 +610,7 @@ lost        → bg-[--color-auction-lost-bg] text-[--color-auction-lost-text] ..
 outbid      → bg-[--color-auction-outbid-bg] text-[--color-auction-outbid-text] ...
 ```
 
-All variants: `text-xs font-semibold tracking-wide uppercase rounded-full px-2 py-0.5 border`.
+All variants: `text-xs font-medium uppercase rounded-full px-2 py-0.5 border` (no tracking).
 `active` badge includes an animated pulsing dot via CSS `animate-pulse` on a small `<span>`.
 
 ### NotificationToast
@@ -635,7 +645,7 @@ Built on shadcn `<Avatar>`:
 **Mobile (< 1024px):**
 - Compressed top bar; icon-only right side
 - Bottom nav: fixed `h-14 bg-background border-t border-border` with 5 tabs
-- Center "Sell" tab: `<Button variant="default" size="icon" className="rounded-full -mt-4 shadow-brand">`
+- Center "Sell" tab: `<Button variant="brand" size="icon" className="rounded-full -mt-4">` (no shadow)
 - Safe area: `pb-[env(safe-area-inset-bottom)]`
 
 ---
@@ -888,4 +898,15 @@ Exports:
 - **`CurrentBidDisplay`** requires `position:relative; overflow:hidden` wrapper with two absolutely-positioned spans for `price-roll` animation.
 - **Server vs Client**: `BidForm`, `CountdownTimer`, Sonner `<Toaster>`, `WalletBadge`, any WebSocket consumer → `"use client"`. shadcn `Card`, `Badge`, `Avatar`, `Skeleton`, `StatusBadge` in read-only context → Server Components.
 - **`layout.tsx`**: Add `DM_Sans` via `next/font/google`, `<Toaster />` from Sonner, and `ThemeProvider`.
-- **`--radius`** in shadcn is the single knob for all component corner rounding — keep at `0.5rem` (8px) to match `--radius-lg`.
+- **`--radius`** is set to `4px` (Tesla's button radius). `rounded-md` resolves to `var(--radius)` = 4px (buttons, inputs). `rounded-xl` = 12px for larger containers. Never use `rounded-full` on buttons.
+
+### Tesla Design Constraints (enforced across all components)
+
+| Rule | What to use | What to avoid |
+|------|-------------|---------------|
+| Font weight | `font-medium` (500) max | `font-semibold`, `font-bold`, `font-extrabold` |
+| Letter spacing | `tracking-normal` (0) only | `tracking-wide`, `tracking-wider`, `tracking-tight`, `tracking-widest` |
+| Shadows | None — do not use `shadow-*` | Any `shadow-sm/md/lg/xl/brand/danger` |
+| Hover lift | Forbidden | `hover:-translate-y-*` |
+| Hover ring | Forbidden for card interaction | `hover:ring-*` |
+| Transitions | `transition-[properties] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]` | `transition-all`, hardcoded `duration-150`/`duration-300` |
