@@ -5,11 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
-import type { VariantProps } from 'class-variance-authority'
-import { badgeVariants } from '@/components/ui/badge'
-
-type BadgeVariant = VariantProps<typeof badgeVariants>['variant']
-
 interface CurrentBidDisplayProps {
   amount:               number        // cents
   isCurrentUserWinning?: boolean
@@ -85,12 +80,12 @@ export function CurrentBidDisplay({
       </div>
 
       {isCurrentUserWinning && !isOutbid && (
-        <Badge variant={'won' as BadgeVariant} className="w-fit">
+        <Badge variant="won" className="w-fit">
           You&apos;re winning
         </Badge>
       )}
       {isOutbid && (
-        <Badge variant={'outbid' as BadgeVariant} className="w-fit">
+        <Badge variant="outbid" className="w-fit">
           You&apos;ve been outbid
         </Badge>
       )}

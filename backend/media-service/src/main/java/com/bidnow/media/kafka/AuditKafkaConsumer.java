@@ -1,5 +1,6 @@
 package com.bidnow.media.kafka;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AuditLogEvent;
 import com.bidnow.media.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Loggable
 public class AuditKafkaConsumer {
 
     private final AuditLogService auditLogService;

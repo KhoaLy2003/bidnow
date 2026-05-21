@@ -37,9 +37,9 @@ public class AuditAspect {
                 newEntity = result;
             }
 
-            if (audit.captureDelta()) {
-                publishAuditEvent(joinPoint, audit, oldEntity, newEntity);
-            }
+            publishAuditEvent(joinPoint, audit,
+                    audit.captureDelta() ? oldEntity : null,
+                    audit.captureDelta() ? newEntity : null);
 
             return result;
         } finally {

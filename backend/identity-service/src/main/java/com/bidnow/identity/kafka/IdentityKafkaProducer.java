@@ -1,5 +1,6 @@
 package com.bidnow.identity.kafka;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.UserRegisteredEvent;
 import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Loggable(level = Loggable.Level.DEBUG)
 public class IdentityKafkaProducer {
 
     private static final String USER_REGISTERED_TOPIC = "user-registered-topic";

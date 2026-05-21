@@ -72,7 +72,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(BEARER_PREFIX.length());
 
         if (!jwtUtil.isTokenValid(token)) {
             log.warn("Invalid or expired JWT for path: {}", path);

@@ -27,7 +27,7 @@ export const useAuctionStore = create<AuctionState>((set) => ({
   setBid: (amount) => set({ currentBid: amount }),
 
   addBidToHistory: (bid) =>
-    set((state) => ({ bidHistory: [bid, ...state.bidHistory] })),
+    set((state) => ({ bidHistory: [bid, ...state.bidHistory].slice(0, 100) })),
 
   setStatus: (status) => set({ status }),
 

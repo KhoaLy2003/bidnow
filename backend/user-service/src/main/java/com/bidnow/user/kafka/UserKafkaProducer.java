@@ -3,6 +3,7 @@
  */
 package com.bidnow.user.kafka;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AuditLogEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Loggable(level = Loggable.Level.DEBUG)
 public class UserKafkaProducer {
 
     private static final String AUDIT_EVENTS_TOPIC = "audit-events";

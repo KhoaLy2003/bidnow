@@ -49,31 +49,34 @@ export function useProfile(): UseProfileResult {
     fetchProfile();
   }, [fetchProfile]);
 
-  const updateProfile = async (
-    data: import("@/types/user-profile").UpdateUserProfileRequest
-  ): Promise<UserProfileResponse> => {
-    if (!isAuthenticated || !accessToken) {
-      throw new Error("Not authenticated");
-    }
+  const updateProfile = useCallback(
+    async (
+      data: import("@/types/user-profile").UpdateUserProfileRequest
+    ): Promise<UserProfileResponse> => {
+      if (!isAuthenticated || !accessToken) {
+        throw new Error("Not authenticated");
+      }
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const res = await userService.updateMyProfile(accessToken, data);
-      setProfile(res.data);
-      return res.data;
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to update profile";
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      try {
+        const res = await userService.updateMyProfile(accessToken, data);
+        setProfile(res.data);
+        return res.data;
+      } catch (err: unknown) {
+        const message =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Failed to update profile";
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [accessToken, isAuthenticated]
+  );
 
   return { profile, isLoading, error, refetch: fetchProfile, updateProfile };
 }

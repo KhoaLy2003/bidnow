@@ -25,7 +25,7 @@ import {
   type TemplateFilters,
 } from '@/types/admin'
 import { useAuthStore } from '@/store/authStore'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -61,7 +61,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = DEFAULT_PAGE_SIZE
 
 const emptyTemplateForm: NotificationTemplateRequest = {
   name: '',
@@ -72,19 +72,6 @@ const emptyTemplateForm: NotificationTemplateRequest = {
   bodyText: '',
   variables: [],
   active: true,
-}
-
-interface ApiError {
-  message?: string
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as ApiError).message
-    if (message) return message
-  }
-
-  return fallback
 }
 
 function variablesToText(variables?: string[] | null) {
@@ -144,12 +131,10 @@ export default function AdminTemplatesPage() {
   }, [accessToken, filters, page])
 
   useEffect(() => {
-    const task = window.setTimeout(fetchTemplates, 0)
-    return () => window.clearTimeout(task)
+    fetchTemplates()
   }, [fetchTemplates])
 
-  const showingStart = totalElements === 0 ? 0 : page * PAGE_SIZE + 1
-  const showingEnd = Math.min((page + 1) * PAGE_SIZE, totalElements)
+  const { start: showingStart, end: showingEnd } = getPaginationRange(page, PAGE_SIZE, totalElements)
 
   const selectedVariables = useMemo(
     () => variablesToText(selectedTemplate?.variables),
@@ -159,6 +144,7 @@ export default function AdminTemplatesPage() {
   const openDetails = async (template: NotificationTemplateResponse) => {
     if (!accessToken) return
     setDetailsOpen(true)
+    if (selectedTemplate?.id === template.id) return
 
     try {
       const details = await adminService.getTemplate(accessToken, template.id)

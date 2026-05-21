@@ -26,12 +26,10 @@ public class DiffUtils {
 
     /**
      * Calculates the differences between two objects of the same type.
-     * Identity fields (@Id) and audit fields (createdAt, updatedAt) are excluded.
-     *
-     * @param oldObj The original object (before change)
-     * @param newObj The updated object (after change)
-     * @return A map containing changed fields with their old and new values:
-     * { "fieldName": { "old": "v1", "new": "v2" } }
+     * Only fields declared directly on the class are inspected — inherited fields
+     * (e.g. {@code createdAt}/{@code updatedAt} from {@code BaseEntity}) are not reached
+     * by {@link Class#getDeclaredFields()} and are therefore excluded automatically.
+     * {@code @Id} fields and names in {@link #EXCLUDED_FIELDS} are also skipped.
      */
     public static Map<String, Map<String, Object>> calculateDiff(Object oldObj, Object newObj) {
         Map<String, Map<String, Object>> diff = new HashMap<>();
@@ -42,16 +40,6 @@ public class DiffUtils {
 
         Class<?> clazz = (oldObj != null) ? oldObj.getClass() : newObj.getClass();
 
-        // If one is null, treat all fields as changed
-        if (oldObj == null || newObj == null) {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (shouldSkipField(field)) continue;
-                addFieldToDiff(diff, field, oldObj, newObj);
-            }
-            return diff;
-        }
-
-        // Both are non-null, compare fields
         for (Field field : clazz.getDeclaredFields()) {
             if (shouldSkipField(field)) continue;
             addFieldToDiff(diff, field, oldObj, newObj);
@@ -61,13 +49,7 @@ public class DiffUtils {
     }
 
     private static boolean shouldSkipField(Field field) {
-        if (EXCLUDED_FIELDS.contains(field.getName())) {
-            return true;
-        }
-        if (field.isAnnotationPresent(Id.class)) {
-            return true;
-        }
-        return false;
+        return EXCLUDED_FIELDS.contains(field.getName()) || field.isAnnotationPresent(Id.class);
     }
 
     private static void addFieldToDiff(Map<String, Map<String, Object>> diff, Field field, Object oldObj, Object newObj) {

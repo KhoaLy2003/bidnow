@@ -1,5 +1,6 @@
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Loggable
 public class TemplateServiceImpl implements TemplateService {
 
     private final NotificationTemplateRepository templateRepository;

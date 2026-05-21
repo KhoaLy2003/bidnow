@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { adminService } from '@/services/adminService'
 import { type EmailDeliveryStatus, type EmailLogFilters, type EmailLogResponse } from '@/types/admin'
 import { useAuthStore } from '@/store/authStore'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,20 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-const PAGE_SIZE = 10
-
-interface ApiError {
-  message?: string
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as ApiError).message
-    if (message) return message
-  }
-
-  return fallback
-}
+const PAGE_SIZE = DEFAULT_PAGE_SIZE
 
 export default function AdminEmailLogsPage() {
   const { accessToken } = useAuthStore()
@@ -75,12 +62,10 @@ export default function AdminEmailLogsPage() {
   }, [accessToken, filters, page])
 
   useEffect(() => {
-    const task = window.setTimeout(fetchLogs, 0)
-    return () => window.clearTimeout(task)
+    fetchLogs()
   }, [fetchLogs])
 
-  const showingStart = totalElements === 0 ? 0 : page * PAGE_SIZE + 1
-  const showingEnd = Math.min((page + 1) * PAGE_SIZE, totalElements)
+  const { start: showingStart, end: showingEnd } = getPaginationRange(page, PAGE_SIZE, totalElements)
 
   return (
     <div className="space-y-6">

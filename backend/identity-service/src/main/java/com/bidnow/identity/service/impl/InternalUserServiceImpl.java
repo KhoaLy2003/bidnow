@@ -1,5 +1,6 @@
 package com.bidnow.identity.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.UserDto;
 import com.bidnow.identity.domain.entity.User;
 import com.bidnow.identity.domain.enums.AccountStatus;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable
 public class InternalUserServiceImpl implements InternalUserService {
 
     private final UserRepository userRepository;

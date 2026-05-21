@@ -37,6 +37,7 @@ Thumbs.db
 # Agent
 .agent/
 .gemini/
+.claude/
 
 # Docs
 docs/superpowers/

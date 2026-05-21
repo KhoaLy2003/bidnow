@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuthStore } from "@/store/authStore";
 import { useState, useEffect, useRef } from "react";
@@ -31,22 +32,22 @@ export default function ProfilePage() {
     country: "",
     postalCode: "",
     bio: "",
-    avatarUrl: "",
   });
 
+  function profileToForm(p: typeof profile) {
+    return {
+      displayName: p?.displayName || "",
+      phoneNumber: p?.phoneNumber || "",
+      address: p?.address || "",
+      city: p?.city || "",
+      country: p?.country || "",
+      postalCode: p?.postalCode || "",
+      bio: p?.bio || "",
+    };
+  }
+
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        displayName: profile.displayName || "",
-        phoneNumber: profile.phoneNumber || "",
-        address: profile.address || "",
-        city: profile.city || "",
-        country: profile.country || "",
-        postalCode: profile.postalCode || "",
-        bio: profile.bio || "",
-        avatarUrl: profile.avatarUrl || "",
-      });
-    }
+    if (profile) setFormData(profileToForm(profile));
   }, [profile]);
 
   const handleSave = async () => {
@@ -63,19 +64,7 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
-    // Reset to current profile data
-    if (profile) {
-      setFormData({
-        displayName: profile.displayName || "",
-        phoneNumber: profile.phoneNumber || "",
-        address: profile.address || "",
-        city: profile.city || "",
-        country: profile.country || "",
-        postalCode: profile.postalCode || "",
-        bio: profile.bio || "",
-        avatarUrl: profile.avatarUrl || "",
-      });
-    }
+    if (profile) setFormData(profileToForm(profile));
     setIsEditing(false);
   };
 
@@ -164,7 +153,7 @@ export default function ProfilePage() {
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <UserAvatar
                   name={displayName}
-                  avatarUrl={formData.avatarUrl || profile?.avatarUrl || undefined}
+                  avatarUrl={profile?.avatarUrl ?? undefined}
                   size="xl"
                   className={`size-32 items-center justify-center transition-opacity duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] ${isUploadingAvatar ? 'opacity-50' : 'group-hover:opacity-75'}`}
                 />
@@ -226,8 +215,8 @@ export default function ProfilePage() {
             <CardContent>
               {isEditing ? (
                 <div className="space-y-2">
-                  <textarea
-                    className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  <Textarea
+                    className="min-h-[120px] resize-none"
                     value={formData.bio}
                     onChange={(e) => setFormData(p => ({ ...p, bio: e.target.value }))}
                     placeholder="Tell us about yourself..."
