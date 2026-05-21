@@ -1,5 +1,6 @@
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
 import com.bidnow.common.dto.event.BidPlacedEvent;
@@ -22,6 +23,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable
 public class NotificationServiceImpl implements NotificationService {
 
     private static final String FRONTEND_BASE_URL = "http://localhost:3000";

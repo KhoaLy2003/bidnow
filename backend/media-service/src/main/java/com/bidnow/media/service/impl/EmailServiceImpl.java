@@ -1,5 +1,6 @@
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
@@ -34,6 +35,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable(logResult = false)
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;

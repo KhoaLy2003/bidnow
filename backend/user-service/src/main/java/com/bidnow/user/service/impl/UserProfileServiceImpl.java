@@ -4,6 +4,7 @@
 package com.bidnow.user.service.impl;
 
 import com.bidnow.common.annotation.Audit;
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.enums.AuditAction;
@@ -32,6 +33,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable
 public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserProfileRepository userProfileRepository;

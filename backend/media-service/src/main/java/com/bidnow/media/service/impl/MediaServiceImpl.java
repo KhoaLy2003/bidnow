@@ -3,6 +3,7 @@
  */
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.enums.MediaEntityType;
 import com.bidnow.media.domain.entity.MediaAsset;
 import com.bidnow.media.dto.response.MediaUploadResponse;
@@ -38,6 +39,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Loggable(logResult = false)
 public class MediaServiceImpl implements MediaService {
 
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp");

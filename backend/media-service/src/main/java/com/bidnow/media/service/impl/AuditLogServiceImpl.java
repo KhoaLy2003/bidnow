@@ -1,5 +1,6 @@
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AuditLogEvent;
 import com.bidnow.common.specification.SearchOperator;
 import com.bidnow.common.specification.SpecificationBuilder;
@@ -24,6 +25,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Loggable
 public class AuditLogServiceImpl implements AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
