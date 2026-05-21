@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ========================================================= -->
+    <!-- APPLICATION INFO -->
+    <!-- ========================================================= -->
+
+    <springProperty
+            scope="context"
+            name="serviceName"
+            source="spring.application.name"
+            defaultValue="unknown-service"/>
+
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- ========================================================= -->
+    <!-- CONSOLE JSON APPENDER -->
+    <!-- ========================================================= -->
+
+    <appender name="JSON_CONSOLE"
+              class="ch.qos.logback.core.ConsoleAppender">
+
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+
+            <providers>
+
+                <!-- timestamp -->
+                <timestamp>
+                    <fieldName>timestamp</fieldName>
+                    <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSXXX</pattern>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+
+                <!-- log level -->
+                <logLevel>
+                    <fieldName>level</fieldName>
+                </logLevel>
+
+                <!-- thread -->
+                <threadName>
+                    <fieldName>thread</fieldName>
+                </threadName>
+
+                <!-- logger -->
+                <loggerName>
+                    <fieldName>logger</fieldName>
+                </loggerName>
+
+                <!-- message -->
+                <message>
+                    <fieldName>message</fieldName>
+                </message>
+
+                <!-- stacktrace -->
+                <stackTrace>
+                    <fieldName>stacktrace</fieldName>
+                </stackTrace>
+
+                <!-- MDC -->
+                <mdc/>
+
+                <!-- arguments -->
+                <arguments/>
+
+                <!-- custom fields -->
+                <globalCustomFields>
+                    {
+                        "service":"${serviceName}",
+                        "environment":"${SPRING_PROFILES_ACTIVE:-local}"
+                    }
+                </globalCustomFields>
+
+            </providers>
+
+        </encoder>
+    </appender>
+
+    <!-- ========================================================= -->
+    <!-- OPTIONAL PLAIN TEXT APPENDER -->
+    <!-- ========================================================= -->
+
+    <appender name="PLAIN_CONSOLE"
+              class="ch.qos.logback.core.ConsoleAppender">
+
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+
+    </appender>
+
+    <!-- ========================================================= -->
+    <!-- PACKAGE LOGGING -->
+    <!-- ========================================================= -->
+
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
+
+    <!-- Application -->
+    <logger name="com.yourcompany" level="DEBUG"/>
+
+    <!-- ========================================================= -->
+    <!-- ROOT -->
+    <!-- ========================================================= -->
+
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+</configuration>

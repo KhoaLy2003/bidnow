@@ -27,6 +27,9 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0  # reduce to 0.1 or lower in production
   endpoints:
     web:
       exposure:

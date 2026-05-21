@@ -1,6 +1,7 @@
 package com.bidnow.identity.service.impl;
 
 import com.bidnow.common.annotation.Audit;
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.event.UserRegisteredEvent;
 import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
@@ -43,6 +44,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable(logResult = false)
 public class AuthServiceImpl implements AuthService {
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
