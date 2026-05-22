@@ -209,7 +209,7 @@ export default function CreateAuctionPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <FieldWrap label="Category" required error={errors.categoryId}>
-                <Select value={data.categoryId} onValueChange={v => update('categoryId', v)}>
+                <Select value={data.categoryId} onValueChange={(v) => { if (v !== null) update('categoryId', v) }}>
                   <SelectTrigger className={cn('text-sm', errors.categoryId && 'border-destructive')}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -220,7 +220,7 @@ export default function CreateAuctionPage() {
               </FieldWrap>
 
               <FieldWrap label="Condition">
-                <Select value={data.condition} onValueChange={v => update('condition', v)}>
+                <Select value={data.condition} onValueChange={(v) => { if (v !== null) update('condition', v) }}>
                   <SelectTrigger className="text-sm">
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>

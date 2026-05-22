@@ -142,7 +142,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="category">Category</Label>
-          <Select value={categoryId} onValueChange={setCategoryId}>
+          <Select value={categoryId} onValueChange={(v) => { if (v !== null) setCategoryId(v) }}>
             <SelectTrigger id="category">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>

@@ -45,7 +45,7 @@ export function AuctionFilters({
           />
         </div>
 
-        <Select value={category} onValueChange={onCategory}>
+        <Select value={category} onValueChange={(v) => { if (v !== null) onCategory(v) }}>
           <SelectTrigger className="h-8 w-40 text-sm">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
@@ -56,7 +56,7 @@ export function AuctionFilters({
           </SelectContent>
         </Select>
 
-        <Select value={statusFilter} onValueChange={onStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { if (v !== null) onStatusFilter(v) }}>
           <SelectTrigger className="h-8 w-36 text-sm">
             <SelectValue placeholder={tab === 'active' ? 'Status' : 'Outcome'} />
           </SelectTrigger>
