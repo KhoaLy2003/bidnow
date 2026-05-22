@@ -34,6 +34,7 @@
         <lombok.version>1.18.30</lombok.version>
         <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
         <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
+        <jobrunr.version>7.3.1</jobrunr.version>
     </properties>
 
     <dependencyManagement>
@@ -44,6 +45,11 @@
                 <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jobrunr</groupId>
+                <artifactId>jobrunr-spring-boot-3-starter</artifactId>
+                <version>${jobrunr.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

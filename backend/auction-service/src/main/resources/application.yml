@@ -43,3 +43,13 @@ springdoc:
     path: /api/v1/auctions/v3/api-docs
   swagger-ui:
     enabled: false
+
+org:
+  jobrunr:
+    background-job-server:
+      enabled: true
+    dashboard:
+      enabled: true
+      port: 8090
+    database:
+      skip-create: true

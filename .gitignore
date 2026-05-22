@@ -41,6 +41,8 @@ Thumbs.db
 
 # Docs
 docs/superpowers/
+docs/design/
+docs/database/jobrunr/
 
 # Custom Ignores
 _backup/
