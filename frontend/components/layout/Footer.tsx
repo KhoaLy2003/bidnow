@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { Gavel } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
+import { BidNowGavelMark } from '@/components/shared/BidNowGavelMark'
 
 const LINKS = {
   Platform: [
@@ -36,7 +36,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
             <Link href="/" className="flex items-center gap-2">
-              <Gavel className="size-5 text-[var(--color-text-brand)]" />
+              <BidNowGavelMark size={24} />
               <span className="text-base font-medium">
                 Bid<span className="text-[var(--color-text-brand)] font-medium">Now</span>
               </span>
