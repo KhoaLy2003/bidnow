@@ -7,17 +7,24 @@ const LINKS = {
     { label: 'Browse Auctions', href: '/auctions' },
     { label: 'Sell an Item',    href: '/sell' },
     { label: 'How It Works',   href: '/how-it-works' },
+    { label: 'FAQ',            href: '/faq' },
   ],
   Account: [
     { label: 'My Bids',   href: '/my-bids' },
     { label: 'Wallet',    href: '/wallet' },
     { label: 'Profile',   href: '/profile' },
   ],
-  Support: [
-    { label: 'Help Center', href: '/help' },
+  Company: [
+    { label: 'About',       href: '/about' },
     { label: 'Contact',     href: '/contact' },
-    { label: 'Privacy',     href: '/privacy' },
-    { label: 'Terms',       href: '/terms' },
+    { label: 'Accessibility', href: '/accessibility' },
+  ],
+  Legal: [
+    { label: 'Terms of Service',    href: '/terms' },
+    { label: 'Privacy Policy',      href: '/privacy' },
+    { label: 'Refund Policy',       href: '/refund-policy' },
+    { label: 'Community Guidelines', href: '/community-guidelines' },
+    { label: 'Anti-Fraud Policy',   href: '/anti-fraud' },
   ],
 }
 
@@ -25,7 +32,7 @@ export function Footer() {
   return (
     <footer className="border-t bg-[var(--color-bg-elevated)]">
       <div className="mx-auto max-w-[var(--container-xl)] px-4 py-12">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
             <Link href="/" className="flex items-center gap-2">
@@ -41,7 +48,7 @@ export function Footer() {
 
           {/* Link columns */}
           {Object.entries(LINKS).map(([section, links]) => (
-            <div key={section} className="flex flex-col gap-3">
+            <div key={section} className="flex flex-col gap-3 col-span-1">
               <p className="text-xs font-medium uppercase text-muted-foreground">
                 {section}
               </p>

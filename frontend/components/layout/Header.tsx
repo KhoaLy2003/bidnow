@@ -51,6 +51,13 @@ export function Header() {
   };
 
   return (
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:rounded-md focus:bg-[var(--color-brand-700)] focus:text-white focus:text-sm focus:font-medium focus:outline-none"
+      >
+        Skip to main content
+      </a>
     <header
       className={cn(
         "sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]",
@@ -252,5 +259,6 @@ export function Header() {
         </div>
       </div>
     </header>
+    </>
   );
 }

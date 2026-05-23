@@ -30,14 +30,21 @@ export function CountdownTimer({ endsAt, size = 'md', className }: CountdownTime
 
   return (
     <div className={cn('inline-flex flex-col items-center gap-0.5', className)}>
-      {/* key forces animation replay on each tick */}
-      <span
-        key={secondsLeft}
-        style={{ animation: 'countdown-tick 150ms ease-in-out' }}
-        className={cn(SIZE_CLASSES[size], STATE_CLASSES[timerState])}
-      >
-        {formatCountdown(secondsLeft)}
-      </span>
+      {secondsLeft === null ? (
+        // Placeholder rendered on server and first client paint — same dims, no content flash
+        <span className={cn(SIZE_CLASSES[size], 'font-mono font-medium text-muted-foreground opacity-0')}>
+          0:00:00
+        </span>
+      ) : (
+        /* key forces animation replay on each tick */
+        <span
+          key={secondsLeft}
+          style={{ animation: 'countdown-tick 150ms ease-in-out' }}
+          className={cn(SIZE_CLASSES[size], STATE_CLASSES[timerState])}
+        >
+          {formatCountdown(secondsLeft)}
+        </span>
+      )}
       {timerState === 'critical' && (
         <span className="flex items-center gap-0.5 text-[length:var(--font-size-2xs)] text-[var(--color-danger-text)]">
           <Zap className="size-2.5" />
