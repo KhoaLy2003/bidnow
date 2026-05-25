@@ -3,14 +3,6 @@
 --changeset bidnow:auction-initial-schema
 --comment: Initialize auction service database schema
 
--- Auction status enum type
-CREATE TYPE auction_status AS ENUM (
-    'DRAFT',
-    'ACTIVE',
-    'COMPLETED',
-    'FAILED',
-    'CANCELLED'
-);
 
 -- Categories table
 CREATE TABLE auction_categories
@@ -46,7 +38,7 @@ CREATE TABLE auction_items
     current_price       DECIMAL(15, 2)           NOT NULL DEFAULT 0,
     current_winner_id   UUID,
     total_bids          INTEGER                  NOT NULL DEFAULT 0,
-    status              auction_status           NOT NULL DEFAULT 'DRAFT',
+    status              VARCHAR(20)              NOT NULL DEFAULT 'DRAFT',
     start_time          TIMESTAMP WITH TIME ZONE NOT NULL,
     end_time            TIMESTAMP WITH TIME ZONE NOT NULL,
     original_end_time   TIMESTAMP WITH TIME ZONE NOT NULL,

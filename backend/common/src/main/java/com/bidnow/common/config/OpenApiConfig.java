@@ -3,12 +3,14 @@
  */
 package com.bidnow.common.config;
 
+import com.bidnow.common.annotation.AuthenticatedUserId;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
@@ -36,4 +38,11 @@ import org.springframework.context.annotation.Configuration;
         scheme = "bearer"
 )
 public class OpenApiConfig {
+
+    static {
+        // Tell SpringDoc to ignore controller parameters annotated with @AuthenticatedUserId.
+        // These are resolved from the X-User-Id header injected by the API Gateway — they are
+        // not part of the public API contract and must not appear in the exported schema.
+        SpringDocUtils.getConfig().addAnnotationsToIgnore(AuthenticatedUserId.class);
+    }
 }
