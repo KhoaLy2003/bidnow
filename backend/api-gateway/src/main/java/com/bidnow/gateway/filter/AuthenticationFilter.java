@@ -48,7 +48,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/resend-otp",
             "/api/v1/auth/refresh",
             "/api/v1/auth/logout",
-            "/api/v1/auctions/categories",
+            "/api/v1/categories",
             "/actuator",
             "/**/v3/api-docs/**",
             "/**/swagger-ui/**",

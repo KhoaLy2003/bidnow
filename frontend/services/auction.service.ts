@@ -25,7 +25,7 @@ export const auctionService = {
    * Fetch auction categories.
    */
   async getCategories(): Promise<ApiResponse<AuctionCategoryResponse[]>> {
-    const response = await fetch(`${API_URL}/api/v1/auctions/categories`, {
+    const response = await fetch(`${API_URL}/api/v1/categories`, {
       method: "GET",
     });
 
@@ -76,7 +76,7 @@ export const auctionService = {
     if (params.page !== undefined) query.append("page", params.page.toString());
     if (params.size !== undefined) query.append("size", params.size.toString());
 
-    const url = `${API_URL}/api/v1/auctions/my-auctions${query.toString() ? '?' + query.toString() : ''}`;
+    const url = `${API_URL}/api/v1/auctions/me${query.toString() ? '?' + query.toString() : ''}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {

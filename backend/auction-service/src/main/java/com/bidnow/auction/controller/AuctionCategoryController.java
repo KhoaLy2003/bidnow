@@ -31,7 +31,7 @@ public class AuctionCategoryController {
      */
     @Operation(summary = "Get all active auction categories")
     @ApiResponse(responseCode = "200", description = "Category list returned")
-    @GetMapping("/")
+    @GetMapping()
     public ResponseEntity<BaseResponse<List<AuctionCategoryResponse>>> getCategories() {
         return ResponseEntity.ok(BaseResponse.success(auctionCategoryService.getCategories()));
     }
