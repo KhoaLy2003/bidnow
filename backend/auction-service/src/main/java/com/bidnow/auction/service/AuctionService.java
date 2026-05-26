@@ -1,5 +1,6 @@
 package com.bidnow.auction.service;
 
+import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionCategoryResponse;
@@ -12,6 +13,12 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AuctionService {
+
+    AuctionResponse getAuctionById(UUID id);
+
+    AuctionResponse publishAuction(UUID sellerId, UUID id);
+
+    void cancelAuction(UUID sellerId, UUID id, CancelAuctionRequest request);
 
     AuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request);
 

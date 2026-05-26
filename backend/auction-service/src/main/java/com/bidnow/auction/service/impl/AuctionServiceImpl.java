@@ -5,6 +5,7 @@ import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.entity.AuctionStatusHistory;
 import com.bidnow.auction.domain.enums.AuctionStatus;
+import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionCategoryResponse;
@@ -38,6 +39,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -52,6 +54,97 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     private final AuctionMapper auctionMapper;
     private final AuctionKafkaProducer auctionKafkaProducer;
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuctionResponse getAuctionById(UUID id) {
+        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
+        List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
+        return auctionMapper.toResponse(auction, images);
+    }
+
+    @Override
+    @Transactional
+    public AuctionResponse publishAuction(UUID sellerId, UUID id) {
+        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
+
+        if (!auction.getSellerId().equals(sellerId)) {
+            throw new ForbiddenException("You do not own this auction", ErrorCodes.ACCESS_DENIED);
+        }
+
+        if (auction.getStatus() != AuctionStatus.DRAFT) {
+            throw new BadRequestException("Only DRAFT auctions can be published", ErrorCodes.INVALID_INPUT);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (!auction.getEndTime().isAfter(now)) {
+            throw new BadRequestException("Auction end time must be in the future", ErrorCodes.INVALID_INPUT);
+        }
+
+        if (!auction.getEndTime().isAfter(auction.getStartTime())) {
+            throw new BadRequestException("End time must be after start time", ErrorCodes.INVALID_INPUT);
+        }
+
+        AuctionStatus oldStatus = auction.getStatus();
+        AuctionStatus newStatus = auction.getStartTime().isAfter(now)
+                ? AuctionStatus.SCHEDULED
+                : AuctionStatus.ACTIVE;
+
+        auction.setStatus(newStatus);
+        auction = auctionItemRepository.save(auction);
+
+        recordStatusHistory(auction, oldStatus, newStatus, sellerId, "Seller published auction");
+
+        if (newStatus == AuctionStatus.ACTIVE) {
+            auctionKafkaProducer.publishAuctionCreated(AuctionCreatedEvent.builder()
+                    .auctionId(auction.getId())
+                    .sellerId(sellerId)
+                    .title(auction.getTitle())
+                    .startingPrice(auction.getStartingPrice())
+                    .endTime(auction.getEndTime().toLocalDateTime())
+                    .build());
+        }
+
+        log.info("Published auction {} to status {} by seller {}", id, newStatus, sellerId);
+        List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
+        return auctionMapper.toResponse(auction, images);
+    }
+
+    @Override
+    @Transactional
+    public void cancelAuction(UUID sellerId, UUID id, CancelAuctionRequest request) {
+        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
+
+        if (!auction.getSellerId().equals(sellerId)) {
+            throw new ForbiddenException("You do not own this auction", ErrorCodes.ACCESS_DENIED);
+        }
+
+        Set<AuctionStatus> cancellable = Set.of(
+                AuctionStatus.DRAFT, AuctionStatus.SCHEDULED, AuctionStatus.ACTIVE);
+        if (!cancellable.contains(auction.getStatus())) {
+            throw new BadRequestException(
+                    "Auction cannot be cancelled in status: " + auction.getStatus(), ErrorCodes.INVALID_INPUT);
+        }
+
+        AuctionStatus oldStatus = auction.getStatus();
+        OffsetDateTime now = OffsetDateTime.now();
+        String reason = (request != null && request.getReason() != null)
+                ? request.getReason() : "Seller cancelled auction";
+
+        auction.setStatus(AuctionStatus.CANCELLED);
+        auction.setCancelledAt(now);
+        auction.setCancelledBy(sellerId);
+        auction.setCancellationReason(reason);
+        auctionItemRepository.save(auction);
+
+        recordStatusHistory(auction, oldStatus, AuctionStatus.CANCELLED, sellerId, reason);
+
+        log.info("Cancelled auction {} (was {}) by seller {}", id, oldStatus, sellerId);
+    }
 
     @Override
     @Transactional

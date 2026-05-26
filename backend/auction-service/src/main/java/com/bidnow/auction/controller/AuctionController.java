@@ -1,5 +1,6 @@
 package com.bidnow.auction.controller;
 
+import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionResponse;
@@ -20,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -29,6 +31,26 @@ import java.util.UUID;
 public class AuctionController {
 
     private final AuctionService auctionService;
+
+    /**
+     * =============================================================
+     * Get auction details by ID (public — no auth required).
+     *
+     * @param id UUID of the auction
+     * @return ResponseEntity containing a BaseResponse with the AuctionResponse.
+     *         HTTP 200 on success, 404 if not found or soft-deleted.
+     * =============================================================
+     */
+    @Operation(summary = "Get auction details by ID (public)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Auction retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Auction not found")
+    })
+    @GetMapping("/{id}")
+    public ResponseEntity<BaseResponse<AuctionResponse>> getAuctionById(@PathVariable UUID id) {
+        AuctionResponse response = auctionService.getAuctionById(id);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
 
     /**
      * =============================================================
@@ -137,6 +159,57 @@ public class AuctionController {
             @AuthenticatedUserId UUID sellerId,
             @PathVariable UUID id) {
         auctionService.deleteAuction(sellerId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * =============================================================
+     * Publish a DRAFT auction (transitions to SCHEDULED or ACTIVE).
+     *
+     * @param sellerId UUID of the authenticated seller
+     * @param id UUID of the auction to publish (path variable)
+     * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
+     *         HTTP 200 on success.
+     * =============================================================
+     */
+    @Operation(summary = "Publish a DRAFT auction (transitions to SCHEDULED or ACTIVE)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Auction published successfully"),
+            @ApiResponse(responseCode = "400", description = "Not in DRAFT status or end time is in the past"),
+            @ApiResponse(responseCode = "403", description = "Not the auction owner"),
+            @ApiResponse(responseCode = "404", description = "Auction not found")
+    })
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<BaseResponse<AuctionResponse>> publishAuction(
+            @AuthenticatedUserId UUID sellerId,
+            @PathVariable UUID id) {
+        AuctionResponse response = auctionService.publishAuction(sellerId, id);
+        return ResponseEntity.ok(BaseResponse.success("Auction published successfully", response));
+    }
+
+    /**
+     * =============================================================
+     * Cancel an auction (DRAFT/SCHEDULED/ACTIVE → CANCELLED).
+     *
+     * @param sellerId UUID of the authenticated seller
+     * @param id UUID of the auction to cancel (path variable)
+     * @param request optional body containing a cancellation reason
+     * @return ResponseEntity with no content (HTTP 204) on success.
+     * =============================================================
+     */
+    @Operation(summary = "Cancel an auction (DRAFT/SCHEDULED/ACTIVE → CANCELLED)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Auction cancelled successfully"),
+            @ApiResponse(responseCode = "400", description = "Auction is in a terminal state"),
+            @ApiResponse(responseCode = "403", description = "Not the auction owner"),
+            @ApiResponse(responseCode = "404", description = "Auction not found")
+    })
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelAuction(
+            @AuthenticatedUserId UUID sellerId,
+            @PathVariable UUID id,
+            @Valid @RequestBody(required = false) CancelAuctionRequest request) {
+        auctionService.cancelAuction(sellerId, id, request);
         return ResponseEntity.noContent().build();
     }
 }
