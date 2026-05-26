@@ -24,6 +24,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SecurityConstants.PUBLIC_ENDPOINTS)
                         .permitAll()
+                        .requestMatchers("/api/v1/auctions/categories")
+                        .permitAll()
                         .requestMatchers("/demo/**")
                         .permitAll()
                         .anyRequest()
