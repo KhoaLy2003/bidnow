@@ -29,7 +29,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/v1/categories")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auctions/**", "/api/v1/auctions")
+                        .requestMatchers(HttpMethod.GET,"/api/v1/auctions/public", "/api/v1/auctions/public/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated()

@@ -46,7 +46,7 @@ public class AuctionController {
             @ApiResponse(responseCode = "200", description = "Auction retrieved successfully"),
             @ApiResponse(responseCode = "404", description = "Auction not found")
     })
-    @GetMapping("/{id}")
+    @GetMapping("/public/{id}")
     public ResponseEntity<BaseResponse<AuctionResponse>> getAuctionById(@PathVariable UUID id) {
         AuctionResponse response = auctionService.getAuctionById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
