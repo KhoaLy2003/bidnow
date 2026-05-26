@@ -1,5 +1,5 @@
 import { formatCurrency } from '@/lib/format'
-import type { CreateAuctionFormData } from '@/types/seller'
+import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
 
 const CATEGORIES: Record<string, string> = {
   watches:     'Watches & Jewelry',

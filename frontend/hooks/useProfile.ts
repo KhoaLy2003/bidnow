@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { userService } from "@/services/user.service";
-import { UserProfileResponse } from "@/types/user-profile";
+import { UserProfileResponse } from "@/types/api/user-profile.api";
 
 interface UseProfileResult {
   profile: UserProfileResponse | null;

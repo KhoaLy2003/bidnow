@@ -19,8 +19,8 @@ import { AntiSnipeNotice }      from '@/components/seller/AntiSnipeNotice'
 import { SellerStatusBadge }    from '@/components/seller/SellerStatusBadge'
 import { DepositRangeInput }    from '@/components/seller/DepositRangeInput'
 import { formatCurrency }       from '@/lib/format'
-import { SellerAuctionStatus }  from '@/types/seller'
-import type { SellerAuction, SellerBidItem, AuditEvent } from '@/types/seller'
+import { SellerAuctionStatus }  from '@/types/ui/seller.ui'
+import type { SellerAuction, SellerBidItem, AuditEvent } from '@/types/ui/seller.ui'
 
 // ── Mock data ──────────────────────────────────────────────────
 const now = Date.now()

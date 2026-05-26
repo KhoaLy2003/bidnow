@@ -5,7 +5,7 @@ import { MOCK_CURRENT_USER_ID } from '@/lib/mock-data'
 import { BidPanelUpcoming } from './BidPanelUpcoming'
 import { BidPanelLive }     from './BidPanelLive'
 import { BidPanelEnded }    from './BidPanelEnded'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 const LIVE_STATUSES = new Set<AuctionStatus>([
   AuctionStatus.Active,

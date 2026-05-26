@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { ListOrdered } from 'lucide-react'
 import { AuctionGrid }   from '@/components/auction/AuctionGrid'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction }  from '@/types/auction'
+import type { Auction }  from '@/types/ui/auction.ui'
 
 export const metadata: Metadata = { title: 'My Bids' }
 

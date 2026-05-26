@@ -7,8 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ActiveAuctionRow, HistoricalAuctionRow } from '@/components/seller/SellerAuctionRow'
 import { AuctionFilters }    from '@/components/seller/AuctionFilters'
 import { EmptyAuctions }     from '@/components/seller/EmptyAuctions'
-import { SellerAuctionStatus } from '@/types/seller'
-import type { SellerAuction }  from '@/types/seller'
+import { SellerAuctionStatus } from '@/types/ui/seller.ui'
+import type { SellerAuction }  from '@/types/ui/seller.ui'
 
 // ── Mock data ──────────────────────────────────────────────────
 const now = Date.now()

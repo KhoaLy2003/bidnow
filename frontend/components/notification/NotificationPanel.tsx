@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { useNotifications } from '@/hooks/useNotifications'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Notification } from '@/types/notification'
+import type { Notification } from '@/types/ui/notification.ui'
 
 const TYPE_COLOR: Record<Notification['type'], string> = {
   outbid:      'bg-[var(--color-danger-default)]',

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { type AuditLogDelta } from "@/types/admin";
+import { type AuditLogDelta } from "@/types/api/admin.api";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, FileText, Minus, Plus } from "lucide-react";
 

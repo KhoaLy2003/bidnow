@@ -1,6 +1,6 @@
 import { ArrowUp, ArrowDown, RefreshCw, CircleDollarSign } from 'lucide-react'
 import { formatCurrency, formatRelativeTime } from '@/lib/format'
-import type { Transaction } from '@/types/wallet'
+import type { Transaction } from '@/types/ui/wallet.ui'
 import { cn } from '@/lib/utils'
 
 interface TransactionRowProps {

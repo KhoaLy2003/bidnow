@@ -1,7 +1,7 @@
 import { CountdownTimer }    from '@/components/auction/CountdownTimer'
 import { CurrentBidDisplay } from '@/components/auction/CurrentBidDisplay'
 import { formatCurrency }    from '@/lib/format'
-import type { SellerAuction, SellerBidItem } from '@/types/seller'
+import type { SellerAuction, SellerBidItem } from '@/types/ui/seller.ui'
 
 interface AuctionMonitorPanelProps {
   auction: SellerAuction

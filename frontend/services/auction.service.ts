@@ -1,5 +1,14 @@
 import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
-import type { Auction, BidHistoryItem } from '@/types/auction'
+import type { Auction, BidHistoryItem } from '@/types/ui/auction.ui'
+import type { ApiResponse, PageResponse } from '@/types/api/common.api'
+import type { 
+  CreateAuctionRequest, 
+  UpdateAuctionRequest, 
+  AuctionResponse, 
+  AuctionSummaryResponse 
+} from '@/types/api/auction.api'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
 // Optional: Introduce a small artificial delay to simulate network latency
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -11,6 +20,94 @@ export interface GetAuctionsParams {
 }
 
 export const auctionService = {
+  /**
+   * Create a new auction listing (Seller).
+   */
+  async createAuction(data: CreateAuctionRequest, token: string): Promise<ApiResponse<AuctionResponse>> {
+    const response = await fetch(`${API_URL}/api/v1/auctions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw error;
+    }
+
+    return response.json();
+  },
+
+  /**
+   * List auctions owned by the authenticated seller.
+   */
+  async getMyAuctions(
+    params: { type?: string; categoryId?: string; page?: number; size?: number },
+    token: string
+  ): Promise<ApiResponse<PageResponse<AuctionSummaryResponse>>> {
+    const query = new URLSearchParams();
+    if (params.type) query.append("type", params.type);
+    if (params.categoryId) query.append("categoryId", params.categoryId);
+    if (params.page !== undefined) query.append("page", params.page.toString());
+    if (params.size !== undefined) query.append("size", params.size.toString());
+
+    const url = `${API_URL}/api/v1/auctions/my-auctions${query.toString() ? '?' + query.toString() : ''}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw error;
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Update an existing auction listing (Seller).
+   */
+  async updateAuction(id: string, data: UpdateAuctionRequest, token: string): Promise<ApiResponse<AuctionResponse>> {
+    const response = await fetch(`${API_URL}/api/v1/auctions/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw error;
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Delete (soft) an auction (Seller).
+   */
+  async deleteAuction(id: string, token: string): Promise<void> {
+    const response = await fetch(`${API_URL}/api/v1/auctions/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok && response.status !== 204) {
+      const error = await response.json();
+      throw error;
+    }
+  },
+
   /**
    * Fetch a list of auctions with optional filtering.
    */

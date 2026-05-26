@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import { useAuctionStore } from '@/store/auctionStore'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Bid } from '@/types/auction'
+import type { Bid } from '@/types/ui/auction.ui'
 
 interface BidNewEvent      { bid: Bid }
 interface AuctionStatusEvent { status: AuctionStatus }

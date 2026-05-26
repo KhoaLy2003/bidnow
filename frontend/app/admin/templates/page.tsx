@@ -23,7 +23,7 @@ import {
   type NotificationTemplateResponse,
   type NotificationTemplateType,
   type TemplateFilters,
-} from '@/types/admin'
+} from '@/types/api/admin.api'
 import { useAuthStore } from '@/store/authStore'
 import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

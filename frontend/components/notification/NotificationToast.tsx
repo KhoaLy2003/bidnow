@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { Trophy, Timer, ArrowDown } from 'lucide-react'
-import type { Notification } from '@/types/notification'
+import type { Notification } from '@/types/ui/notification.ui'
 
 const DURATION: Record<Notification['type'], number | undefined> = {
   won:          8_000,

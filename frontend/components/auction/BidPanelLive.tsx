@@ -8,7 +8,7 @@ import { StatusBadge } from './StatusBadge'
 import { WatchingFooter } from './WatchingFooter'
 import { formatCurrency } from '@/lib/format'
 import { useWalletStore } from '@/store/walletStore'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 interface BidPanelLiveProps {
   auction:               Auction

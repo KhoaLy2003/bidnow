@@ -1,5 +1,5 @@
-import { ApiResponse } from "@/types/auth";
-import { UserProfileResponse } from "@/types/user-profile";
+import { ApiResponse } from "@/types/api/auth.api";
+import { UserProfileResponse } from "@/types/api/user-profile.api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 

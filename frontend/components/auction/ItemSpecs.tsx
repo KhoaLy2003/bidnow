@@ -1,6 +1,6 @@
 import { Check, X } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 interface ItemSpecsProps {
   auction:       Auction

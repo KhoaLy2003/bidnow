@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Clock, Mail, Ro
 import { toast } from 'sonner'
 
 import { adminService } from '@/services/adminService'
-import { type EmailDeliveryStatus, type EmailLogFilters, type EmailLogResponse } from '@/types/admin'
+import { type EmailDeliveryStatus, type EmailLogFilters, type EmailLogResponse } from '@/types/api/admin.api'
 import { useAuthStore } from '@/store/authStore'
 import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

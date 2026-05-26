@@ -2,7 +2,7 @@ import {
   Radio, Timer, AlertTriangle, Lock, Trophy, XCircle, Ban, FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { SellerAuctionStatus } from '@/types/seller'
+import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import { cn } from '@/lib/utils'
 
 type BadgeVariant = 'default' | 'secondary' | 'active' | 'ending-soon' | 'critical' | 'closed' | 'won' | 'lost'

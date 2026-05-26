@@ -12,8 +12,8 @@ import { CountdownTimer }     from '@/components/auction/CountdownTimer'
 import { SellerStatusBadge }  from './SellerStatusBadge'
 import { DeleteAuctionDialog } from './DeleteAuctionDialog'
 import { formatCurrency }     from '@/lib/format'
-import { SellerAuctionStatus } from '@/types/seller'
-import type { SellerAuction }  from '@/types/seller'
+import { SellerAuctionStatus } from '@/types/ui/seller.ui'
+import type { SellerAuction }  from '@/types/ui/seller.ui'
 import { cn } from '@/lib/utils'
 
 function canEdit(auction: SellerAuction): boolean {

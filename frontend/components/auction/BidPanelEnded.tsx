@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { AuctionResultBanner } from './AuctionResultBanner'
 import { WatchingFooter } from './WatchingFooter'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 interface BidPanelEndedProps {
   auction: Auction

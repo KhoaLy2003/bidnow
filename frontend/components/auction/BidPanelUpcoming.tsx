@@ -9,7 +9,7 @@ import { useCountdown } from '@/hooks/useCountdown'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 interface BidPanelUpcomingProps {
   auction: Auction

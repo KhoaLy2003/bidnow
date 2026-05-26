@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Transaction, WalletBalance } from '@/types/wallet'
+import type { Transaction, WalletBalance } from '@/types/ui/wallet.ui'
 
 const LOW_BALANCE_THRESHOLD = 10_00  // $10.00
 

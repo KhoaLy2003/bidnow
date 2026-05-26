@@ -1,4 +1,4 @@
-import type { AuditEvent } from '@/types/seller'
+import type { AuditEvent } from '@/types/ui/seller.ui'
 
 interface AuditTrailProps {
   events: AuditEvent[]

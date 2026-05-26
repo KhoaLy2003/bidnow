@@ -7,7 +7,7 @@ import { CountdownTimer } from './CountdownTimer'
 import { formatCurrency } from '@/lib/format'
 import { getAuctionStatus } from '@/lib/auction-utils'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 import { cn } from '@/lib/utils'
 
 interface AuctionCardProps {

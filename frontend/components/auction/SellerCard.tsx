@@ -1,5 +1,5 @@
 import { UserAvatar } from '@/components/shared/UserAvatar'
-import type { AuctionSeller } from '@/types/auction'
+import type { AuctionSeller } from '@/types/ui/auction.ui'
 
 interface SellerCardProps {
   seller: AuctionSeller
