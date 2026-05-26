@@ -147,8 +147,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
         try {
           const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
           await mediaService.uploadToS3(presigned.uploadUrl, file)
-          const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/media/download?s3Key=${presigned.s3Key}`
-          uploadedUrls.push(fullUrl)
+          uploadedUrls.push(presigned.s3Key)
         } catch (e) {
           console.error("Failed to upload image:", file.name, e)
           throw new Error("Image upload failed.")

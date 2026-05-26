@@ -15,6 +15,7 @@ import { formatCurrency }     from '@/lib/format'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
 import { cn } from '@/lib/utils'
+import { useSecureImage } from '@/hooks/useSecureImage'
 
 function canEdit(auction: SellerAuction): boolean {
   if (auction.status === SellerAuctionStatus.Draft) return true
@@ -39,6 +40,7 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
   const editable  = canEdit(auction)
   const deletable = canDelete(auction)
   const imageUrl  = auction.primaryImageUrl ?? null
+  const resolvedImageUrl = useSecureImage(imageUrl)
   const isClosed  = [
     SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled,
   ].includes(auction.status)
@@ -52,8 +54,8 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
             'size-12 shrink-0 overflow-hidden rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-elevated)]',
             isClosed && 'grayscale-[60%]',
           )}>
-            {imageUrl
-              ? <Image src={imageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
+            {resolvedImageUrl
+              ? <Image src={resolvedImageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
               : <div className="size-full" style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }} />
             }
           </div>
@@ -170,13 +172,15 @@ interface HistoricalRowProps {
 
 export function HistoricalAuctionRow({ auction }: HistoricalRowProps) {
   const imageUrl = auction.primaryImageUrl ?? null
+  const resolvedImageUrl = useSecureImage(imageUrl)
+  
   return (
     <tr className="group border-b border-[var(--color-border-default)] transition-colors duration-[var(--duration-tesla)] hover:bg-[var(--color-bg-elevated)]">
       {/* Thumbnail */}
       <td className="w-14 py-3 pl-6 pr-2">
         <div className="size-12 shrink-0 overflow-hidden rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-elevated)] grayscale-[60%]">
-          {imageUrl
-            ? <Image src={imageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
+          {resolvedImageUrl
+            ? <Image src={resolvedImageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
             : <div className="size-full" style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }} />
           }
         </div>

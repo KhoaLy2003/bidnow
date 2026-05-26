@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { mediaService } from '@/services/media.service'
-import { useAuthStore } from '@/store/authStore'
+import { useSecureImage } from '@/hooks/useSecureImage'
 
 interface UserAvatarProps {
   name: string
@@ -49,40 +48,7 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const initials = getInitials(name)
   const bgColor = hashColor(name)
-  const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined)
-  const accessToken = useAuthStore((s) => s.accessToken)
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const resolveAvatar = async () => {
-      if (!avatarUrl) {
-        setResolvedUrl(undefined);
-        return;
-      }
-
-      // If it looks like an S3 key from our media service
-      if (avatarUrl.startsWith('uploads/')) {
-        try {
-          if (!accessToken) return;
-          const url = await mediaService.getDownloadUrl(accessToken, avatarUrl);
-          if (isMounted) setResolvedUrl(url);
-        } catch (error) {
-          console.error("Failed to load avatar url", error);
-          if (isMounted) setResolvedUrl(undefined);
-        }
-      } else {
-        // It's already a full HTTP URL or relative path
-        if (isMounted) setResolvedUrl(avatarUrl);
-      }
-    };
-
-    resolveAvatar();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [avatarUrl]);
+  const resolvedUrl = useSecureImage(avatarUrl)
 
   return (
     <div className={cn('relative inline-flex shrink-0', className)}>
