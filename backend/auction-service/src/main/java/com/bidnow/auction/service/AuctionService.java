@@ -2,14 +2,18 @@ package com.bidnow.auction.service;
 
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionCategoryResponse;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.common.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface AuctionService {
+
+    List<AuctionCategoryResponse> getCategories();
 
     AuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request);
 

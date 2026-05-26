@@ -2,6 +2,7 @@ package com.bidnow.auction.controller;
 
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionCategoryResponse;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.service.AuctionService;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -37,6 +39,13 @@ import java.util.UUID;
 public class AuctionController {
 
     private final AuctionService auctionService;
+
+    @Operation(summary = "Get all active auction categories")
+    @ApiResponse(responseCode = "200", description = "Category list returned")
+    @GetMapping("/categories")
+    public ResponseEntity<BaseResponse<List<AuctionCategoryResponse>>> getCategories() {
+        return ResponseEntity.ok(BaseResponse.success(auctionService.getCategories()));
+    }
 
     @Operation(summary = "Create a new auction listing")
     @ApiResponses({
