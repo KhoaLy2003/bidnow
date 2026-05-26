@@ -18,13 +18,18 @@ import { cn } from '@/lib/utils'
 import { useSecureImage } from '@/hooks/useSecureImage'
 
 function canEdit(auction: SellerAuction): boolean {
-  if (auction.status === SellerAuctionStatus.Draft) return true
-  if (auction.status === SellerAuctionStatus.Active && auction.startsAt > new Date()) return true
-  return false
+  return (
+    auction.status === SellerAuctionStatus.Draft ||
+    auction.status === SellerAuctionStatus.Scheduled
+  )
 }
 
 function canDelete(auction: SellerAuction): boolean {
-  return canEdit(auction) && auction.totalBids === 0
+  return (
+    auction.status === SellerAuctionStatus.Draft ||
+    auction.status === SellerAuctionStatus.Scheduled ||
+    auction.status === SellerAuctionStatus.Active
+  )
 }
 
 // ────────────────────────────────────────────────────────────────

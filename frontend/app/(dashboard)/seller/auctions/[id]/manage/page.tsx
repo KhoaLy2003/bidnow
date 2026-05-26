@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams }     from 'next/navigation'
 import Link              from 'next/link'
-import { CheckCircle2, Circle, Trash2 } from 'lucide-react'
+import { CheckCircle2, Circle, Trash2, Eye, Pencil } from 'lucide-react'
 import { Button }        from '@/components/ui/button'
 import { Input }         from '@/components/ui/input'
 import { Textarea }      from '@/components/ui/textarea'
@@ -78,13 +78,18 @@ const DRAFT_EVENTS: AuditEvent[] = [
 // ──────────────────────────────────────────────────────────────
 
 function canEdit(auction: SellerAuction): boolean {
-  if (auction.status === SellerAuctionStatus.Draft) return true
-  if (auction.status === SellerAuctionStatus.Active && auction.startsAt > new Date()) return true
-  return false
+  return (
+    auction.status === SellerAuctionStatus.Draft ||
+    auction.status === SellerAuctionStatus.Scheduled
+  )
 }
 
 function canDelete(auction: SellerAuction): boolean {
-  return canEdit(auction) && auction.totalBids === 0
+  return (
+    auction.status === SellerAuctionStatus.Draft ||
+    auction.status === SellerAuctionStatus.Scheduled ||
+    auction.status === SellerAuctionStatus.Active
+  )
 }
 
 function ChecklistItem({ done, label }: { done: boolean; label: string }) {
@@ -345,17 +350,40 @@ export default function ManageAuctionPage() {
           </div>
         </div>
 
-        {deletable && (
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href={`/auctions/${auction.id}`} />}
+            nativeButton={false}
+          >
+            <Eye className="mr-1.5 size-3.5" />
+            View
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!editable}
+            onClick={() => {
+              document.getElementById('edit-section')?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            <Pencil className="mr-1.5 size-3.5" />
+            Edit
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
-            className="shrink-0 text-[var(--color-danger-text)] hover:bg-[var(--color-danger-subtle)]"
+            disabled={!deletable}
+            className="text-[var(--color-danger-text)] hover:bg-[var(--color-danger-subtle)] disabled:opacity-50 disabled:pointer-events-none"
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 className="mr-1.5 size-3.5" />
             Delete
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="px-6 py-6 flex flex-col gap-8">
@@ -369,7 +397,7 @@ export default function ManageAuctionPage() {
 
         {/* ── Draft mode: edit form (with optional lock overlay) ── */}
         {!isLive && (
-          <section className="relative flex flex-col gap-3">
+          <section id="edit-section" className="relative flex flex-col gap-3">
             <h2 className="font-medium text-sm">Edit auction</h2>
             {!editable && (
               <EditLockOverlay reason="This auction is live and has active bids — editing is locked." />
