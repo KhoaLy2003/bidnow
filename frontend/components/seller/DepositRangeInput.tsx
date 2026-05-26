@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Input }   from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label }   from '@/components/ui/label'
 import { cn }      from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
@@ -33,10 +33,7 @@ export function DepositRangeInput({
     return { thumbLeft: range > 0 ? `${((clamped - minCents) / range) * 100}%` : '0%' }
   }, [depositCents, minCents, maxCents, startingPriceCents])
 
-  function handleChange(raw: string) {
-    const dollars = parseFloat(raw.replace(/[^0-9.]/g, ''))
-    if (!isNaN(dollars)) onChange(Math.round(dollars * 100))
-  }
+
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-primary/50 bg-primary/[0.06] p-4">
@@ -50,11 +47,11 @@ export function DepositRangeInput({
       <div className="flex items-end gap-4">
         <div className="flex flex-col gap-1.5 w-40">
           <Label className="text-xs font-medium text-muted-foreground">Amount</Label>
-          <Input
-            value={depositCents > 0 ? `$${(depositCents / 100).toFixed(2)}` : ''}
-            onChange={e => handleChange(e.target.value)}
-            placeholder="$ 0.00"
-            className={cn('font-mono text-sm', !inRange && startingPriceCents > 0 && 'border-destructive')}
+          <CurrencyInput
+            valueCents={depositCents}
+            onChangeCents={onChange}
+            placeholder="0.00"
+            hasError={!inRange && startingPriceCents > 0}
           />
           <p className={cn(
             'text-xs',

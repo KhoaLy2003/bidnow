@@ -5,7 +5,8 @@ import type {
   CreateAuctionRequest, 
   UpdateAuctionRequest, 
   AuctionResponse, 
-  AuctionSummaryResponse 
+  AuctionSummaryResponse,
+  AuctionCategoryResponse
 } from '@/types/api/auction.api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -20,6 +21,27 @@ export interface GetAuctionsParams {
 }
 
 export const auctionService = {
+  /**
+   * Fetch auction categories.
+   */
+  async getCategories(): Promise<ApiResponse<AuctionCategoryResponse[]>> {
+    const response = await fetch(`${API_URL}/api/v1/auctions/categories`, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      // Safely handle empty error responses
+      const errorText = await response.text();
+      try {
+        throw JSON.parse(errorText);
+      } catch (e) {
+        throw new Error(errorText || `Failed with status ${response.status}`);
+      }
+    }
+
+    return response.json();
+  },
+
   /**
    * Create a new auction listing (Seller).
    */

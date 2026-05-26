@@ -1,21 +1,12 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-export interface MediaUploadResponse {
-  id: string;
-  originalName: string;
-  s3Key: string;
-  contentType: string;
-  fileSize: number;
-  width: number;
-  height: number;
-  createdAt: string;
-}
+import type { MediaUploadResponse, MediaEntityType, PresignedUrlResponse } from '@/types/api/media.api';
 
 export const mediaService = {
   uploadFile: async (
     accessToken: string,
     file: File,
-    entityType?: string,
+    entityType?: MediaEntityType,
     entityId?: string,
   ): Promise<MediaUploadResponse> => {
     const formData = new FormData();
@@ -38,6 +29,45 @@ export const mediaService = {
 
     const json = await response.json();
     return json.data;
+  },
+
+  getPresignedUrl: async (
+    accessToken: string,
+    fileName: string,
+    contentType: string,
+  ): Promise<PresignedUrlResponse> => {
+    const url = new URL(`${API_URL}/api/v1/media/presigned-url`);
+    url.searchParams.append("fileName", fileName);
+    url.searchParams.append("contentType", contentType);
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw error;
+    }
+
+    const json = await response.json();
+    return json.data;
+  },
+
+  uploadToS3: async (uploadUrl: string, file: File): Promise<void> => {
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to upload to S3: ${response.statusText}`);
+    }
   },
 
   getDownloadUrl: async (

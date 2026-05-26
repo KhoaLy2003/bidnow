@@ -38,9 +38,9 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const editable  = canEdit(auction)
   const deletable = canDelete(auction)
-  const imageUrl  = auction.imageUrls[0] ?? null
+  const imageUrl  = auction.primaryImageUrl ?? null
   const isClosed  = [
-    SellerAuctionStatus.Closed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled,
+    SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled,
   ].includes(auction.status)
 
   return (
@@ -75,9 +75,6 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
         {/* Current bid */}
         <td className="w-32 py-3 pr-4 text-right">
           <p className="font-mono font-medium text-sm">{formatCurrency(auction.currentBid)}</p>
-          {auction.bidIncrement > 0 && (
-            <p className="text-xs text-muted-foreground">+{formatCurrency(auction.bidIncrement)} incr</p>
-          )}
         </td>
 
         {/* Bid count */}
@@ -172,7 +169,7 @@ interface HistoricalRowProps {
 }
 
 export function HistoricalAuctionRow({ auction }: HistoricalRowProps) {
-  const imageUrl = auction.imageUrls[0] ?? null
+  const imageUrl = auction.primaryImageUrl ?? null
   return (
     <tr className="group border-b border-[var(--color-border-default)] transition-colors duration-[var(--duration-tesla)] hover:bg-[var(--color-bg-elevated)]">
       {/* Thumbnail */}
@@ -200,14 +197,7 @@ export function HistoricalAuctionRow({ auction }: HistoricalRowProps) {
 
       {/* Winner */}
       <td className="w-36 py-3 pr-4">
-        {auction.winnerName ? (
-          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Trophy className="size-3 text-[var(--color-auction-won-text)]" />
-            @{auction.winnerName}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )}
+        <span className="text-sm text-muted-foreground">—</span>
       </td>
 
       {/* End date */}

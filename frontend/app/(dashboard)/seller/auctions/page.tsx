@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link                  from 'next/link'
 import { Button }            from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -9,119 +9,11 @@ import { AuctionFilters }    from '@/components/seller/AuctionFilters'
 import { EmptyAuctions }     from '@/components/seller/EmptyAuctions'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
+import { useAuthStore } from '@/store/authStore'
+import { auctionService } from '@/services/auction.service'
+import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper'
 
-// ── Mock data ──────────────────────────────────────────────────
-const now = Date.now()
-
-const MOCK_ACTIVE: SellerAuction[] = [
-  {
-    id: 'au-29481', title: 'Hasselblad 500C/M Medium Format — body + 80mm', description: '',
-    imageUrls: [], categoryId: 'electronics', categoryName: 'Electronics',
-    sellerId: 'me', startingPrice: 120_000, currentBid: 142_000, bidIncrement: 5_000,
-    depositAmount: 8_400, totalBids: 18, watchers: 47,
-    startsAt: new Date(now - 2 * 86_400_000),
-    endsAt:   new Date(now + 2 * 3_600_000 + 14 * 60_000),
-    createdAt: new Date(now - 3 * 86_400_000),
-    status: SellerAuctionStatus.Active,
-  },
-  {
-    id: 'au-29482', title: '1968 Omega Speedmaster Pre-Moon (Cal. 321)', description: '',
-    imageUrls: [], categoryId: 'watches', categoryName: 'Watches & Jewelry',
-    sellerId: 'me', startingPrice: 250_000, currentBid: 420_000, bidIncrement: 5_000,
-    depositAmount: 17_500, totalBids: 42, watchers: 124,
-    startsAt: new Date(now - 4 * 86_400_000),
-    endsAt:   new Date(now + 11 * 60_000 + 4_000),
-    createdAt: new Date(now - 5 * 86_400_000),
-    status: SellerAuctionStatus.EndingSoon,
-  },
-  {
-    id: 'au-29483', title: 'Eames Lounge & Ottoman — rosewood, 1971', description: '',
-    imageUrls: [], categoryId: 'furniture', categoryName: 'Home & Furniture',
-    sellerId: 'me', startingPrice: 180_000, currentBid: 280_000, bidIncrement: 2_500,
-    depositAmount: 12_600, totalBids: 7, watchers: 23,
-    startsAt: new Date(now - 5 * 86_400_000),
-    endsAt:   new Date(now + 48_000),
-    createdAt: new Date(now - 6 * 86_400_000),
-    status: SellerAuctionStatus.Critical,
-  },
-  {
-    id: 'au-29484', title: 'Fender Telecaster Custom 1972 — natural finish', description: '',
-    imageUrls: [], categoryId: 'music', categoryName: 'Music & Instruments',
-    sellerId: 'me', startingPrice: 80_000, currentBid: 95_000, bidIncrement: 2_500,
-    depositAmount: 5_600, totalBids: 23, watchers: 61,
-    startsAt: new Date(now - 86_400_000),
-    endsAt:   new Date(now + 30 * 3_600_000),
-    createdAt: new Date(now - 2 * 86_400_000),
-    status: SellerAuctionStatus.Active,
-  },
-  {
-    id: 'au-29490', title: "Vintage Persian rug, 6'×9' — Tabriz", description: '',
-    imageUrls: [], categoryId: 'furniture', categoryName: 'Home & Furniture',
-    sellerId: 'me', startingPrice: 80_000, currentBid: 0, bidIncrement: 2_500,
-    depositAmount: 8_000, totalBids: 0, watchers: 0,
-    startsAt: new Date(now + 86_400_000),
-    endsAt:   new Date(now + 6 * 86_400_000),
-    createdAt: new Date(now - 86_400_000),
-    status: SellerAuctionStatus.Draft,
-  },
-]
-
-const MOCK_HISTORICAL: SellerAuction[] = [
-  {
-    id: 'au-10001', title: 'Leica M6 Classic — silver, original strap', description: '',
-    imageUrls: [], categoryId: 'electronics', categoryName: 'Electronics',
-    sellerId: 'me', startingPrice: 200_000, currentBid: 315_000, bidIncrement: 5_000,
-    depositAmount: 14_000, totalBids: 22, watchers: 58,
-    startsAt: new Date(now - 14 * 86_400_000),
-    endsAt:   new Date(now - 7 * 86_400_000),
-    createdAt: new Date(now - 15 * 86_400_000),
-    status: SellerAuctionStatus.Won,
-    winnerName: 'mauve_42',
-  },
-  {
-    id: 'au-10002', title: 'Set of 4 Eames DSW chairs — walnut', description: '',
-    imageUrls: [], categoryId: 'furniture', categoryName: 'Home & Furniture',
-    sellerId: 'me', startingPrice: 50_000, currentBid: 68_000, bidIncrement: 1_000,
-    depositAmount: 3_500, totalBids: 11, watchers: 29,
-    startsAt: new Date(now - 20 * 86_400_000),
-    endsAt:   new Date(now - 12 * 86_400_000),
-    createdAt: new Date(now - 21 * 86_400_000),
-    status: SellerAuctionStatus.Won,
-    winnerName: 'dlrt',
-  },
-  {
-    id: 'au-10003', title: 'Rolex Submariner 14060 — no date', description: '',
-    imageUrls: [], categoryId: 'watches', categoryName: 'Watches & Jewelry',
-    sellerId: 'me', startingPrice: 700_000, currentBid: 0, bidIncrement: 10_000,
-    depositAmount: 49_000, totalBids: 0, watchers: 12,
-    startsAt: new Date(now - 30 * 86_400_000),
-    endsAt:   new Date(now - 23 * 86_400_000),
-    createdAt: new Date(now - 31 * 86_400_000),
-    status: SellerAuctionStatus.Failed,
-  },
-  {
-    id: 'au-10004', title: 'Mid-century brass floor lamp', description: '',
-    imageUrls: [], categoryId: 'furniture', categoryName: 'Home & Furniture',
-    sellerId: 'me', startingPrice: 15_000, currentBid: 21_000, bidIncrement: 500,
-    depositAmount: 1_050, totalBids: 6, watchers: 14,
-    startsAt: new Date(now - 40 * 86_400_000),
-    endsAt:   new Date(now - 33 * 86_400_000),
-    createdAt: new Date(now - 41 * 86_400_000),
-    status: SellerAuctionStatus.Won,
-    winnerName: 'noor.k',
-  },
-  {
-    id: 'au-10005', title: 'Polaroid SX-70 — alpha 1, with case', description: '',
-    imageUrls: [], categoryId: 'electronics', categoryName: 'Electronics',
-    sellerId: 'me', startingPrice: 30_000, currentBid: 0, bidIncrement: 500,
-    depositAmount: 2_100, totalBids: 0, watchers: 8,
-    startsAt: new Date(now - 50 * 86_400_000),
-    endsAt:   new Date(now - 43 * 86_400_000),
-    createdAt: new Date(now - 51 * 86_400_000),
-    status: SellerAuctionStatus.Failed,
-  },
-]
-// ──────────────────────────────────────────────────────────────
+// Mock data removed.
 
 const ITEMS_PER_PAGE = 20
 
@@ -134,6 +26,10 @@ function TableHead({ children, right }: { children: React.ReactNode; right?: boo
 }
 
 export default function SellerAuctionsPage() {
+  const { accessToken } = useAuthStore()
+  const [auctions, setAuctions] = useState<SellerAuction[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [search,      setSearch]      = useState('')
   const [category,    setCategory]    = useState('All categories')
   const [statusFilter, setStatusFilter] = useState('All statuses')
@@ -141,21 +37,58 @@ export default function SellerAuctionsPage() {
   const [histPage,    setHistPage]    = useState(1)
   const [deletedIds,  setDeletedIds]  = useState<string[]>([])
 
+  useEffect(() => {
+    if (!accessToken) return
+    let mounted = true
+    const fetchAuctions = async () => {
+      try {
+        setLoading(true)
+        const res = await auctionService.getMyAuctions({}, accessToken)
+        console.log(res)
+        if (mounted) {
+          setAuctions((res.data.data || []).map(mapAuctionSummaryToSellerAuction))
+        }
+      } catch (err) {
+        console.error('Failed to fetch auctions:', err)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    fetchAuctions()
+    return () => { mounted = false }
+  }, [accessToken])
+
+  const { allActive, allHistorical } = useMemo(() => {
+    const active: SellerAuction[] = []
+    const historical: SellerAuction[] = []
+    
+    auctions.forEach(a => {
+      if ([SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled].includes(a.status)) {
+        historical.push(a)
+      } else {
+        active.push(a)
+      }
+    })
+    return { allActive: active, allHistorical: historical }
+  }, [auctions])
+
   const activeAuctions = useMemo(() => {
-    return MOCK_ACTIVE.filter(a => !deletedIds.includes(a.id)).filter(a => {
+    return allActive.filter(a => !deletedIds.includes(a.id)).filter(a => {
       if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false
       if (category !== 'All categories' && a.categoryName !== category) return false
+      if (statusFilter !== 'All statuses' && a.status !== statusFilter) return false
       return true
     })
-  }, [search, category, deletedIds])
+  }, [allActive, search, category, statusFilter, deletedIds])
 
   const histAuctions = useMemo(() => {
-    return MOCK_HISTORICAL.filter(a => {
+    return allHistorical.filter(a => {
       if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false
       if (category !== 'All categories' && a.categoryName !== category) return false
+      if (statusFilter !== 'All statuses' && a.status !== statusFilter) return false
       return true
     })
-  }, [search, category])
+  }, [allHistorical, search, category, statusFilter])
 
   const activePage_items  = activeAuctions.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE)
   const histPage_items    = histAuctions.slice((histPage - 1)  * ITEMS_PER_PAGE, histPage  * ITEMS_PER_PAGE)
@@ -169,7 +102,7 @@ export default function SellerAuctionsPage() {
         <div className="flex flex-col gap-0.5">
           <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">My auctions</h1>
           <p className="text-sm text-muted-foreground">
-            {MOCK_ACTIVE.length + MOCK_HISTORICAL.length} total · {MOCK_ACTIVE.length} active · {MOCK_HISTORICAL.length} completed
+            {allActive.length + allHistorical.length} total · {allActive.length} active · {allHistorical.length} completed
           </p>
         </div>
         <Button variant="brand" size="lg" render={<Link href="/seller/auctions/new" />} nativeButton={false}>
@@ -184,13 +117,13 @@ export default function SellerAuctionsPage() {
               value="active"
               className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent"
             >
-              Active <span className="ml-1.5 font-mono text-xs text-muted-foreground">{MOCK_ACTIVE.length}</span>
+              Active <span className="ml-1.5 font-mono text-xs text-muted-foreground">{allActive.length}</span>
             </TabsTrigger>
             <TabsTrigger
               value="historical"
               className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent"
             >
-              Historical <span className="ml-1.5 font-mono text-xs text-muted-foreground">{MOCK_HISTORICAL.length}</span>
+              Historical <span className="ml-1.5 font-mono text-xs text-muted-foreground">{allHistorical.length}</span>
             </TabsTrigger>
           </TabsList>
         </div>

@@ -18,7 +18,7 @@ export function AuctionMonitorPanel({ auction, bids }: AuctionMonitorPanelProps)
           <CurrentBidDisplay amount={auction.currentBid} size="lg" />
           {bids.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              ↑ +{formatCurrency(auction.bidIncrement)} · @{bids[0].bidderName} · just now
+              ↑ +{formatCurrency(0)} · @{bids[0].bidderName} · just now
             </p>
           )}
         </div>
@@ -50,7 +50,7 @@ export function AuctionMonitorPanel({ auction, bids }: AuctionMonitorPanelProps)
         {/* Watching */}
         <div className="flex flex-col gap-1 p-5">
           <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Watching Now</p>
-          <p className="font-mono font-medium text-[length:var(--font-size-xl)]">{auction.watchers}</p>
+          <p className="font-mono font-medium text-[length:var(--font-size-xl)]">0</p>
         </div>
       </div>
 

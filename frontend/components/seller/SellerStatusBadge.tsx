@@ -1,11 +1,11 @@
 import {
-  Radio, Timer, AlertTriangle, Lock, Trophy, XCircle, Ban, FileText,
+  Radio, Timer, Lock, XCircle, Ban, FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import { cn } from '@/lib/utils'
 
-type BadgeVariant = 'default' | 'secondary' | 'active' | 'ending-soon' | 'critical' | 'closed' | 'won' | 'lost'
+type BadgeVariant = 'default' | 'secondary' | 'scheduled' | 'active' | 'closed' | 'won' | 'lost' | 'outbid'
 
 const CONFIG: Record<SellerAuctionStatus, {
   label:   string
@@ -14,12 +14,10 @@ const CONFIG: Record<SellerAuctionStatus, {
   pulse?:  boolean
 }> = {
   [SellerAuctionStatus.Draft]:      { label: 'Draft',       variant: 'secondary',   Icon: FileText },
+  [SellerAuctionStatus.Scheduled]:  { label: 'Scheduled',   variant: 'scheduled',   Icon: Timer },
   [SellerAuctionStatus.Active]:     { label: 'Active',      variant: 'active',      Icon: Radio,          pulse: true },
-  [SellerAuctionStatus.EndingSoon]: { label: 'Ending Soon', variant: 'ending-soon', Icon: Timer },
-  [SellerAuctionStatus.Critical]:   { label: 'Critical',    variant: 'critical',    Icon: AlertTriangle },
-  [SellerAuctionStatus.Closed]:     { label: 'Closed',      variant: 'closed',      Icon: Lock },
-  [SellerAuctionStatus.Won]:        { label: 'Sold',        variant: 'won',         Icon: Trophy },
-  [SellerAuctionStatus.Failed]:     { label: 'No Sale',     variant: 'closed',      Icon: XCircle },
+  [SellerAuctionStatus.Completed]:  { label: 'Completed',   variant: 'closed',      Icon: Lock },
+  [SellerAuctionStatus.Failed]:     { label: 'Failed',      variant: 'closed',      Icon: XCircle },
   [SellerAuctionStatus.Cancelled]:  { label: 'Cancelled',   variant: 'closed',      Icon: Ban },
 }
 

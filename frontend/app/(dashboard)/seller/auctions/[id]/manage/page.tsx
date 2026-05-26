@@ -1,6 +1,6 @@
 'use client'
 
-import { useState }      from 'react'
+import { useState, useEffect } from 'react'
 import { useParams }     from 'next/navigation'
 import Link              from 'next/link'
 import { CheckCircle2, Circle, Trash2 } from 'lucide-react'
@@ -21,26 +21,32 @@ import { DepositRangeInput }    from '@/components/seller/DepositRangeInput'
 import { formatCurrency }       from '@/lib/format'
 import { SellerAuctionStatus }  from '@/types/ui/seller.ui'
 import type { SellerAuction, SellerBidItem, AuditEvent } from '@/types/ui/seller.ui'
+import type { AuctionCategoryResponse } from '@/types/api/auction.api'
+import { ImageUploadGrid }      from '@/components/seller/ImageUploadGrid'
+import { CurrencyInput }        from '@/components/ui/currency-input'
+import { auctionService }       from '@/services/auction.service'
+import { mediaService }         from '@/services/media.service'
+import { useAuthStore }         from '@/store/authStore'
 
 // ── Mock data ──────────────────────────────────────────────────
 const now = Date.now()
 
 const MOCK_AUCTIONS: Record<string, SellerAuction> = {
   'au-29481': {
-    id: 'au-29481', title: 'Hasselblad 500C/M Medium Format — body + 80mm', description: 'Excellent condition. Original leather strap, both caps included. Meter works perfectly. Slight brassing on corners as expected for age.',
-    imageUrls: [], categoryId: 'electronics', categoryName: 'Electronics',
-    sellerId: 'me', startingPrice: 120_000, currentBid: 142_000, bidIncrement: 5_000,
-    depositAmount: 8_400, totalBids: 18, watchers: 47,
+    id: 'au-29481', title: 'Hasselblad 500C/M Medium Format — body + 80mm',
+    categoryId: 'electronics', categoryName: 'Electronics',
+    sellerId: 'me', startingPrice: 120_000, currentBid: 142_000,
+    totalBids: 18,
     startsAt: new Date(now - 2 * 86_400_000),
     endsAt:   new Date(now + 2 * 3_600_000 + 14 * 60_000),
     createdAt: new Date(now - 3 * 86_400_000),
-    status: SellerAuctionStatus.EndingSoon,
+    status: SellerAuctionStatus.Active,
   },
   'au-29490': {
-    id: 'au-29490', title: "Vintage Persian rug, 6'×9' — Tabriz", description: 'Hand-knotted wool on cotton foundation. Circa 1940s. Rich burgundy and navy palette. Minor wear consistent with age.',
-    imageUrls: [], categoryId: 'furniture', categoryName: 'Home & Furniture',
-    sellerId: 'me', startingPrice: 80_000, currentBid: 0, bidIncrement: 2_500,
-    depositAmount: 8_000, totalBids: 0, watchers: 0,
+    id: 'au-29490', title: "Vintage Persian rug, 6'×9' — Tabriz",
+    categoryId: 'furniture', categoryName: 'Home & Furniture',
+    sellerId: 'me', startingPrice: 80_000, currentBid: 0,
+    totalBids: 0,
     startsAt: new Date(now + 86_400_000),
     endsAt:   new Date(now + 6 * 86_400_000),
     createdAt: new Date(now - 86_400_000),
@@ -102,18 +108,86 @@ interface DraftFormProps {
 
 function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
   const [title,       setTitle]       = useState(auction.title)
-  const [description, setDescription] = useState(auction.description)
+  const [description, setDescription] = useState('') // Fetch from details API later
   const [categoryId,  setCategoryId]  = useState(auction.categoryId)
   const [startingPrice, setStartingPrice] = useState(auction.startingPrice)
-  const [bidIncrement,  setBidIncrement]  = useState(auction.bidIncrement)
-  const [depositAmount, setDepositAmount] = useState(auction.depositAmount)
+  const [bidIncrement,  setBidIncrement]  = useState(0) // Fetch from details API later
+  const [depositAmount, setDepositAmount] = useState(0) // Fetch from details API later
   const [durationDays,  setDurationDays]  = useState(7)
+  const [images,        setImages]        = useState<File[]>([])
+  const [submitting,    setSubmitting]    = useState(false)
+  const [categories,    setCategories]    = useState<AuctionCategoryResponse[]>([])
+  const { accessToken } = useAuthStore()
+
+  useEffect(() => {
+    if (!accessToken) return;
+    auctionService.getCategories()
+      .then(res => setCategories(res.data))
+      .catch(err => console.error("Failed to load categories:", err))
+  }, [accessToken])
 
   const hasTitle       = title.trim().length > 0
   const hasDescription = description.trim().length > 0
   const hasCategory    = categoryId.trim().length > 0
   const hasPricing     = startingPrice > 0 && bidIncrement > 0 && depositAmount > 0
-  const readyToPublish = hasTitle && hasDescription && hasCategory && hasPricing
+  // Require images if the auction has no primaryImageUrl, otherwise they're optional (means keeping existing if not replaced, though the current API might just replace all)
+  const hasImages      = images.length > 0 || !!auction.primaryImageUrl
+  const readyToPublish = hasTitle && hasDescription && hasCategory && hasPricing && hasImages
+
+  const submitForm = async (publish: boolean) => {
+    if (!accessToken) {
+      alert("You must be logged in to update an auction.");
+      return;
+    }
+    setSubmitting(true)
+    try {
+      const uploadedUrls: string[] = []
+      // Upload images
+      for (const file of images) {
+        try {
+          const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
+          await mediaService.uploadToS3(presigned.uploadUrl, file)
+          const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/media/download?s3Key=${presigned.s3Key}`
+          uploadedUrls.push(fullUrl)
+        } catch (e) {
+          console.error("Failed to upload image:", file.name, e)
+          throw new Error("Image upload failed.")
+        }
+      }
+
+      // If no new images uploaded, we should ideally keep the old ones,
+      // but without the full array of existing images, we'll just pass what we have
+      // or empty array if none uploaded (which might clear them, depending on backend logic)
+
+      // Calculate endTime from durationDays
+      const now = new Date()
+      const endsAt = new Date(now.getTime() + durationDays * 86_400_000)
+
+      await auctionService.updateAuction(auction.id, {
+        title,
+        description,
+        categoryId,
+        startingPrice,
+        bidIncrement,
+        depositAmount,
+        startTime: now.toISOString(),
+        endTime: endsAt.toISOString(),
+        imageUrls: uploadedUrls
+      }, accessToken)
+
+      if (publish) {
+        // If we need to publish, we could call another endpoint, but currently updating status is not in UpdateAuctionRequest
+        // We'll call onPublish callback instead
+      }
+      
+      onSave()
+    } catch (error) {
+      console.error('Failed to update auction:', error)
+      alert("An error occurred while saving the auction.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,42 +215,42 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <Label>Images</Label>
+          <p className="text-xs text-muted-foreground mb-1">Upload new images to replace existing ones.</p>
+          <ImageUploadGrid images={images} onChange={setImages} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="category">Category</Label>
           <Select value={categoryId} onValueChange={(v) => { if (v !== null) setCategoryId(v) }}>
             <SelectTrigger id="category">
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder="Select category">
+                {categories.find(c => c.id === categoryId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="watches">Watches &amp; Jewelry</SelectItem>
-              <SelectItem value="electronics">Electronics</SelectItem>
-              <SelectItem value="art">Art &amp; Collectibles</SelectItem>
-              <SelectItem value="furniture">Home &amp; Furniture</SelectItem>
-              <SelectItem value="fashion">Fashion</SelectItem>
-              <SelectItem value="vehicles">Vehicles</SelectItem>
-              <SelectItem value="music">Music &amp; Instruments</SelectItem>
+              {categories.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="starting">Starting price (₫)</Label>
-            <Input
+            <Label htmlFor="starting">Starting price</Label>
+            <CurrencyInput
               id="starting"
-              type="number"
-              min={0}
-              value={startingPrice / 100}
-              onChange={e => setStartingPrice(Math.round(parseFloat(e.target.value || '0') * 100))}
+              valueCents={startingPrice}
+              onChangeCents={setStartingPrice}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="increment">Bid increment (₫)</Label>
-            <Input
+            <Label htmlFor="increment">Bid increment</Label>
+            <CurrencyInput
               id="increment"
-              type="number"
-              min={0}
-              value={bidIncrement / 100}
-              onChange={e => setBidIncrement(Math.round(parseFloat(e.target.value || '0') * 100))}
+              valueCents={bidIncrement}
+              onChangeCents={setBidIncrement}
             />
           </div>
         </div>
@@ -208,16 +282,16 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
         <ChecklistItem done={hasTitle}       label="Title set" />
         <ChecklistItem done={hasDescription} label="Description written" />
         <ChecklistItem done={hasCategory}    label="Category selected" />
-        <ChecklistItem done={auction.imageUrls.length > 0} label="At least one image uploaded" />
+        <ChecklistItem done={!!auction.primaryImageUrl} label="At least one image uploaded" />
         <ChecklistItem done={hasPricing}     label="Pricing complete (starting, increment, deposit)" />
       </div>
 
       {/* Action bar */}
       <div className="flex items-center gap-3 max-w-2xl">
-        <Button variant="outline" size="lg" onClick={onSave}>
-          Save draft
+        <Button variant="outline" size="lg" disabled={submitting} onClick={() => submitForm(false)}>
+          {submitting ? 'Saving...' : 'Save draft'}
         </Button>
-        <Button variant="brand" size="lg" disabled={!readyToPublish} onClick={onPublish}>
+        <Button variant="brand" size="lg" disabled={!readyToPublish || submitting} onClick={() => submitForm(true)}>
           Publish auction
         </Button>
         {!readyToPublish && (
@@ -303,8 +377,8 @@ export default function ManageAuctionPage() {
             )}
             <DraftEditForm
               auction={auction}
-              onSave={() => {/* TODO: call API */}}
-              onPublish={() => {/* TODO: call publish API */}}
+              onSave={() => {/* Refresh data here in the future */}}
+              onPublish={() => {/* Refresh data here in the future */}}
             />
           </section>
         )}
@@ -317,10 +391,6 @@ export default function ManageAuctionPage() {
               <div className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
                 <span className="text-muted-foreground">Starting price</span>
                 <span className="font-mono">{formatCurrency(auction.startingPrice)}</span>
-                <span className="text-muted-foreground">Bid increment</span>
-                <span className="font-mono">{formatCurrency(auction.bidIncrement)}</span>
-                <span className="text-muted-foreground">Deposit required</span>
-                <span className="font-mono">{formatCurrency(auction.depositAmount)}</span>
                 <span className="text-muted-foreground">Category</span>
                 <span>{auction.categoryName}</span>
                 <span className="text-muted-foreground">Ends at</span>

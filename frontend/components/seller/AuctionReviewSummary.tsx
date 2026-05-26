@@ -27,7 +27,6 @@ export function AuctionReviewSummary({ data, onEditStep }: AuctionReviewSummaryP
   const rows: ReviewRow[] = [
     { label: 'Title',          value: data.title || '—',                                 step: 1 },
     { label: 'Category',       value: CATEGORIES[data.categoryId] ?? data.categoryId ?? '—', step: 1 },
-    { label: 'Condition',      value: data.condition || '—',                             step: 1 },
     { label: 'Description',    value: data.description || '—',                           step: 1 },
     { label: 'Images',         value: `${data.images.length} uploaded`,                  step: 2 },
     { label: 'Starting price', value: data.startingPrice > 0 ? formatCurrency(data.startingPrice) : '—', step: 3, mono: true },

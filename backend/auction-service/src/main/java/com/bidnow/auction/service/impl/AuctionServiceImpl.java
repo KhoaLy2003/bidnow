@@ -73,7 +73,7 @@ public class AuctionServiceImpl implements AuctionService {
             throw new BadRequestException("Buy now price must be greater than starting price", ErrorCodes.INVALID_INPUT);
         }
 
-        AuctionStatus status = resolveStatus(request.getStatus());
+        AuctionStatus status = resolveStatus(request.getStatus(), request.getStartTime());
 
         AuctionCategory category = auctionCategoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new NotFoundException("Category not found", ErrorCodes.NOT_FOUND));
@@ -120,7 +120,7 @@ public class AuctionServiceImpl implements AuctionService {
     public PageResponse<AuctionSummaryResponse> getMyAuctions(UUID sellerId, String type, UUID categoryId, Pageable pageable) {
         List<AuctionStatus> statusFilter = "history".equalsIgnoreCase(type)
                 ? List.of(AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.CANCELLED)
-                : List.of(AuctionStatus.DRAFT, AuctionStatus.ACTIVE);
+                : List.of(AuctionStatus.DRAFT, AuctionStatus.SCHEDULED, AuctionStatus.ACTIVE);
 
         Specification<AuctionItem> spec = SpecificationBuilder.<AuctionItem>forEntity()
                 .with("sellerId", SearchOperator.EQUAL, sellerId)
@@ -219,11 +219,15 @@ public class AuctionServiceImpl implements AuctionService {
         log.info("Soft-deleted auction {} by seller {}", auctionId, sellerId);
     }
 
-    private AuctionStatus resolveStatus(AuctionStatus requested) {
-        if (requested == AuctionStatus.ACTIVE) {
-            return AuctionStatus.ACTIVE;
+    private AuctionStatus resolveStatus(AuctionStatus requested, OffsetDateTime startTime) {
+        // Seller can explicitly save as DRAFT regardless of start time
+        if (requested == AuctionStatus.DRAFT) {
+            return AuctionStatus.DRAFT;
         }
-        return AuctionStatus.DRAFT;
+        // startTime in the future → SCHEDULED; now or past → ACTIVE immediately
+        return startTime.isAfter(OffsetDateTime.now())
+                ? AuctionStatus.SCHEDULED
+                : AuctionStatus.ACTIVE;
     }
 
     private List<AuctionImage> buildImages(AuctionItem auction, List<String> imageUrls) {

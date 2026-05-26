@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter }       from 'next/navigation'
 import Link                from 'next/link'
-import { Loader2 }         from 'lucide-react'
+import { CalendarIcon, Loader2 } from 'lucide-react'
+import { format }          from 'date-fns'
+import { Calendar }        from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button }          from '@/components/ui/button'
 import { Input }           from '@/components/ui/input'
 import { Textarea }        from '@/components/ui/textarea'
@@ -20,21 +24,13 @@ import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { auctionService } from '@/services/auction.service'
+import { mediaService } from '@/services/media.service'
+import { useAuthStore } from '@/store/authStore'
+import type { AuctionCategoryResponse } from '@/types/api/auction.api'
+import { CurrencyInput } from '@/components/ui/currency-input'
 
 const STEPS = ['Basics', 'Images', 'Pricing', 'Review']
-
-const CATEGORIES = [
-  { id: 'watches',     label: 'Watches & Jewelry' },
-  { id: 'electronics', label: 'Electronics' },
-  { id: 'art',         label: 'Art & Collectibles' },
-  { id: 'furniture',   label: 'Home & Furniture' },
-  { id: 'fashion',     label: 'Fashion' },
-  { id: 'vehicles',    label: 'Vehicles' },
-  { id: 'music',       label: 'Music & Instruments' },
-]
-
-const CONDITIONS = ['Excellent — like new', 'Excellent — used', 'Good — used', 'Fair — used', 'For parts / not working']
-
 const DURATION_OPTIONS = [
   { label: '1 day',   days: 1 },
   { label: '3 days',  days: 3 },
@@ -97,26 +93,37 @@ function validateStep3(data: CreateAuctionFormData): Errors {
   }
   if (data.durationDays < 1 || data.durationDays > 30)
     e.duration = 'Duration must be between 1 hour and 30 days.'
+  if (data.startType === 'scheduled') {
+    if (!data.scheduledStartTime) {
+      e.startTime = 'Please select a start date and time.'
+    } else if (data.scheduledStartTime <= new Date()) {
+      e.startTime = 'Scheduled start time must be in the future.'
+    }
+  }
   return e
 }
 
 // ── Main component ──────────────────────────────────────────────
 export default function CreateAuctionPage() {
   const router = useRouter()
+  const { accessToken } = useAuthStore()
   const [step,      setStep]      = useState(1)
   const [data,      setData]      = useState<CreateAuctionFormData>(INITIAL_FORM_DATA)
   const [errors,    setErrors]    = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
-  const [tag,       setTag]       = useState('')
+  const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
+
+  // Fetch categories on mount
+  useEffect(() => {
+    if (!accessToken) return;
+    auctionService.getCategories()
+      .then(res => setCategories(res.data))
+      .catch(err => console.error("Failed to load categories:", err))
+  }, [accessToken])
 
   function update<K extends keyof CreateAuctionFormData>(key: K, val: CreateAuctionFormData[K]) {
     setData(prev => ({ ...prev, [key]: val }))
     setErrors(prev => { const n = { ...prev }; delete n[key as string]; return n })
-  }
-
-  function parseDollars(raw: string): number {
-    const v = parseFloat(raw.replace(/[^0-9.]/g, ''))
-    return isNaN(v) ? 0 : Math.round(v * 100)
   }
 
   function tryAdvance() {
@@ -129,27 +136,63 @@ export default function CreateAuctionPage() {
     setStep(s => Math.min(4, s + 1))
   }
 
-  async function handleSubmit(_asDraft: boolean) {
+  async function handleSubmit(asDraft: boolean) {
+    if (!accessToken) {
+      alert("You must be logged in to create an auction.");
+      return;
+    }
+
     setSubmitting(true)
-    // TODO: POST /api/v1/auctions
-    await new Promise(r => setTimeout(r, 1200))
-    setSubmitting(false)
-    router.push('/auctions')
+    try {
+      const uploadedUrls: string[] = []
+      
+      // Upload images first
+      for (const file of data.images) {
+        try {
+          const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
+          await mediaService.uploadToS3(presigned.uploadUrl, file)
+          const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/media/download?s3Key=${presigned.s3Key}`
+          uploadedUrls.push(fullUrl)
+        } catch (e) {
+          console.error("Failed to upload image:", file.name, e)
+          throw new Error("Image upload failed.")
+        }
+      }
+
+      const actualStartTime = data.startType === 'scheduled' && data.scheduledStartTime ? data.scheduledStartTime : new Date();
+      // Create auction
+      await auctionService.createAuction({
+        title: data.title,
+        description: data.description,
+        categoryId: data.categoryId,
+        startingPrice: data.startingPrice,
+        bidIncrement: data.bidIncrement,
+        buyNowPrice: data.buyNowPrice > 0 ? data.buyNowPrice : undefined,
+        depositAmount: data.depositAmount,
+        startTime: actualStartTime.toISOString(), // Starting immediately or at scheduled time
+        endTime: endsAt.toISOString(),
+        imageUrls: uploadedUrls,
+        status: asDraft ? 'DRAFT' : (data.startType === 'scheduled' ? 'SCHEDULED' : 'ACTIVE')
+      }, accessToken)
+      
+      router.push('/seller/auctions')
+    } catch (error) {
+      console.error('Failed to create auction:', error)
+      alert("An error occurred while creating the auction. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  function addTag(e: React.KeyboardEvent) {
-    if (e.key !== 'Enter' || !tag.trim()) return
-    e.preventDefault()
-    if (data.tags.length < 8 && !data.tags.includes(tag.trim()))
-      update('tags', [...data.tags, tag.trim()])
-    setTag('')
-  }
+
 
   const [mountTime] = useState<number>(() => Date.now())
-  const endsAt = useMemo(
-    () => new Date(mountTime + data.durationDays * 86_400_000),
-    [mountTime, data.durationDays],
-  )
+  const endsAt = useMemo(() => {
+    const baseTime = data.startType === 'scheduled' && data.scheduledStartTime 
+      ? data.scheduledStartTime.getTime() 
+      : mountTime;
+    return new Date(baseTime + data.durationDays * 86_400_000);
+  }, [mountTime, data.durationDays, data.startType, data.scheduledStartTime])
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
@@ -211,47 +254,18 @@ export default function CreateAuctionPage() {
               <FieldWrap label="Category" required error={errors.categoryId}>
                 <Select value={data.categoryId} onValueChange={(v) => { if (v !== null) update('categoryId', v) }}>
                   <SelectTrigger className={cn('text-sm', errors.categoryId && 'border-destructive')}>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Select category">
+                      {categories.find(c => c.id === data.categoryId)?.name}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </FieldWrap>
-
-              <FieldWrap label="Condition">
-                <Select value={data.condition} onValueChange={(v) => { if (v !== null) update('condition', v) }}>
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Select condition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONDITIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FieldWrap>
             </div>
 
-            <FieldWrap label="Tags" helper="Up to 8 tags. Press Enter to add.">
-              <div className={cn(
-                'flex flex-wrap items-center gap-1.5 min-h-9 rounded-md border border-input bg-background px-3 py-2 text-sm',
-              )}>
-                {data.tags.map(t => (
-                  <span key={t} className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
-                    {t}
-                    <button type="button" onClick={() => update('tags', data.tags.filter(x => x !== t))} className="hover:text-destructive">×</button>
-                  </span>
-                ))}
-                {data.tags.length < 8 && (
-                  <input
-                    className="flex-1 min-w-20 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
-                    placeholder="+ add tag"
-                    value={tag}
-                    onChange={e => setTag(e.target.value)}
-                    onKeyDown={addTag}
-                  />
-                )}
-              </div>
-            </FieldWrap>
+
           </div>
         )}
 
@@ -286,11 +300,11 @@ export default function CreateAuctionPage() {
                 helper="USD, 2 decimal places"
                 error={errors.startingPrice}
               >
-                <Input
-                  value={data.startingPrice > 0 ? `$${(data.startingPrice / 100).toFixed(2)}` : ''}
-                  onChange={e => update('startingPrice', parseDollars(e.target.value))}
-                  placeholder="$ 0.00"
-                  className={cn('font-mono text-sm', errors.startingPrice && 'border-destructive')}
+                <CurrencyInput
+                  valueCents={data.startingPrice}
+                  onChangeCents={cents => update('startingPrice', cents)}
+                  placeholder="0.00"
+                  hasError={!!errors.startingPrice}
                 />
               </FieldWrap>
 
@@ -298,11 +312,11 @@ export default function CreateAuctionPage() {
                 helper="Minimum $0.01"
                 error={errors.bidIncrement}
               >
-                <Input
-                  value={data.bidIncrement > 0 ? `$${(data.bidIncrement / 100).toFixed(2)}` : ''}
-                  onChange={e => update('bidIncrement', parseDollars(e.target.value))}
-                  placeholder="$ 0.00"
-                  className={cn('font-mono text-sm', errors.bidIncrement && 'border-destructive')}
+                <CurrencyInput
+                  valueCents={data.bidIncrement}
+                  onChangeCents={cents => update('bidIncrement', cents)}
+                  placeholder="0.00"
+                  hasError={!!errors.bidIncrement}
                 />
               </FieldWrap>
 
@@ -310,19 +324,19 @@ export default function CreateAuctionPage() {
                 helper="Must be greater than starting price"
                 error={errors.buyNowPrice}
               >
-                <Input
-                  value={data.buyNowPrice > 0 ? `$${(data.buyNowPrice / 100).toFixed(2)}` : ''}
-                  onChange={e => update('buyNowPrice', parseDollars(e.target.value))}
-                  placeholder="$ 0.00"
-                  className={cn('font-mono text-sm', errors.buyNowPrice && 'border-destructive')}
+                <CurrencyInput
+                  valueCents={data.buyNowPrice}
+                  onChangeCents={cents => update('buyNowPrice', cents)}
+                  placeholder="0.00"
+                  hasError={!!errors.buyNowPrice}
                 />
               </FieldWrap>
 
               <FieldWrap label="Reserve price (optional)" helper="Hidden from bidders">
-                <Input
-                  value={data.bidIncrement > 0 ? '' : ''}
-                  placeholder="$ 0.00"
-                  className="font-mono text-sm"
+                <CurrencyInput
+                  valueCents={0}
+                  onChangeCents={() => {}}
+                  placeholder="0.00"
                   readOnly
                 />
               </FieldWrap>
@@ -334,6 +348,78 @@ export default function CreateAuctionPage() {
               startingPriceCents={data.startingPrice}
               onChange={cents => update('depositAmount', cents)}
             />
+
+            <FieldWrap label="Start time" required error={errors.startTime}>
+              <Tabs
+                value={data.startType}
+                onValueChange={(v) => update('startType', v as 'now' | 'scheduled')}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="now">Start immediately</TabsTrigger>
+                  <TabsTrigger value="scheduled">Schedule for later</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              {data.startType === 'scheduled' && (
+                <div className="mt-3">
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !data.scheduledStartTime && "text-muted-foreground",
+                            errors.startTime && "border-destructive"
+                          )}
+                        />
+                      }
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {data.scheduledStartTime ? format(data.scheduledStartTime, "PPP p") : <span>Pick a date and time</span>}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={data.scheduledStartTime || undefined}
+                        onSelect={(d) => {
+                          if (d) {
+                            // Keep the existing time if editing date, otherwise set a default time (e.g., noon)
+                            const newDate = new Date(d);
+                            if (data.scheduledStartTime) {
+                              newDate.setHours(data.scheduledStartTime.getHours());
+                              newDate.setMinutes(data.scheduledStartTime.getMinutes());
+                            } else {
+                              newDate.setHours(12, 0, 0, 0);
+                            }
+                            update('scheduledStartTime', newDate);
+                          } else {
+                            update('scheduledStartTime', null);
+                          }
+                        }}
+                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                      />
+                      {data.scheduledStartTime && (
+                        <div className="p-3 border-t border-[var(--color-border-default)]">
+                          <Label className="text-xs mb-2 block text-muted-foreground">Time</Label>
+                          <Input 
+                            type="time" 
+                            className="w-full text-sm"
+                            value={format(data.scheduledStartTime, "HH:mm")}
+                            onChange={(e) => {
+                              const [hours, minutes] = e.target.value.split(':');
+                              const newDate = new Date(data.scheduledStartTime!);
+                              newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+                              update('scheduledStartTime', newDate);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </FieldWrap>
 
             <FieldWrap label="Duration" required
               helper={`Auction will end on ${endsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at ${endsAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} ICT (GMT+7)`}

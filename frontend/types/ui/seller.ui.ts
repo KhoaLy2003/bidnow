@@ -1,10 +1,8 @@
 export enum SellerAuctionStatus {
   Draft      = 'draft',
+  Scheduled  = 'scheduled',
   Active     = 'active',
-  EndingSoon = 'ending-soon',
-  Critical   = 'critical',
-  Closed     = 'closed',
-  Won        = 'won',
+  Completed  = 'completed',
   Failed     = 'failed',
   Cancelled  = 'cancelled',
 }
@@ -12,25 +10,17 @@ export enum SellerAuctionStatus {
 export interface SellerAuction {
   id:            string
   title:         string
-  description:   string
-  imageUrls:     string[]
+  primaryImageUrl?: string
   categoryId:    string
   categoryName?: string
   sellerId:      string
   startingPrice: number   // cents
   currentBid:    number   // cents
-  bidIncrement:  number   // cents
-  buyNowPrice?:  number   // cents
-  depositAmount: number   // cents
-  reservePrice?: number   // cents
   totalBids:     number
-  watchers:      number
   startsAt:      Date
   endsAt:        Date
   createdAt:     Date
   status:        SellerAuctionStatus
-  winnerId?:     string
-  winnerName?:   string
 }
 
 export interface SellerBidItem {
@@ -52,8 +42,6 @@ export interface CreateAuctionFormData {
   title:       string
   description: string
   categoryId:  string
-  condition:   string
-  tags:        string[]
   // Step 2 — Images
   images:      File[]
   // Step 3 — Pricing & Duration
@@ -62,6 +50,8 @@ export interface CreateAuctionFormData {
   buyNowPrice:   number   // cents (0 = not set)
   depositAmount: number   // cents
   durationDays:  number
+  startType:     'now' | 'scheduled'
+  scheduledStartTime: Date | null
   endsAt?:       Date
 }
 
@@ -69,12 +59,12 @@ export const INITIAL_FORM_DATA: CreateAuctionFormData = {
   title:         '',
   description:   '',
   categoryId:    '',
-  condition:     '',
-  tags:          [],
   images:        [],
   startingPrice: 0,
   bidIncrement:  0,
   buyNowPrice:   0,
   depositAmount: 0,
   durationDays:  3,
+  startType:     'now',
+  scheduledStartTime: null,
 }
