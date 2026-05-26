@@ -13,8 +13,6 @@ import java.util.UUID;
 
 public interface AuctionService {
 
-    List<AuctionCategoryResponse> getCategories();
-
     AuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request);
 
     PageResponse<AuctionSummaryResponse> getMyAuctions(UUID sellerId, String type, UUID categoryId, Pageable pageable);

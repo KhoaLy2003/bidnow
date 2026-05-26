@@ -54,14 +54,6 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionKafkaProducer auctionKafkaProducer;
 
     @Override
-    public List<AuctionCategoryResponse> getCategories() {
-        return auctionCategoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc()
-                .stream()
-                .map(auctionMapper::toCategory)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional
     public AuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request) {
         if (!request.getEndTime().isAfter(request.getStartTime())) {
