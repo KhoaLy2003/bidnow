@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { userService } from "@/services/user.service";
-import { UserProfileResponse } from "@/types/api/user-profile.api";
+import { UpdateUserProfileRequest, UserProfileResponse } from "@/types/api/user-profile.api";
 
 interface UseProfileResult {
   profile: UserProfileResponse | null;
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
-  updateProfile: (data: import("@/types/user-profile").UpdateUserProfileRequest) => Promise<UserProfileResponse>;
+  updateProfile: (data: UpdateUserProfileRequest) => Promise<UserProfileResponse>;
 }
 
 /**
@@ -51,7 +51,7 @@ export function useProfile(): UseProfileResult {
 
   const updateProfile = useCallback(
     async (
-      data: import("@/types/user-profile").UpdateUserProfileRequest
+      data: UpdateUserProfileRequest
     ): Promise<UserProfileResponse> => {
       if (!isAuthenticated || !accessToken) {
         throw new Error("Not authenticated");
