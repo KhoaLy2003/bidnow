@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Bid } from '@/types/auction'
+import type { Bid } from '@/types/ui/auction.ui'
 
 interface AuctionState {
   currentBid:      number

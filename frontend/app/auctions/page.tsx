@@ -4,7 +4,7 @@ import { Footer }      from '@/components/layout/Footer'
 import { BottomNav }   from '@/components/layout/BottomNav'
 import { AuctionGrid } from '@/components/auction/AuctionGrid'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 export const metadata: Metadata = { title: 'Browse Auctions' }
 

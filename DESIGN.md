@@ -284,3 +284,42 @@ When refining existing screens generated with this design system:
 3. Use natural language descriptions, not CSS values — "barely rounded corners" not "border-radius: 4px"
 4. Describe the desired "feel" alongside specific measurements — "gallery-like silence between sections" communicates the whitespace philosophy better than "margin-bottom: 100vh"
 5. Always verify that photography is doing the emotional heavy-lifting — if the UI itself feels "designed," it's too much
+
+---
+
+## 10. BidNow Adaptation
+
+This section documents how BidNow's Tailwind/CSS token layer maps the Tesla principles described above.
+
+### Token Mapping
+
+| Tesla principle | BidNow token | Value |
+|-----------------|-------------|-------|
+| 0.33s cubic-bezier transition | `--duration-tesla` | `333ms` |
+| Tesla cubic-bezier | `--ease-tesla` | `cubic-bezier(0.5, 0, 0, 0.75)` |
+| 4px button radius | `--radius` / `--radius-md` | `4px` |
+| 12px card radius | `--radius-xl` | `12px` |
+| Frosted glass nav | `--shadow-frosted` | `rgba(255,255,255,0.75)` |
+| Modal overlay | `--shadow-overlay` | `rgba(128,128,128,0.65)` |
+| All box-shadows: none | `--shadow-*` | `none` |
+
+### Enforced Rules in Components
+
+| Tesla principle | BidNow implementation |
+|-----------------|-----------------------|
+| Weight 400–500 only | `font-medium` max; `font-semibold/bold/extrabold` banned |
+| Normal letter-spacing everywhere | `tracking-*` utilities banned; zero tracking only |
+| No shadows on any element | All `--shadow-*` tokens set to `none`; no `shadow-*` Tailwind utilities |
+| No hover animations with scale/translate | `hover:-translate-y-*` banned |
+| 0.33s consistent transition | `duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]` on all transitions |
+| Specific properties only (not `all`) | `transition-[background-color,border-color,color,...]` — never `transition-all` |
+| No ring decoration on cards | Card hover uses `border-color` transition, not `ring` |
+
+### What BidNow Keeps (Intentional Departures)
+
+Tesla's site is product-photography-first with no auction domain. BidNow adapts the principles while keeping auction-specific UI that Tesla has no equivalent for:
+
+- **Auction state colors** — active/ending/critical/won/lost/outbid color tokens are retained; Tesla has no equivalent (no status indicators). Colors are intentionally muted to avoid clashing with the flat aesthetic.
+- **Countdown timer urgency** — critical state uses a colored background pill (Tesla has no time-pressure UI). Font weight stays at `font-medium` even at critical state.
+- **Brand indigo** — BidNow uses indigo (`#4F46E5`) as its primary color rather than Tesla's electric blue (`#3E6AE1`). The token philosophy (single accent color) is the same.
+- **Card borders** — BidNow uses `border border-border-default` on cards for surface separation (Tesla uses pure whitespace). Keeps the flat Tesla aesthetic while maintaining scannability in a dense auction grid.

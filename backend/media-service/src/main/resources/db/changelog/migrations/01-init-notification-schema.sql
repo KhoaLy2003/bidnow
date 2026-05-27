@@ -1,31 +1,13 @@
 -- liquibase formatted sql
 
 -- changeset khoa.ly:1
-CREATE TYPE notification_type AS ENUM (
-    'BID_PLACED',
-    'BID_OUTBID',
-    'AUCTION_ENDING_SOON',
-    'AUCTION_WON',
-    'AUCTION_LOST',
-    'AUCTION_CANCELLED',
-    'PAYMENT_REMINDER',
-    'PAYMENT_RECEIVED',
-    'DEPOSIT_REFUNDED',
-    'DEPOSIT_FORFEITED',
-    'WATCHLIST_ITEM_STARTING',
-    'SYSTEM_ANNOUNCEMENT'
-);
-
-CREATE TYPE notification_channel AS ENUM ('IN_APP', 'EMAIL', 'PUSH', 'SMS');
-CREATE TYPE notification_status AS ENUM ('PENDING', 'SENT', 'FAILED', 'READ');
-
 CREATE TABLE notif_notifications
 (
     id            UUID PRIMARY KEY,
-    user_id       UUID                 NOT NULL,
-    type          notification_type    NOT NULL,
-    channel       notification_channel NOT NULL,
-    status        notification_status  NOT NULL DEFAULT 'PENDING',
+    user_id       UUID         NOT NULL,
+    type          VARCHAR(50)  NOT NULL,
+    channel       VARCHAR(20)  NOT NULL,
+    status        VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
     title         VARCHAR(255)         NOT NULL,
     message       TEXT                 NOT NULL,
     action_url    VARCHAR(500),

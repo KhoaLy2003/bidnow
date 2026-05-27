@@ -20,6 +20,8 @@ const badgeVariants = cva(
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
         // Auction state variants
+        scheduled:
+          "bg-auction-scheduled-bg text-auction-scheduled-text border-auction-scheduled-border font-medium uppercase",
         active:
           "bg-auction-active-bg text-auction-active-text border-auction-active-border font-medium uppercase",
         "ending-soon":

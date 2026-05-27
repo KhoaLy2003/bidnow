@@ -1,4 +1,4 @@
-import { type ApiResponse, type PageResponse } from "@/types/api";
+import { type ApiResponse, type PageResponse } from "@/types/api/common.api";
 import {
   AuditLogFilters,
   AuditLogResponse,
@@ -14,7 +14,7 @@ import {
   type SendTemplateEmailRequest,
   type SortDirection,
   type TemplateFilters,
-} from "@/types/admin";
+} from "@/types/api/admin.api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 

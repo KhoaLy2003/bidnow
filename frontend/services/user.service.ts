@@ -1,5 +1,5 @@
-import { ApiResponse } from "@/types/auth";
-import { UserProfileResponse } from "@/types/user-profile";
+import { ApiResponse } from "@/types/api/auth.api";
+import { UpdateUserProfileRequest, UserProfileResponse } from "@/types/api/user-profile.api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -31,7 +31,7 @@ export const userService = {
    */
   async updateMyProfile(
     accessToken: string,
-    data: import("@/types/user-profile").UpdateUserProfileRequest
+    data: UpdateUserProfileRequest
   ): Promise<ApiResponse<UserProfileResponse>> {
     const response = await fetch(`${API_URL}/api/v1/users/me`, {
       method: "PUT",

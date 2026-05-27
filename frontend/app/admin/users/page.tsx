@@ -33,7 +33,7 @@ import {
   type AdminUserSortField,
   type AdminUserStatus,
   type SortDirection,
-} from '@/types/admin'
+} from '@/types/api/admin.api'
 import { useAuthStore } from '@/store/authStore'
 import { cn, formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'

@@ -7,7 +7,7 @@ import {
   type AuditLogResponse,
   type AuditLogFilters,
   type AuditAction,
-} from "@/types/admin";
+} from "@/types/api/admin.api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,

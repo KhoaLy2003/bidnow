@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { User, LogOut, Settings, ListOrdered } from "lucide-react";
+import { Gavel, User, LogOut, Settings, ListOrdered, Package } from "lucide-react";
 import { BidNowGavelMark } from "@/components/shared/BidNowGavelMark";
 import { Button } from "@/components/ui/button";
 import {
@@ -186,6 +186,18 @@ export function Header() {
                         className="py-2.5"
                       >
                         <ListOrdered className="size-4" /> My Bids
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        render={
+                          <Link
+                            href="/seller/auctions"
+                            className="flex items-center gap-2"
+                          />
+                        }
+                        className="py-2.5"
+                      >
+                        <Package className="size-4" /> My Auctions
                       </DropdownMenuItem>
 
                       <DropdownMenuItem

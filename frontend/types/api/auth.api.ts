@@ -1,4 +1,4 @@
-export type { ApiResponse } from "./api";
+export type { ApiResponse } from "./common.api";
 
 export interface User {
   id: string;

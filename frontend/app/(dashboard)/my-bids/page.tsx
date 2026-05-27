@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { ListOrdered } from 'lucide-react'
 import { AuctionGrid }   from '@/components/auction/AuctionGrid'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction }  from '@/types/auction'
+import type { Auction }  from '@/types/ui/auction.ui'
 
 export const metadata: Metadata = { title: 'My Bids' }
 
@@ -14,6 +14,8 @@ const MY_BIDS: Auction[] = [
     startsAt: new Date(Date.now() - 3_600_000),
     endsAt:   new Date(Date.now() + 7_200_000),
     status: AuctionStatus.Active, isFeatured: true,
+    condition: 'Near Mint', reserveMet: true,
+    seller: { id: 'u1', name: 'Marcus W.', rating: 4.9, totalAuctions: 218 },
   },
   {
     id: '2', title: 'Gibson Les Paul Custom 1974', description: '',
@@ -22,6 +24,8 @@ const MY_BIDS: Auction[] = [
     startsAt: new Date(Date.now() - 7_200_000),
     endsAt:   new Date(Date.now() - 3_600_000),
     status: AuctionStatus.Won, isFeatured: true,
+    condition: 'Good', reserveMet: true,
+    seller: { id: 'u2', name: 'Vintage Strings', rating: 4.7, totalAuctions: 132 },
   },
 ]
 

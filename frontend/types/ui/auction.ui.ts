@@ -1,5 +1,13 @@
 import type { AuctionStatus } from '@/lib/design-tokens'
 
+export interface AuctionSeller {
+  id:            string
+  name:          string
+  avatarUrl?:    string
+  rating:        number
+  totalAuctions: number
+}
+
 export interface Auction {
   id:            string
   title:         string
@@ -18,6 +26,9 @@ export interface Auction {
   endsAt:        Date
   status:        AuctionStatus
   isFeatured:    boolean
+  condition:     string
+  reserveMet:    boolean
+  seller:        AuctionSeller
 }
 
 export interface Bid {

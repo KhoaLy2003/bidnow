@@ -1,5 +1,5 @@
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 
 const WARNING_THRESHOLD_SECONDS  = 5 * 60   // 5 minutes
 const CRITICAL_THRESHOLD_SECONDS = 60        // 1 minute
@@ -25,6 +25,7 @@ export function deriveTimerState(endsAt: Date): TimerState {
  */
 export function getAuctionStatus(auction: Auction): AuctionStatus {
   const terminal: AuctionStatus[] = [
+    AuctionStatus.Scheduled,
     AuctionStatus.Closed,
     AuctionStatus.Won,
     AuctionStatus.Lost,
