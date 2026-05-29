@@ -36,6 +36,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -113,11 +115,17 @@ public class AuctionServiceImpl implements AuctionService {
                     .endTime(auction.getEndTime().toInstant())
                     .build());
         } else if (newStatus == AuctionStatus.SCHEDULED) {
-            final UUID auctionId = auction.getId();
-            BackgroundJob.<AuctionActivationJob>schedule(
-                    auction.getStartTime().toInstant(),
-                    job -> job.activateAuction(auctionId));
-            log.info("Scheduled activation job for auction {} at {}", auctionId, auction.getStartTime());
+            final UUID scheduledAuctionId = auction.getId();
+            final java.time.Instant activateAt = auction.getStartTime().toInstant();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    BackgroundJob.<AuctionActivationJob>schedule(
+                            activateAt,
+                            job -> job.activateAuction(scheduledAuctionId));
+                    log.info("Scheduled activation job for auction {} at {}", scheduledAuctionId, activateAt);
+                }
+            });
         }
 
         log.info("Published auction {} to status {} by seller {}", id, newStatus, sellerId);
@@ -217,6 +225,18 @@ public class AuctionServiceImpl implements AuctionService {
                     .startingPrice(auction.getStartingPrice())
                     .endTime(auction.getEndTime().toInstant())
                     .build());
+        } else if (status == AuctionStatus.SCHEDULED) {
+            final UUID scheduledAuctionId = auction.getId();
+            final java.time.Instant activateAt = auction.getStartTime().toInstant();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    BackgroundJob.<AuctionActivationJob>schedule(
+                            activateAt,
+                            job -> job.activateAuction(scheduledAuctionId));
+                    log.info("Scheduled activation job for auction {} at {}", scheduledAuctionId, activateAt);
+                }
+            });
         }
 
         log.info("Created auction {} with status {} for seller {}", auction.getId(), status, sellerId);
