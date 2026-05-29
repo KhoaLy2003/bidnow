@@ -24,6 +24,7 @@ import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { auctionService } from '@/services/auction.service'
 import { mediaService } from '@/services/media.service'
 import { useAuthStore } from '@/store/authStore'
@@ -92,7 +93,7 @@ function validateStep3(data: CreateAuctionFormData): Errors {
       e.depositAmount = `Deposit must be ${formatCurrency(min)}–${formatCurrency(max)} (5–20% of starting price).`
   }
   if (data.durationDays < 1 || data.durationDays > 30)
-    e.duration = 'Duration must be between 1 hour and 30 days.'
+    e.duration = 'Duration must be between 1 and 30 days.'
   if (data.startType === 'scheduled') {
     if (!data.scheduledStartTime) {
       e.startTime = 'Please select a start date and time.'
@@ -138,27 +139,24 @@ export default function CreateAuctionPage() {
 
   async function handleSubmit(asDraft: boolean) {
     if (!accessToken) {
-      alert("You must be logged in to create an auction.");
+      toast.error('You must be logged in to create an auction.')
       return;
     }
 
     setSubmitting(true)
     try {
-      const uploadedUrls: string[] = []
-      
-      // Upload images first
-      for (const file of data.images) {
-        try {
+      const uploadedUrls = await Promise.all(
+        data.images.map(async (file) => {
           const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
           await mediaService.uploadToS3(presigned.uploadUrl, file)
-          uploadedUrls.push(presigned.s3Key)
-        } catch (e) {
-          console.error("Failed to upload image:", file.name, e)
-          throw new Error("Image upload failed.")
-        }
-      }
+          return presigned.s3Key
+        })
+      )
 
       const actualStartTime = data.startType === 'scheduled' && data.scheduledStartTime ? data.scheduledStartTime : new Date();
+      const endTime = data.startType === 'scheduled' && data.scheduledStartTime
+        ? new Date(data.scheduledStartTime.getTime() + data.durationDays * 86_400_000)
+        : new Date(Date.now() + data.durationDays * 86_400_000);
       let auctionStatus: 'DRAFT' | 'SCHEDULED' | 'ACTIVE'
       if (asDraft) {
         auctionStatus = 'DRAFT'
@@ -177,7 +175,7 @@ export default function CreateAuctionPage() {
         buyNowPrice: data.buyNowPrice > 0 ? data.buyNowPrice : undefined,
         depositAmount: data.depositAmount,
         startTime: actualStartTime.toISOString(),
-        endTime: endsAt.toISOString(),
+        endTime: endTime.toISOString(),
         imageUrls: uploadedUrls,
         status: auctionStatus
       }, accessToken)
@@ -185,7 +183,7 @@ export default function CreateAuctionPage() {
       router.push('/seller/auctions')
     } catch (error) {
       console.error('Failed to create auction:', error)
-      alert("An error occurred while creating the auction. Please try again.")
+      toast.error('Failed to create auction. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -193,13 +191,12 @@ export default function CreateAuctionPage() {
 
 
 
-  const [mountTime] = useState<number>(() => Date.now())
   const endsAt = useMemo(() => {
-    const baseTime = data.startType === 'scheduled' && data.scheduledStartTime 
-      ? data.scheduledStartTime.getTime() 
-      : mountTime;
+    const baseTime = data.startType === 'scheduled' && data.scheduledStartTime
+      ? data.scheduledStartTime.getTime()
+      : Date.now();
     return new Date(baseTime + data.durationDays * 86_400_000);
-  }, [mountTime, data.durationDays, data.startType, data.scheduledStartTime])
+  }, [data.durationDays, data.startType, data.scheduledStartTime])
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
