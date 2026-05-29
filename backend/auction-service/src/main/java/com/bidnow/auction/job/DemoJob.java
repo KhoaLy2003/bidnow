@@ -2,7 +2,6 @@ package com.bidnow.auction.job;
 
 import lombok.extern.slf4j.Slf4j;
 import org.jobrunr.jobs.annotations.Job;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Slf4j

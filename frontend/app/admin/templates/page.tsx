@@ -62,6 +62,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
 const PAGE_SIZE = DEFAULT_PAGE_SIZE
+const SKELETON_ROW_KEYS = ['sk-0', 'sk-1', 'sk-2', 'sk-3', 'sk-4'] as const
 
 const emptyTemplateForm: NotificationTemplateRequest = {
   name: '',
@@ -349,67 +350,65 @@ export default function AdminTemplatesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell colSpan={6}>
-                      <Skeleton className="h-8 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : templates.length === 0 ? (
+              {loading && SKELETON_ROW_KEYS.map((key) => (
+                <TableRow key={key}>
+                  <TableCell colSpan={6}>
+                    <Skeleton className="h-8 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!loading && templates.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                     No templates found.
                   </TableCell>
                 </TableRow>
-              ) : (
-                templates.map((template) => (
-                  <TableRow
-                    key={template.id}
-                    role="button"
-                    tabIndex={0}
-                    className="cursor-pointer"
-                    onClick={() => openDetails(template)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        openDetails(template)
-                      }
-                    }}
-                  >
-                    <TableCell className="font-medium">{template.name}</TableCell>
-                    <TableCell className="max-w-[280px] truncate text-muted-foreground">
-                      {template.subject || 'No subject'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{template.language}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={template.active ? 'won' : 'outline'}>
-                        {template.active ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
-                        {template.active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {template.updatedAt ? formatDate(template.updatedAt) : 'N/A'}
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openDetails(template)}>
-                          <Eye className="size-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEditForm(template)}>
-                          <Edit className="size-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => openTestDialog(template)}>
-                          <Send className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
               )}
+              {!loading && templates.map((template) => (
+                <TableRow
+                  key={template.id}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer"
+                  onClick={() => openDetails(template)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      openDetails(template)
+                    }
+                  }}
+                >
+                  <TableCell className="font-medium">{template.name}</TableCell>
+                  <TableCell className="max-w-[280px] truncate text-muted-foreground">
+                    {template.subject || 'No subject'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{template.language}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={template.active ? 'won' : 'outline'}>
+                      {template.active ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
+                      {template.active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {template.updatedAt ? formatDate(template.updatedAt) : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openDetails(template)}>
+                        <Eye className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openEditForm(template)}>
+                        <Edit className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openTestDialog(template)}>
+                        <Send className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>

@@ -230,71 +230,71 @@ export default function AuditLogsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isLoading && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-10">
                       Loading audit logs...
                     </TableCell>
                   </TableRow>
-                ) : logs.length === 0 ? (
+                )}
+                {!isLoading && logs.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-10">
                       No audit logs found.
                     </TableCell>
                   </TableRow>
-                ) : (
-                  logs.map((log) => (
-                    <TableRow
-                      key={log.id}
-                      role="button"
-                      tabIndex={0}
-                      className="cursor-pointer"
-                      onClick={() => openDetails(log)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          openDetails(log);
-                        }
-                      }}
-                    >
-                      <TableCell className="text-xs">
-                        {log.timestamp ? formatDate(log.timestamp) : "N/A"}
-                      </TableCell>
-                      <TableCell>{getActionBadge(log.action)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-xs">{log.entityType}</span>
-                          <span className="text-[10px] text-muted-foreground truncate w-32">
-                            {log.entityId}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-xs truncate w-40">
-                            {log.actorEmail ||
-                              (log.actorType === "SYSTEM" ? "System" : log.actorId)}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground uppercase">
-                            {log.actorType}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell
-                        className="text-right"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDetails(log)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" /> View Diff
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
                 )}
+                {!isLoading && logs.map((log) => (
+                  <TableRow
+                    key={log.id}
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer"
+                    onClick={() => openDetails(log)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openDetails(log);
+                      }
+                    }}
+                  >
+                    <TableCell className="text-xs">
+                      {log.timestamp ? formatDate(log.timestamp) : "N/A"}
+                    </TableCell>
+                    <TableCell>{getActionBadge(log.action)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-xs">{log.entityType}</span>
+                        <span className="text-[10px] text-muted-foreground truncate w-32">
+                          {log.entityId}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-xs truncate w-40">
+                          {log.actorEmail ||
+                            (log.actorType === "SYSTEM" ? "System" : log.actorId)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground uppercase">
+                          {log.actorType}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDetails(log)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" /> View Diff
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

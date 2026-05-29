@@ -273,7 +273,7 @@ export default function AboutPage() {
                 style={{ height: 1, background: 'var(--color-border-default)' }}
               />
               {TIMELINE.map((m, i) => (
-                <div key={i} className="flex flex-col gap-3 relative">
+                <div key={m.title} className="flex flex-col gap-3 relative">
                   <div
                     className="absolute hidden lg:block"
                     style={{

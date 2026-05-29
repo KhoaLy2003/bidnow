@@ -7,14 +7,14 @@
 -- Categories table
 CREATE TABLE auction_categories
 (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name          VARCHAR(100) NOT NULL UNIQUE,
-    slug          VARCHAR(100) NOT NULL UNIQUE,
+    id            UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    name          VARCHAR(100)             NOT NULL UNIQUE,
+    slug          VARCHAR(100)             NOT NULL UNIQUE,
     description   TEXT,
-    parent_id     UUID         REFERENCES auction_categories (id),
+    parent_id     UUID REFERENCES auction_categories (id),
     icon_url      VARCHAR(500),
-    display_order INTEGER      NOT NULL DEFAULT 0,
-    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+    display_order INTEGER                  NOT NULL DEFAULT 0,
+    is_active     BOOLEAN                  NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,14 +26,14 @@ CREATE INDEX idx_auction_categories_is_active ON auction_categories (is_active);
 -- Auction items table
 CREATE TABLE auction_items
 (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                  UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
     seller_id           UUID                     NOT NULL,
     title               VARCHAR(255)             NOT NULL,
     description         TEXT                     NOT NULL,
     category_id         UUID                     NOT NULL REFERENCES auction_categories (id),
     starting_price      DECIMAL(15, 2)           NOT NULL CHECK (starting_price >= 0),
     bid_increment       DECIMAL(15, 2)           NOT NULL CHECK (bid_increment > 0),
-    buy_now_price       DECIMAL(15, 2)           CHECK (buy_now_price > starting_price),
+    buy_now_price       DECIMAL(15, 2) CHECK (buy_now_price > starting_price),
     deposit_amount      DECIMAL(15, 2)           NOT NULL CHECK (deposit_amount >= 0),
     current_price       DECIMAL(15, 2)           NOT NULL DEFAULT 0,
     current_winner_id   UUID,
@@ -66,7 +66,7 @@ CREATE INDEX idx_auction_items_winner_id ON auction_items (winner_id) WHERE winn
 -- Auction images table
 CREATE TABLE auction_images
 (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id            UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
     auction_id    UUID                     NOT NULL,
     image_url     VARCHAR(1000)            NOT NULL,
     thumbnail_url VARCHAR(1000),
@@ -82,14 +82,14 @@ CREATE UNIQUE INDEX idx_auction_images_primary ON auction_images (auction_id) WH
 -- Auction status history table
 CREATE TABLE auction_status_history
 (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auction_id  UUID                     NOT NULL,
-    from_status VARCHAR(20),
-    to_status   VARCHAR(20)              NOT NULL,
-    reason      TEXT,
+    id           UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
+    auction_id   UUID                     NOT NULL,
+    from_status  VARCHAR(20),
+    to_status    VARCHAR(20)              NOT NULL,
+    reason       TEXT,
     triggered_by UUID,
-    metadata    JSONB,
-    created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    metadata     JSONB,
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_auction_status_history_auction FOREIGN KEY (auction_id) REFERENCES auction_items (id) ON DELETE CASCADE
 );
 
@@ -99,7 +99,7 @@ CREATE INDEX idx_auction_status_history_created_at ON auction_status_history (cr
 -- Auction extensions table
 CREATE TABLE auction_extensions
 (
-    id                         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                         UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
     auction_id                 UUID                     NOT NULL,
     previous_end_time          TIMESTAMP WITH TIME ZONE NOT NULL,
     new_end_time               TIMESTAMP WITH TIME ZONE NOT NULL,

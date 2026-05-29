@@ -410,7 +410,7 @@ export default async function FAQPage({ searchParams }: { searchParams: Promise<
 
               <Accordion className="w-full">
                 {activeItems.map((item, i) => (
-                  <AccordionItem key={i} value={`item-${i}`}>
+                  <AccordionItem key={item.q} value={`item-${i}`}>
                     <AccordionTrigger
                       className="font-display font-medium text-left"
                       style={{ fontSize: 18, letterSpacing: '-0.005em' }}

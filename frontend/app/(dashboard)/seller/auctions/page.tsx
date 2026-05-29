@@ -17,7 +17,7 @@ import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper
 
 const ITEMS_PER_PAGE = 20
 
-function TableHead({ children, right }: { children: React.ReactNode; right?: boolean }) {
+function TableHead({ children, right }: { readonly children: React.ReactNode; readonly right?: boolean }) {
   return (
     <th className={`border-b border-[var(--color-border-default)] py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground ${right ? 'pr-4 text-right' : 'pr-4 text-left'}`}>
       {children}

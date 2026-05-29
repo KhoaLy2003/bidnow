@@ -41,9 +41,8 @@ export function useSecureImage(initialUrl?: string | null) {
           console.error("Failed to load secure image", error);
         }
       }
-      else {
-        // It's already a standard URL (or public placeholder)
-        if (isMounted) setResolvedUrl(initialUrl);
+      else if (isMounted) {
+        setResolvedUrl(initialUrl);
       }
     }
 

@@ -10,8 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label }    from '@/components/ui/label'
 
 interface DeleteAuctionDialogProps {
-  open:         boolean
-  auctionTitle: string
+  readonly open:         boolean
+  readonly auctionTitle: string
   onClose():    void
   onConfirm(reason: string): void
 }

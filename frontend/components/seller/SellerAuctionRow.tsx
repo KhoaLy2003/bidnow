@@ -3,7 +3,7 @@
 import { useState }     from 'react'
 import Image             from 'next/image'
 import Link              from 'next/link'
-import { Eye, Pencil, Trash2, MoreHorizontal, Trophy } from 'lucide-react'
+import { Eye, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 import { Button }        from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,

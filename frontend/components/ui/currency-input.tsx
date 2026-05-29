@@ -26,7 +26,7 @@ export function CurrencyInput({
     }
     // Also sync if external value gets a value that doesn't match our current raw
     // e.g. when loading data from API
-    const currentDollars = parseFloat(raw)
+    const currentDollars = Number.parseFloat(raw)
     const expectedDollars = valueCents / 100
     if (!isNaN(expectedDollars) && expectedDollars !== currentDollars && valueCents > 0) {
       setRaw(expectedDollars.toString())
@@ -35,7 +35,7 @@ export function CurrencyInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRaw(e.target.value)
-    const dollars = parseFloat(e.target.value)
+    const dollars = Number.parseFloat(e.target.value)
     onChangeCents(isNaN(dollars) ? 0 : Math.round(dollars * 100))
   }
 

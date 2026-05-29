@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { Loader2 } from 'lucide-react'
 
-export function AdminGuard({ children }: { children: React.ReactNode }) {
+export function AdminGuard({ children }: { readonly children: React.ReactNode }) {
   const router = useRouter()
   const { isAuthenticated, user } = useAuthStore()
 
