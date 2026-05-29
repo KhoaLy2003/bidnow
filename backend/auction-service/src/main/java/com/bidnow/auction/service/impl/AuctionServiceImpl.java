@@ -151,6 +151,7 @@ public class AuctionServiceImpl implements AuctionService {
             auctionKafkaProducer.publishAuctionCancelled(AuctionCancelledEvent.builder()
                     .auctionId(auction.getId())
                     .sellerId(sellerId)
+                    .auctionTitle(auction.getTitle())
                     .previousStatus(oldStatus.name())
                     .reason(reason)
                     .cancelledAt(now.toInstant())

@@ -15,6 +15,7 @@ import java.util.UUID;
 public class AuctionCancelledEvent {
     private UUID auctionId;
     private UUID sellerId;
+    private String auctionTitle;
     private String previousStatus;
     private String reason;
     private Instant cancelledAt;
