@@ -217,8 +217,12 @@ public class AuctionServiceImpl implements AuctionService {
         Page<AuctionItem> page = auctionItemRepository.findAll(spec, pageable);
 
         List<AuctionItem> auctions = page.getContent();
+        if (auctions.isEmpty()) {
+            return PaginationUtils.toPageResponse(page, List.of());
+        }
+        List<UUID> auctionIds = auctions.stream().map(AuctionItem::getId).toList();
         Map<UUID, List<AuctionImage>> imagesByAuction = auctionImageRepository
-                .findByAuctionInOrderByDisplayOrderAsc(auctions)
+                .findByAuctionIdInOrderByDisplayOrderAsc(auctionIds)
                 .stream()
                 .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
         List<AuctionSummaryResponse> summaries = auctions.stream()
