@@ -312,7 +312,7 @@ public class AuctionServiceImpl implements AuctionService {
 
         if (TERMINAL_STATUSES.contains(auction.getStatus())) {
             throw new BadRequestException(
-                    "Cannot modify a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
+                    "Cannot delete a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
         }
 
         if (auction.getStatus() != AuctionStatus.DRAFT &&
