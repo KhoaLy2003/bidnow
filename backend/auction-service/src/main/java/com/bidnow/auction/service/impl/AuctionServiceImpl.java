@@ -48,6 +48,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AuctionServiceImpl implements AuctionService {
 
+    private static final Set<AuctionStatus> TERMINAL_STATUSES =
+            Set.of(AuctionStatus.CANCELLED, AuctionStatus.COMPLETED, AuctionStatus.FAILED);
+
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionCategoryRepository auctionCategoryRepository;
     private final AuctionImageRepository auctionImageRepository;
@@ -249,6 +252,11 @@ public class AuctionServiceImpl implements AuctionService {
             throw new ForbiddenException("You do not own this auction", ErrorCodes.ACCESS_DENIED);
         }
 
+        if (TERMINAL_STATUSES.contains(auction.getStatus())) {
+            throw new BadRequestException(
+                    "Cannot modify a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
+        }
+
         if (auction.getStatus() != AuctionStatus.DRAFT &&
                 !auction.getStartTime().isAfter(OffsetDateTime.now())) {
             throw new BadRequestException("Auction cannot be modified after it has started", ErrorCodes.INVALID_INPUT);
@@ -300,6 +308,11 @@ public class AuctionServiceImpl implements AuctionService {
 
         if (!auction.getSellerId().equals(sellerId)) {
             throw new ForbiddenException("You do not own this auction", ErrorCodes.ACCESS_DENIED);
+        }
+
+        if (TERMINAL_STATUSES.contains(auction.getStatus())) {
+            throw new BadRequestException(
+                    "Cannot modify a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
         }
 
         if (auction.getStatus() != AuctionStatus.DRAFT &&
