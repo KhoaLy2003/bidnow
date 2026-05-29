@@ -38,7 +38,7 @@ public class CreateAuctionRequest {
     private UUID categoryId;
 
     @NotNull(message = "Starting price is required")
-    @DecimalMin(value = "0.00", message = "Starting price must be non-negative")
+    @DecimalMin(value = "0.01", message = "Starting price must be greater than zero")
     @Schema(description = "Initial bidding price", example = "100.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal startingPrice;
 

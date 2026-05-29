@@ -30,7 +30,7 @@ public class UpdateAuctionRequest {
     @Schema(description = "Category UUID")
     private UUID categoryId;
 
-    @DecimalMin(value = "0.00", message = "Starting price must be non-negative")
+    @DecimalMin(value = "0.01", message = "Starting price must be greater than zero")
     @Schema(description = "Initial bidding price", example = "100.00")
     private BigDecimal startingPrice;
 
