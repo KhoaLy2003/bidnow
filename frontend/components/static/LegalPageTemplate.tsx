@@ -139,7 +139,7 @@ function Callout({
   )
 }
 
-function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
+function DataTable({ headers, rows }: { readonly headers: readonly string[]; readonly rows: readonly (readonly string[])[] }) {
   return (
     <div
       style={{
@@ -186,7 +186,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
         >
           {row.map((cell, j) => (
             <span
-              key={j}
+              key={headers[j]}
               style={{
                 flex: 1,
                 color: j === 0 ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
@@ -223,8 +223,8 @@ function slugify(s: string) {
 // ---------------------------------------------------------------------------
 
 interface LegalPageTemplateProps {
-  doc: LegalDocument
-  related?: RelatedDoc[]
+  readonly doc: LegalDocument
+  readonly related?: readonly RelatedDoc[]
 }
 
 export function LegalPageTemplate({ doc, related = [] }: LegalPageTemplateProps) {
@@ -294,8 +294,8 @@ export function LegalPageTemplate({ doc, related = [] }: LegalPageTemplateProps)
               borderBottom: '1px solid var(--color-border-default)',
             }}
           >
-            {doc.meta.map((m, i) => (
-              <div key={i} className="flex flex-col">
+            {doc.meta.map((m) => (
+              <div key={m.k} className="flex flex-col">
                 <span
                   className="font-mono uppercase"
                   style={{

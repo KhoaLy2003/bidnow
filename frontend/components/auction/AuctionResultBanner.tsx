@@ -3,8 +3,8 @@ import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 
 interface AuctionResultBannerProps {
-  status:    AuctionStatus.Won | AuctionStatus.Lost | AuctionStatus.Closed
-  finalBid:  number        // cents
+  readonly status:    AuctionStatus.Won | AuctionStatus.Lost | AuctionStatus.Closed
+  readonly finalBid:  number
 }
 
 export function AuctionResultBanner({ status, finalBid }: AuctionResultBannerProps) {

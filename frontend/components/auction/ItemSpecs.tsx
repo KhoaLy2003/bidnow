@@ -3,8 +3,8 @@ import { formatCurrency } from '@/lib/format'
 import type { Auction } from '@/types/ui/auction.ui'
 
 interface ItemSpecsProps {
-  auction:       Auction
-  categoryLabel: string
+  readonly auction:       Auction
+  readonly categoryLabel: string
 }
 
 function SpecRow({
@@ -13,10 +13,10 @@ function SpecRow({
   mono = false,
   last = false,
 }: {
-  label: string
-  value: React.ReactNode
-  mono?: boolean
-  last?: boolean
+  readonly label: string
+  readonly value: React.ReactNode
+  readonly mono?: boolean
+  readonly last?: boolean
 }) {
   return (
     <div

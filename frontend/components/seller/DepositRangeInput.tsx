@@ -7,8 +7,8 @@ import { cn }      from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 
 interface DepositRangeInputProps {
-  depositCents:      number
-  startingPriceCents: number
+  readonly depositCents:       number
+  readonly startingPriceCents: number
   onChange(cents: number): void
 }
 

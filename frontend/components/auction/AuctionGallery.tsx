@@ -6,8 +6,8 @@ import { ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AuctionGalleryProps {
-  images: string[]
-  title:  string
+  readonly images: string[]
+  readonly title:  string
 }
 
 export function AuctionGallery({ images, title }: AuctionGalleryProps) {

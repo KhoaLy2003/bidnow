@@ -95,7 +95,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ delta }) => {
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
         <Badge variant="outline" className="gap-1">
-          {fields.length} field{fields.length !== 1 ? "s" : ""} changed
+          {fields.length} field{fields.length === 1 ? "" : "s"} changed
         </Badge>
       </div>
       {fields.map(([field, { old: oldVal, new: newVal }]) => (

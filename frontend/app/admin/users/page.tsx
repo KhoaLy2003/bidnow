@@ -438,8 +438,7 @@ export default function UserManagementPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{showingStart}</span>-
-            <span className="font-medium text-foreground">{showingEnd}</span> of{' '}
+            Showing <span className="font-medium text-foreground">{showingStart}</span>{'-'}<span className="font-medium text-foreground">{showingEnd}</span> of{' '}
             <span className="font-medium text-foreground">{totalElements}</span>
           </p>
           <div className="flex items-center gap-2">
@@ -662,9 +661,9 @@ function ProfileField({
   label,
   value,
 }: {
-  icon: IconComponent
-  label: string
-  value?: string | null
+  readonly icon: IconComponent
+  readonly label: string
+  readonly value?: string | null
 }) {
   return (
     <div className="rounded-lg border p-4">

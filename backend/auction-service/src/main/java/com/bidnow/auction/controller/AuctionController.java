@@ -19,9 +19,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -38,7 +45,7 @@ public class AuctionController {
      *
      * @param id UUID of the auction
      * @return ResponseEntity containing a BaseResponse with the AuctionResponse.
-     *         HTTP 200 on success, 404 if not found or soft-deleted.
+     * HTTP 200 on success, 404 if not found or soft-deleted.
      * =============================================================
      */
     @Operation(summary = "Get auction details by ID (public)")
@@ -56,13 +63,13 @@ public class AuctionController {
      * =============================================================
      * List auctions owned by the authenticated seller.
      *
-     * @param sellerId UUID of the authenticated seller
-     * @param type filter type (default: "active")
+     * @param sellerId   UUID of the authenticated seller
+     * @param type       filter type (default: "active")
      * @param categoryId optional category UUID to filter auctions
-     * @param page zero-based page index
-     * @param size page size
+     * @param page       zero-based page index
+     * @param size       page size
      * @return ResponseEntity containing a BaseResponse with a PageResponse of AuctionSummaryResponse.
-     *         HTTP 200 on success.
+     * HTTP 200 on success.
      * =============================================================
      */
     @Operation(summary = "List auctions owned by the authenticated seller")
@@ -86,9 +93,9 @@ public class AuctionController {
      * Create a new auction listing.
      *
      * @param sellerId UUID of the authenticated seller (resolved from security/context)
-     * @param request CreateAuctionRequest validated request body containing auction details
+     * @param request  CreateAuctionRequest validated request body containing auction details
      * @return ResponseEntity containing a BaseResponse with the created AuctionResponse.
-     *         HTTP 201 on success. Possible responses: 201, 400 (validation/business), 404 (category not found).
+     * HTTP 201 on success. Possible responses: 201, 400 (validation/business), 404 (category not found).
      * =============================================================
      */
     @Operation(summary = "Create a new auction listing")
@@ -115,10 +122,10 @@ public class AuctionController {
      * Update an auction (only allowed before it starts).
      *
      * @param sellerId UUID of the authenticated seller
-     * @param id UUID of the auction to update (path variable)
-     * @param request UpdateAuctionRequest validated request body with update fields
+     * @param id       UUID of the auction to update (path variable)
+     * @param request  UpdateAuctionRequest validated request body with update fields
      * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
-     *         HTTP 200 on success. Possible responses: 200, 400 (cannot modify), 403 (not owner), 404 (not found).
+     * HTTP 200 on success. Possible responses: 200, 400 (cannot modify), 403 (not owner), 404 (not found).
      * =============================================================
      */
     @Operation(summary = "Update an auction (only allowed before it starts)")
@@ -142,9 +149,9 @@ public class AuctionController {
      * Delete (soft) an auction (only allowed before it starts).
      *
      * @param sellerId UUID of the authenticated seller
-     * @param id UUID of the auction to delete (path variable)
+     * @param id       UUID of the auction to delete (path variable)
      * @return ResponseEntity with no content (HTTP 204) on successful deletion.
-     *         Possible responses: 204, 400 (cannot delete), 403 (not owner), 404 (not found).
+     * Possible responses: 204, 400 (cannot delete), 403 (not owner), 404 (not found).
      * ------------------------------------------------------------
      */
     @Operation(summary = "Delete (soft) an auction (only allowed before it starts)")
@@ -167,9 +174,9 @@ public class AuctionController {
      * Publish a DRAFT auction (transitions to SCHEDULED or ACTIVE).
      *
      * @param sellerId UUID of the authenticated seller
-     * @param id UUID of the auction to publish (path variable)
+     * @param id       UUID of the auction to publish (path variable)
      * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
-     *         HTTP 200 on success.
+     * HTTP 200 on success.
      * =============================================================
      */
     @Operation(summary = "Publish a DRAFT auction (transitions to SCHEDULED or ACTIVE)")
@@ -192,8 +199,8 @@ public class AuctionController {
      * Cancel an auction (DRAFT/SCHEDULED/ACTIVE → CANCELLED).
      *
      * @param sellerId UUID of the authenticated seller
-     * @param id UUID of the auction to cancel (path variable)
-     * @param request optional body containing a cancellation reason
+     * @param id       UUID of the auction to cancel (path variable)
+     * @param request  optional body containing a cancellation reason
      * @return ResponseEntity with no content (HTTP 204) on success.
      * =============================================================
      */

@@ -1,14 +1,14 @@
 import type { AuditEvent } from '@/types/ui/seller.ui'
 
 interface AuditTrailProps {
-  events: AuditEvent[]
+  readonly events: AuditEvent[]
 }
 
 export function AuditTrail({ events }: AuditTrailProps) {
   return (
     <div className="flex flex-col gap-1">
-      {events.map((ev, i) => (
-        <div key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
+      {events.map((ev) => (
+        <div key={ev.timestamp.toISOString()} className="flex items-start gap-3 text-sm text-muted-foreground">
           <span className="shrink-0 font-mono text-xs text-[var(--color-text-tertiary)]">
             {ev.timestamp.toLocaleDateString('en-US', {
               month: 'short',

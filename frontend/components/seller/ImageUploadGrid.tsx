@@ -5,6 +5,7 @@ import { Upload, X, Star } from 'lucide-react'
 import { cn }     from '@/lib/utils'
 
 interface ImageFile {
+  id:       string
   file:     File
   preview:  string
   progress: number   // 0–100; 100 = done
@@ -12,8 +13,8 @@ interface ImageFile {
 }
 
 interface ImageUploadGridProps {
-  images:    File[]
-  onChange(files: File[]): void
+  readonly images:    File[]
+  readonly onChange:  (files: File[]) => void
 }
 
 const MAX_FILES   = 10
@@ -23,7 +24,7 @@ const ACCEPT      = ['image/jpeg', 'image/png']
 export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<ImageFile[]>(() =>
-    images.map(f => ({ file: f, preview: URL.createObjectURL(f), progress: 100 }))
+    images.map(f => ({ id: crypto.randomUUID(), file: f, preview: URL.createObjectURL(f), progress: 100 }))
   )
   const [dragging, setDragging] = useState(false)
 
@@ -33,12 +34,13 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
 
     for (const f of arr) {
       if (items.length + next.length >= MAX_FILES) break
-      const error = !ACCEPT.includes(f.type)
-        ? 'Only JPEG or PNG files are accepted.'
-        : f.size > MAX_BYTES
-        ? `File too large. Max 5 MB (this file is ${(f.size / 1024 / 1024).toFixed(1)} MB).`
-        : undefined
-      next.push({ file: f, preview: error ? '' : URL.createObjectURL(f), progress: error ? 100 : 0, error })
+      let error: string | undefined
+      if (!ACCEPT.includes(f.type)) {
+        error = 'Only JPEG or PNG files are accepted.'
+      } else if (f.size > MAX_BYTES) {
+        error = `File too large. Max 5 MB (this file is ${(f.size / 1024 / 1024).toFixed(1)} MB).`
+      }
+      next.push({ id: crypto.randomUUID(), file: f, preview: error ? '' : URL.createObjectURL(f), progress: error ? 100 : 0, error })
     }
 
     const updated = [...items, ...next]
@@ -57,10 +59,10 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
     onChange(updated.filter(i => !i.error).map(i => i.file))
   }
 
-  function remove(idx: number) {
-    const updated = items.filter((_, i) => i !== idx)
+  function remove(id: string) {
+    const updated = items.filter(item => item.id !== id)
     setItems(updated)
-    onChange(updated.filter(i => !i.error).map(i => i.file))
+    onChange(updated.filter(item => !item.error).map(item => item.file))
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -106,7 +108,7 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
         <div className="grid grid-cols-5 gap-2">
           {items.map((item, idx) => (
             <div
-              key={idx}
+              key={item.id}
               className={cn(
                 'relative aspect-[4/3] overflow-hidden rounded-md border',
                 item.error
@@ -150,7 +152,7 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
               {/* Remove button */}
               <button
                 type="button"
-                onClick={() => remove(idx)}
+                onClick={() => remove(item.id)}
                 className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors duration-[var(--duration-tesla)]"
               >
                 <X className="size-3" />

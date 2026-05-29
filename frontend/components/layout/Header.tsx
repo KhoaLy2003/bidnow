@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Gavel, User, LogOut, Settings, ListOrdered, Package } from "lucide-react";
+import { User, LogOut, Settings, ListOrdered, Package } from "lucide-react";
 import { BidNowGavelMark } from "@/components/shared/BidNowGavelMark";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,10 +70,7 @@ export function Header() {
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <BidNowGavelMark size={28} />
           <span className="hidden font-medium sm:inline-block">
-            Bid
-            <span className="text-[var(--color-text-brand)] font-medium">
-              Now
-            </span>
+            Bid<span className="text-[var(--color-text-brand)] font-medium">Now</span>
           </span>
         </Link>
 

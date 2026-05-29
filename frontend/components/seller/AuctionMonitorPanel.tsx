@@ -4,8 +4,8 @@ import { formatCurrency }    from '@/lib/format'
 import type { SellerAuction, SellerBidItem } from '@/types/ui/seller.ui'
 
 interface AuctionMonitorPanelProps {
-  auction: SellerAuction
-  bids:    SellerBidItem[]
+  readonly auction: SellerAuction
+  readonly bids:    SellerBidItem[]
 }
 
 export function AuctionMonitorPanel({ auction, bids }: AuctionMonitorPanelProps) {

@@ -8,8 +8,8 @@ CREATE TABLE notif_notifications
     type          VARCHAR(50)  NOT NULL,
     channel       VARCHAR(20)  NOT NULL,
     status        VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
-    title         VARCHAR(255)         NOT NULL,
-    message       TEXT                 NOT NULL,
+    title         VARCHAR(255) NOT NULL,
+    message       TEXT         NOT NULL,
     action_url    VARCHAR(500),
     auction_id    UUID,
     bid_id        UUID,
@@ -17,8 +17,8 @@ CREATE TABLE notif_notifications
     sent_at       TIMESTAMP,
     read_at       TIMESTAMP,
     failed_reason TEXT,
-    retry_count   INTEGER                       DEFAULT 0,
-    created_at    TIMESTAMP            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    retry_count   INTEGER               DEFAULT 0,
+    created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP
 );
 

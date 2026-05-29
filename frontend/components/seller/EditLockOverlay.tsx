@@ -2,7 +2,7 @@ import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface EditLockOverlayProps {
-  reason?: string
+  readonly reason?: string
 }
 
 export function EditLockOverlay({ reason }: EditLockOverlayProps) {

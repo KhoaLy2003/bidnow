@@ -87,7 +87,7 @@ function validateStep3(data: CreateAuctionFormData): Errors {
     e.buyNowPrice = 'Buy-it-now must be greater than starting price.'
   if (data.startingPrice > 0) {
     const min = Math.ceil(data.startingPrice * 0.05)
-    const max = Math.floor(data.startingPrice * 0.20)
+    const max = Math.floor(data.startingPrice * 0.2)
     if (data.depositAmount < min || data.depositAmount > max)
       e.depositAmount = `Deposit must be ${formatCurrency(min)}–${formatCurrency(max)} (5–20% of starting price).`
   }
@@ -159,6 +159,14 @@ export default function CreateAuctionPage() {
       }
 
       const actualStartTime = data.startType === 'scheduled' && data.scheduledStartTime ? data.scheduledStartTime : new Date();
+      let auctionStatus: 'DRAFT' | 'SCHEDULED' | 'ACTIVE'
+      if (asDraft) {
+        auctionStatus = 'DRAFT'
+      } else if (data.startType === 'scheduled') {
+        auctionStatus = 'SCHEDULED'
+      } else {
+        auctionStatus = 'ACTIVE'
+      }
       // Create auction
       await auctionService.createAuction({
         title: data.title,
@@ -168,10 +176,10 @@ export default function CreateAuctionPage() {
         bidIncrement: data.bidIncrement,
         buyNowPrice: data.buyNowPrice > 0 ? data.buyNowPrice : undefined,
         depositAmount: data.depositAmount,
-        startTime: actualStartTime.toISOString(), // Starting immediately or at scheduled time
+        startTime: actualStartTime.toISOString(),
         endTime: endsAt.toISOString(),
         imageUrls: uploadedUrls,
-        status: asDraft ? 'DRAFT' : (data.startType === 'scheduled' ? 'SCHEDULED' : 'ACTIVE')
+        status: auctionStatus
       }, accessToken)
       
       router.push('/seller/auctions')
@@ -408,7 +416,7 @@ export default function CreateAuctionPage() {
                             onChange={(e) => {
                               const [hours, minutes] = e.target.value.split(':');
                               const newDate = new Date(data.scheduledStartTime!);
-                              newDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+                              newDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10));
                               update('scheduledStartTime', newDate);
                             }}
                           />

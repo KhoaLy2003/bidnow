@@ -26,7 +26,7 @@ public class AuctionCategoryController {
      * Get all active auction categories.
      *
      * @return ResponseEntity containing a BaseResponse with a list of AuctionCategoryResponse.
-     *         HTTP 200 on success.
+     * HTTP 200 on success.
      * =============================================================
      */
     @Operation(summary = "Get all active auction categories")

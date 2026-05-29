@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/table'
 
 const PAGE_SIZE = DEFAULT_PAGE_SIZE
+const SKELETON_ROW_KEYS = ['sk-0', 'sk-1', 'sk-2', 'sk-3', 'sk-4'] as const
 
 export default function AdminEmailLogsPage() {
   const { accessToken } = useAuthStore()
@@ -137,44 +138,42 @@ export default function AdminEmailLogsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell colSpan={7} className="px-4">
-                      <Skeleton className="h-8 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : logs.length === 0 ? (
+              {loading && SKELETON_ROW_KEYS.map((key) => (
+                <TableRow key={key}>
+                  <TableCell colSpan={7} className="px-4">
+                    <Skeleton className="h-8 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!loading && logs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     No email logs found.
                   </TableCell>
                 </TableRow>
-              ) : (
-                logs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="px-4">
-                      <div className="flex items-center gap-2">
-                        <Mail className="size-4 text-muted-foreground" />
-                        <span className="font-medium">{log.recipientEmail}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{log.templateName}</TableCell>
-                    <TableCell className="max-w-[260px] truncate text-muted-foreground">{log.subject}</TableCell>
-                    <TableCell>
-                      <EmailStatusBadge status={log.status} />
-                    </TableCell>
-                    <TableCell>{log.retryCount}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {log.sentAt ? formatDate(log.sentAt) : 'Not sent'}
-                    </TableCell>
-                    <TableCell className="max-w-[260px] truncate pr-4 text-muted-foreground">
-                      {log.failureReason || '-'}
-                    </TableCell>
-                  </TableRow>
-                ))
               )}
+              {!loading && logs.map((log) => (
+                <TableRow key={log.id}>
+                  <TableCell className="px-4">
+                    <div className="flex items-center gap-2">
+                      <Mail className="size-4 text-muted-foreground" />
+                      <span className="font-medium">{log.recipientEmail}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">{log.templateName}</TableCell>
+                  <TableCell className="max-w-[260px] truncate text-muted-foreground">{log.subject}</TableCell>
+                  <TableCell>
+                    <EmailStatusBadge status={log.status} />
+                  </TableCell>
+                  <TableCell>{log.retryCount}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {log.sentAt ? formatDate(log.sentAt) : 'Not sent'}
+                  </TableCell>
+                  <TableCell className="max-w-[260px] truncate pr-4 text-muted-foreground">
+                    {log.failureReason || '-'}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </CardContent>
