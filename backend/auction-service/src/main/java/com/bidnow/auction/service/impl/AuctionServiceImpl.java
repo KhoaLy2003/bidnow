@@ -16,6 +16,7 @@ import com.bidnow.auction.repository.AuctionCategoryRepository;
 import com.bidnow.auction.repository.AuctionImageRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
+import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
@@ -27,6 +28,7 @@ import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
 import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.common.util.PaginationUtils;
+import org.jobrunr.scheduling.BackgroundJob;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -110,6 +112,12 @@ public class AuctionServiceImpl implements AuctionService {
                     .startingPrice(auction.getStartingPrice())
                     .endTime(auction.getEndTime().toInstant())
                     .build());
+        } else if (newStatus == AuctionStatus.SCHEDULED) {
+            final UUID auctionId = auction.getId();
+            BackgroundJob.<AuctionActivationJob>schedule(
+                    auction.getStartTime().toInstant(),
+                    job -> job.activateAuction(auctionId));
+            log.info("Scheduled activation job for auction {} at {}", auctionId, auction.getStartTime());
         }
 
         log.info("Published auction {} to status {} by seller {}", id, newStatus, sellerId);
