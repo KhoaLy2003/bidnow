@@ -10,13 +10,13 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
 import com.bidnow.auction.repository.AuctionCategoryRepository;
 import com.bidnow.auction.repository.AuctionImageRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
-import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
@@ -28,9 +28,9 @@ import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
 import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.common.util.PaginationUtils;
-import org.jobrunr.scheduling.BackgroundJob;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jobrunr.scheduling.BackgroundJob;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -40,6 +40,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,17 +116,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .endTime(auction.getEndTime().toInstant())
                     .build());
         } else if (newStatus == AuctionStatus.SCHEDULED) {
-            final UUID scheduledAuctionId = auction.getId();
-            final java.time.Instant activateAt = auction.getStartTime().toInstant();
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    BackgroundJob.<AuctionActivationJob>schedule(
-                            activateAt,
-                            job -> job.activateAuction(scheduledAuctionId));
-                    log.info("Scheduled activation job for auction {} at {}", scheduledAuctionId, activateAt);
-                }
-            });
+            scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
 
         log.info("Published auction {} to status {} by seller {}", id, newStatus, sellerId);
@@ -163,7 +154,7 @@ public class AuctionServiceImpl implements AuctionService {
 
         recordStatusHistory(auction, oldStatus, AuctionStatus.CANCELLED, sellerId, reason);
 
-        if (oldStatus == AuctionStatus.ACTIVE) {
+        if (oldStatus == AuctionStatus.ACTIVE || oldStatus == AuctionStatus.SCHEDULED) {
             auctionKafkaProducer.publishAuctionCancelled(AuctionCancelledEvent.builder()
                     .auctionId(auction.getId())
                     .sellerId(sellerId)
@@ -226,17 +217,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .endTime(auction.getEndTime().toInstant())
                     .build());
         } else if (status == AuctionStatus.SCHEDULED) {
-            final UUID scheduledAuctionId = auction.getId();
-            final java.time.Instant activateAt = auction.getStartTime().toInstant();
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    BackgroundJob.<AuctionActivationJob>schedule(
-                            activateAt,
-                            job -> job.activateAuction(scheduledAuctionId));
-                    log.info("Scheduled activation job for auction {} at {}", scheduledAuctionId, activateAt);
-                }
-            });
+            scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
 
         log.info("Created auction {} with status {} for seller {}", auction.getId(), status, sellerId);
@@ -367,6 +348,16 @@ public class AuctionServiceImpl implements AuctionService {
         auctionItemRepository.save(auction);
 
         log.info("Soft-deleted auction {} by seller {}", auctionId, sellerId);
+    }
+
+    private void scheduleActivationJob(UUID auctionId, Instant activateAt) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                BackgroundJob.<AuctionActivationJob>schedule(activateAt, job -> job.activateAuction(auctionId));
+                log.info("Scheduled activation job for auction {} at {}", auctionId, activateAt);
+            }
+        });
     }
 
     private AuctionStatus resolveStatus(AuctionStatus requested, OffsetDateTime startTime) {
