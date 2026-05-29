@@ -282,12 +282,15 @@ public class AuctionServiceImpl implements AuctionService {
             }
         }
 
+        // Validate image count BEFORE mutating the entity via mapper
+        if (request.getImageUrls() != null &&
+                (request.getImageUrls().size() < 1 || request.getImageUrls().size() > 10)) {
+            throw new BadRequestException("Must provide between 1 and 10 images", ErrorCodes.INVALID_INPUT);
+        }
+
         auctionMapper.updateFromRequest(request, auction);
 
         if (request.getImageUrls() != null) {
-            if (request.getImageUrls().size() < 1 || request.getImageUrls().size() > 10) {
-                throw new BadRequestException("Must provide between 1 and 10 images", ErrorCodes.INVALID_INPUT);
-            }
             auctionImageRepository.deleteByAuction(auction);
             List<AuctionImage> newImages = buildImages(auction, request.getImageUrls());
             auctionImageRepository.saveAll(newImages);
