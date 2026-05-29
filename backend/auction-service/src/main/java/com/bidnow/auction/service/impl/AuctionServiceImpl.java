@@ -19,6 +19,7 @@ import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
+import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.ForbiddenException;
@@ -145,6 +146,16 @@ public class AuctionServiceImpl implements AuctionService {
         auctionItemRepository.save(auction);
 
         recordStatusHistory(auction, oldStatus, AuctionStatus.CANCELLED, sellerId, reason);
+
+        if (oldStatus == AuctionStatus.ACTIVE) {
+            auctionKafkaProducer.publishAuctionCancelled(AuctionCancelledEvent.builder()
+                    .auctionId(auction.getId())
+                    .sellerId(sellerId)
+                    .previousStatus(oldStatus.name())
+                    .reason(reason)
+                    .cancelledAt(now.toInstant())
+                    .build());
+        }
 
         log.info("Cancelled auction {} (was {}) by seller {}", id, oldStatus, sellerId);
     }
