@@ -113,6 +113,14 @@ export default function CreateAuctionPage() {
   const [errors,    setErrors]    = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
   const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
+  useEffect(() => {
+    if (data.startType !== 'now') return
+    const id = setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [data.startType])
 
   // Fetch categories on mount
   useEffect(() => {
@@ -147,9 +155,14 @@ export default function CreateAuctionPage() {
     try {
       const uploadedUrls = await Promise.all(
         data.images.map(async (file) => {
-          const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
-          await mediaService.uploadToS3(presigned.uploadUrl, file)
-          return presigned.s3Key
+          try {
+            const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
+            await mediaService.uploadToS3(presigned.uploadUrl, file)
+            return presigned.s3Key
+          } catch (e) {
+            console.error('Failed to upload image:', file.name, e)
+            throw new Error(`Image upload failed for "${file.name}".`)
+          }
         })
       )
 
@@ -194,9 +207,9 @@ export default function CreateAuctionPage() {
   const endsAt = useMemo(() => {
     const baseTime = data.startType === 'scheduled' && data.scheduledStartTime
       ? data.scheduledStartTime.getTime()
-      : Date.now();
+      : nowMs;
     return new Date(baseTime + data.durationDays * 86_400_000);
-  }, [data.durationDays, data.startType, data.scheduledStartTime])
+  }, [nowMs, data.durationDays, data.startType, data.scheduledStartTime])
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
