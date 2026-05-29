@@ -11,5 +11,7 @@ public interface AuctionImageRepository extends JpaRepository<AuctionImage, UUID
 
     List<AuctionImage> findByAuctionOrderByDisplayOrderAsc(AuctionItem auction);
 
+    List<AuctionImage> findByAuctionInOrderByDisplayOrderAsc(List<AuctionItem> auctions);
+
     void deleteByAuction(AuctionItem auction);
 }

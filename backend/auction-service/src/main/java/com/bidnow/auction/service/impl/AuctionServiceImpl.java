@@ -38,8 +38,10 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -214,9 +216,14 @@ public class AuctionServiceImpl implements AuctionService {
 
         Page<AuctionItem> page = auctionItemRepository.findAll(spec, pageable);
 
-        List<AuctionSummaryResponse> summaries = page.getContent().stream()
+        List<AuctionItem> auctions = page.getContent();
+        Map<UUID, List<AuctionImage>> imagesByAuction = auctionImageRepository
+                .findByAuctionInOrderByDisplayOrderAsc(auctions)
+                .stream()
+                .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
+        List<AuctionSummaryResponse> summaries = auctions.stream()
                 .map(item -> {
-                    List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(item);
+                    List<AuctionImage> images = imagesByAuction.getOrDefault(item.getId(), List.of());
                     AuctionImage primary = images.stream()
                             .filter(AuctionImage::getIsPrimary)
                             .findFirst()
