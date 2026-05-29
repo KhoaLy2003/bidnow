@@ -107,7 +107,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .sellerId(sellerId)
                     .title(auction.getTitle())
                     .startingPrice(auction.getStartingPrice())
-                    .endTime(auction.getEndTime().toLocalDateTime())
+                    .endTime(auction.getEndTime().toInstant())
                     .build());
         }
 
@@ -195,7 +195,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .sellerId(sellerId)
                     .title(auction.getTitle())
                     .startingPrice(auction.getStartingPrice())
-                    .endTime(auction.getEndTime().toLocalDateTime())
+                    .endTime(auction.getEndTime().toInstant())
                     .build());
         }
 

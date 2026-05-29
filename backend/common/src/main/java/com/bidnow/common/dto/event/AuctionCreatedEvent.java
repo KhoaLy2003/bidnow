@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -18,5 +18,5 @@ public class AuctionCreatedEvent {
     private UUID sellerId;
     private String title;
     private BigDecimal startingPrice;
-    private LocalDateTime endTime;
+    private Instant endTime;
 }
