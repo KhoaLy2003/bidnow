@@ -1,10 +1,11 @@
 import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
 import type { Auction, BidHistoryItem } from '@/types/ui/auction.ui'
+import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
-import type { 
-  CreateAuctionRequest, 
-  UpdateAuctionRequest, 
-  AuctionResponse, 
+import type {
+  CreateAuctionRequest,
+  UpdateAuctionRequest,
+  AuctionResponse,
   AuctionSummaryResponse,
   AuctionCategoryResponse
 } from '@/types/api/auction.api'
@@ -18,6 +19,26 @@ export interface GetAuctionsParams {
   q?: string
   category?: string
   featured?: boolean
+}
+
+export interface GetBrowseAuctionsParams {
+  q?: string
+}
+
+const CATEGORY_NAMES: Record<string, string> = {
+  watches:  'Watches',
+  music:    'Music',
+  books:    'Books',
+  sneakers: 'Sneakers',
+  cameras:  'Cameras',
+  art:      'Art',
+}
+
+// Buy now prices added to select mock items for demo purposes
+const MOCK_BUY_NOW_PRICES: Record<string, number> = {
+  '2': 350_000,   // Gibson Les Paul
+  '5': 120_000,   // Nike Air Jordan
+  '8': 95_000,    // Leica M3
 }
 
 export const auctionService = {
@@ -152,6 +173,34 @@ export const auctionService = {
     }
 
     return results
+  },
+
+  /**
+   * Fetch auction summaries for the public browse page.
+   * Returns AuctionBrowseItem[] shaped for the browse UI.
+   * Replace this mock with a real API call when the browse endpoint is available.
+   */
+  async getBrowseAuctions(params?: GetBrowseAuctionsParams): Promise<AuctionBrowseItem[]> {
+    await delay(300)
+
+    let results = [...MOCK_AUCTIONS]
+
+    if (params?.q) {
+      const query = params.q.toLowerCase()
+      results = results.filter((a) => a.title.toLowerCase().includes(query))
+    }
+
+    return results.map((a): AuctionBrowseItem => ({
+      id:              a.id,
+      title:           a.title,
+      primaryImageUrl: a.imageUrls[0] ?? null,
+      currentPrice:    a.currentBid,
+      totalBids:       a.totalBids,
+      endTime:         a.endsAt,
+      status:          a.status,
+      buyNowPrice:     a.buyNowPrice ?? MOCK_BUY_NOW_PRICES[a.id] ?? null,
+      categoryName:    CATEGORY_NAMES[a.categoryId] ?? a.categoryId,
+    }))
   },
 
   /**
