@@ -4,9 +4,10 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { AuctionImageResponse } from '@/types/api/auction.api'
 
 interface AuctionGalleryProps {
-  readonly images: string[]
+  readonly images: AuctionImageResponse[]
   readonly title:  string
 }
 
@@ -14,28 +15,24 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [dragStartX, setDragStartX] = useState<number | null>(null)
 
-  const hasImages = images.length > 0
-  const activeImage = images[activeIndex]
+  const sorted     = [...images].sort((a, b) => a.displayOrder - b.displayOrder)
+  const hasImages  = sorted.length > 0
+  const activeImage = sorted[activeIndex]
 
-  function cancelDrag() {
-    setDragStartX(null)
-  }
+  function cancelDrag() { setDragStartX(null) }
 
-  function handlePointerDown(e: React.PointerEvent) {
-    setDragStartX(e.clientX)
-  }
+  function handlePointerDown(e: React.PointerEvent) { setDragStartX(e.clientX) }
 
   function handlePointerUp(e: React.PointerEvent) {
     if (dragStartX === null || !hasImages) return
     const delta = e.clientX - dragStartX
-    if (delta < -40 && activeIndex < images.length - 1) setActiveIndex(activeIndex + 1)
+    if (delta < -40 && activeIndex < sorted.length - 1) setActiveIndex(activeIndex + 1)
     if (delta > 40  && activeIndex > 0)                 setActiveIndex(activeIndex - 1)
     setDragStartX(null)
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Main image */}
       <div
         className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted select-none"
         onPointerDown={handlePointerDown}
@@ -45,7 +42,7 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
       >
         {hasImages ? (
           <Image
-            src={activeImage}
+            src={activeImage.imageUrl}
             alt={`${title} — image ${activeIndex + 1}`}
             fill
             className="object-cover"
@@ -58,20 +55,18 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
           </div>
         )}
 
-        {/* Counter */}
         {hasImages && (
           <div className="absolute right-3 top-3 rounded px-2 py-1 text-xs font-mono text-muted-foreground bg-background/90 border">
-            {activeIndex + 1} / {images.length}
+            {activeIndex + 1} / {sorted.length}
           </div>
         )}
       </div>
 
-      {/* Thumbnail row */}
-      {hasImages && images.length > 1 && (
+      {hasImages && sorted.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {images.map((src, i) => (
+          {sorted.map((img, i) => (
             <button
-              key={src}
+              key={img.id}
               type="button"
               onClick={() => setActiveIndex(i)}
               className={cn(
@@ -82,7 +77,7 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
               )}
             >
               <Image
-                src={src}
+                src={img.thumbnailUrl || img.imageUrl}
                 alt={`${title} — thumbnail ${i + 1}`}
                 fill
                 className="object-cover"
