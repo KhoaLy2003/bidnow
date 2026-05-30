@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, LayoutGrid, List } from 'lucide-react'
 import { Button }  from '@/components/ui/button'
 import { Badge }   from '@/components/ui/badge'
 import {
@@ -15,6 +15,7 @@ import {
 import { FilterPanel }       from './FilterPanel'
 import { SortButton }        from './SortButton'
 import { AuctionBrowseGrid } from './AuctionBrowseGrid'
+import { AuctionBrowseList } from './AuctionBrowseList'
 import {
   applyFilters,
   applySort,
@@ -47,6 +48,7 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
   const [filters,    setFilters]    = useState<BrowseFilters>(initial)
   const [pending,    setPending]    = useState<BrowseFilters>(initial)
   const [sort,       setSort]       = useState<SortOption>(DEFAULT_SORT)
+  const [viewMode,   setViewMode]   = useState<'grid' | 'list'>('grid')
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const displayed = useMemo(
@@ -155,6 +157,23 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
             </Sheet>
 
             <SortButton value={sort} onChange={setSort} />
+
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="icon-sm"
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="size-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="icon-sm"
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+            >
+              <List className="size-4" />
+            </Button>
           </div>
         </div>
 
@@ -168,9 +187,10 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
               Clear filters
             </Button>
           </div>
-        ) : (
-          <AuctionBrowseGrid items={displayed} />
-        )}
+        ) : viewMode === 'grid'
+            ? <AuctionBrowseGrid items={displayed} />
+            : <AuctionBrowseList items={displayed} />
+        }
       </div>
     </div>
   )
