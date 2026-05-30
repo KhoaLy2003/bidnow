@@ -1,4 +1,5 @@
 import type { AuctionStatus } from '@/lib/design-tokens'
+import type { AuctionImageResponse } from '@/types/api/auction.api'
 
 export interface AuctionSeller {
   id:            string
@@ -45,4 +46,35 @@ export interface BidHistoryItem extends Bid {
   bidderAvatarUrl?: string
   isCurrentUser:   boolean
   isWinning:       boolean
+}
+
+export interface AuctionDetailSeller {
+  id: string
+  name: string
+  avatarUrl?: string
+}
+
+export interface AuctionDetail {
+  id: string
+  title: string
+  description: string
+  categoryId: string
+  categoryName: string
+  startingPrice: number
+  bidIncrement: number
+  buyNowPrice?: number
+  depositAmount: number
+  currentBid: number
+  currentWinnerId?: string
+  totalBids: number
+  status: AuctionStatus
+  startsAt: Date
+  endsAt: Date
+  originalEndAt: Date
+  extensionCount: number
+  completedAt?: Date
+  winnerId?: string
+  images: AuctionImageResponse[]
+  seller: AuctionDetailSeller | null
+  createdAt: Date
 }

@@ -81,3 +81,33 @@ export interface AuctionSummaryResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UserSummaryResponse {
+  id: string
+  name: string
+  avatarUrl?: string
+}
+
+export interface AuctionDetailResponse {
+  id: string
+  title: string
+  description: string
+  category: AuctionCategoryResponse
+  startingPrice: number
+  bidIncrement: number
+  buyNowPrice?: number
+  depositAmount: number
+  currentPrice: number
+  currentWinnerId?: string
+  totalBids: number
+  status: string
+  startTime: string
+  endTime: string
+  originalEndTime: string
+  extensionCount: number
+  completedAt?: string
+  winnerId?: string
+  images: AuctionImageResponse[]
+  seller: UserSummaryResponse | null
+  createdAt: string
+}
