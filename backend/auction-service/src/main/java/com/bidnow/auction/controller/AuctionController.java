@@ -5,7 +5,7 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
-import com.bidnow.auction.dto.response.AuctionResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.service.AuctionService;
@@ -88,7 +88,7 @@ public class AuctionController {
      * Get full auction details by ID (public — no auth required).
      *
      * @param id UUID of the auction
-     * @return ResponseEntity containing a BaseResponse with the AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the SellerAuctionResponse.
      * HTTP 200 on success, 404 if not found or soft-deleted.
      * =============================================================
      */
@@ -98,8 +98,8 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction not found")
     })
     @GetMapping("/public/{id}")
-    public ResponseEntity<BaseResponse<AuctionResponse>> getAuctionById(@PathVariable UUID id) {
-        AuctionResponse response = auctionService.getAuctionById(id);
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> getAuctionById(@PathVariable UUID id) {
+        SellerAuctionResponse response = auctionService.getAuctionById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
@@ -138,7 +138,7 @@ public class AuctionController {
      *
      * @param sellerId UUID of the authenticated seller (resolved from security/context)
      * @param request  CreateAuctionRequest validated request body containing auction details
-     * @return ResponseEntity containing a BaseResponse with the created AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the created SellerAuctionResponse.
      * HTTP 201 on success. Possible responses: 201, 400 (validation/business), 404 (category not found).
      * =============================================================
      */
@@ -149,12 +149,12 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @PostMapping
-    public ResponseEntity<BaseResponse<AuctionResponse>> createAuction(
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> createAuction(
             @AuthenticatedUserId UUID sellerId,
             @Valid @RequestBody CreateAuctionRequest request) {
-        AuctionResponse response = auctionService.createAuction(sellerId, request);
+        SellerAuctionResponse response = auctionService.createAuction(sellerId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.<AuctionResponse>builder()
+                .body(BaseResponse.<SellerAuctionResponse>builder()
                         .status(HttpStatus.CREATED.value())
                         .message("Auction created successfully")
                         .data(response)
@@ -168,7 +168,7 @@ public class AuctionController {
      * @param sellerId UUID of the authenticated seller
      * @param id       UUID of the auction to update (path variable)
      * @param request  UpdateAuctionRequest validated request body with update fields
-     * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the updated SellerAuctionResponse.
      * HTTP 200 on success. Possible responses: 200, 400 (cannot modify), 403 (not owner), 404 (not found).
      * =============================================================
      */
@@ -180,11 +180,11 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction or category not found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<AuctionResponse>> updateAuction(
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> updateAuction(
             @AuthenticatedUserId UUID sellerId,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAuctionRequest request) {
-        AuctionResponse response = auctionService.updateAuction(sellerId, id, request);
+        SellerAuctionResponse response = auctionService.updateAuction(sellerId, id, request);
         return ResponseEntity.ok(BaseResponse.success("Auction updated successfully", response));
     }
 
@@ -219,7 +219,7 @@ public class AuctionController {
      *
      * @param sellerId UUID of the authenticated seller
      * @param id       UUID of the auction to publish (path variable)
-     * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the updated SellerAuctionResponse.
      * HTTP 200 on success.
      * =============================================================
      */
@@ -231,10 +231,10 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction not found")
     })
     @PostMapping("/{id}/publish")
-    public ResponseEntity<BaseResponse<AuctionResponse>> publishAuction(
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> publishAuction(
             @AuthenticatedUserId UUID sellerId,
             @PathVariable UUID id) {
-        AuctionResponse response = auctionService.publishAuction(sellerId, id);
+        SellerAuctionResponse response = auctionService.publishAuction(sellerId, id);
         return ResponseEntity.ok(BaseResponse.success("Auction published successfully", response));
     }
 

@@ -7,7 +7,7 @@ import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionCategoryResponse;
 import com.bidnow.auction.dto.response.AuctionImageResponse;
-import com.bidnow.auction.dto.response.AuctionResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -19,9 +19,9 @@ import java.util.List;
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public abstract class AuctionMapper {
 
-    public AuctionResponse toResponse(AuctionItem item, List<AuctionImage> images) {
+    public SellerAuctionResponse toResponse(AuctionItem item, List<AuctionImage> images) {
         if (item == null) return null;
-        return AuctionResponse.builder()
+        return SellerAuctionResponse.builder()
                 .id(item.getId())
                 .sellerId(item.getSellerId())
                 .title(item.getTitle())

@@ -12,7 +12,7 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
-import com.bidnow.auction.dto.response.AuctionResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.job.AuctionActivationJob;
@@ -78,7 +78,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional(readOnly = true)
-    public AuctionResponse getAuctionById(UUID id) {
+    public SellerAuctionResponse getAuctionById(UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
         List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
@@ -87,7 +87,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional
-    public AuctionResponse publishAuction(UUID sellerId, UUID id) {
+    public SellerAuctionResponse publishAuction(UUID sellerId, UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
 
@@ -182,7 +182,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional
-    public AuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request) {
+    public SellerAuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request) {
         if (!request.getEndTime().isAfter(request.getStartTime())) {
             throw new BadRequestException("End time must be after start time", ErrorCodes.INVALID_INPUT);
         }
@@ -277,7 +277,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional
-    public AuctionResponse updateAuction(UUID sellerId, UUID auctionId, UpdateAuctionRequest request) {
+    public SellerAuctionResponse updateAuction(UUID sellerId, UUID auctionId, UpdateAuctionRequest request) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
 
