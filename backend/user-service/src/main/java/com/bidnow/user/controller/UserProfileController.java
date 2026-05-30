@@ -5,6 +5,7 @@ package com.bidnow.user.controller;
 
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
+import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
@@ -38,6 +39,28 @@ import java.util.UUID;
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
+
+    /**
+     * =============================================================
+     * Get a minimal user summary by user ID (internal — no auth required).
+     * Intended for service-to-service calls (e.g. auction-service enriching seller info).
+     *
+     * @param userId UUID of the user
+     * @return ResponseEntity containing a BaseResponse with UserSummaryResponse.
+     * HTTP 200 on success, 404 if no profile found.
+     * =============================================================
+     */
+    @Operation(summary = "Get user summary by ID (Internal)", hidden = true)
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User summary returned"),
+            @ApiResponse(responseCode = "404", description = "User profile not found")
+    })
+    @GetMapping("/internal/{userId}/summary")
+    public ResponseEntity<BaseResponse<UserSummaryResponse>> getUserSummary(
+            @PathVariable UUID userId) {
+        UserSummaryResponse response = userProfileService.getUserSummary(userId);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
 
     /**
      * Internal endpoint called by identity-service (via Feign) after registration.
