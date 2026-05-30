@@ -2,7 +2,7 @@ package com.bidnow.auction.repository;
 
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.enums.AuctionStatus;
-import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.repository.projection.CategoryAuctionCount;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -16,10 +16,10 @@ public interface AuctionItemRepository extends JpaRepository<AuctionItem, UUID>,
 
     Optional<AuctionItem> findByIdAndDeletedAtIsNull(UUID id);
 
-    @Query("SELECT NEW com.bidnow.auction.dto.response.CategoryCountResponse(" +
-            "ai.category.id, ai.category.name, ai.category.slug, COUNT(ai)) " +
+    @Query("SELECT ai.category.id AS categoryId, ai.category.name AS categoryName, " +
+            "ai.category.slug AS slug, COUNT(ai) AS count " +
             "FROM AuctionItem ai " +
-            "WHERE ai.status = :status AND ai.deletedAt IS NULL " +
+            "WHERE ai.status = :status AND ai.deletedAt IS NULL AND ai.category.isActive = true " +
             "GROUP BY ai.category.id, ai.category.name, ai.category.slug")
-    List<CategoryCountResponse> countByStatusGroupByCategory(@Param("status") AuctionStatus status);
+    List<CategoryAuctionCount> countByStatusGroupByCategory(@Param("status") AuctionStatus status);
 }

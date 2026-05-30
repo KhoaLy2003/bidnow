@@ -16,6 +16,7 @@ import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.repository.projection.CategoryAuctionCount;
 import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
@@ -479,7 +480,10 @@ public class AuctionServiceImpl implements AuctionService {
     @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.CACHE_CATEGORY_COUNTS, key = "'active'")
     public List<CategoryCountResponse> getCategoryAuctionCounts() {
-        return auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE);
+        return auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE)
+                .stream()
+                .map(p -> new CategoryCountResponse(p.getCategoryId(), p.getCategoryName(), p.getSlug(), p.getCount()))
+                .toList();
     }
 
     private void scheduleActivationJob(UUID auctionId, Instant activateAt) {
