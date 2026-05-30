@@ -57,6 +57,7 @@ public abstract class AuctionMapper {
                 .categoryName(category != null ? category.getName() : null)
                 .startingPrice(item.getStartingPrice())
                 .currentPrice(item.getCurrentPrice())
+                .buyNowPrice(item.getBuyNowPrice())
                 .status(item.getStatus())
                 .startTime(item.getStartTime())
                 .endTime(item.getEndTime())
