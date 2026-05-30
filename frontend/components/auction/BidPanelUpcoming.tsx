@@ -4,15 +4,14 @@ import { useState, useEffect } from 'react'
 import { Bell, BellOff } from 'lucide-react'
 import { CountdownTimer } from './CountdownTimer'
 import { StatusBadge } from './StatusBadge'
-import { WatchingFooter } from './WatchingFooter'
 import { useCountdown } from '@/hooks/useCountdown'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
-import type { Auction } from '@/types/ui/auction.ui'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelUpcomingProps {
-  auction: Auction
+  auction: AuctionDetail
 }
 
 export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
@@ -20,7 +19,6 @@ export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
   const [startDateStr, setStartDateStr] = useState<string | null>(null)
   const { isExpired } = useCountdown(auction.startsAt)
 
-  // Format start date client-side only to avoid SSR timezone hydration mismatch
   useEffect(() => {
     setStartDateStr(
       auction.startsAt.toLocaleString('en-US', {
@@ -100,7 +98,11 @@ export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
         </button>
       </div>
 
-      <WatchingFooter n={auction.watchers} />
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-4 px-[18px] py-3 border-t text-xs text-muted-foreground bg-[var(--color-bg-elevated)]">
+        <span className="underline underline-offset-2 cursor-pointer">Share</span>
+        <span className="underline underline-offset-2 cursor-pointer">Save</span>
+      </div>
     </div>
   )
 }
