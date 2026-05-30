@@ -1,12 +1,13 @@
+import { BadgeCheck } from 'lucide-react'
 import { UserAvatar } from '@/components/shared/UserAvatar'
-import type { AuctionSeller } from '@/types/ui/auction.ui'
+import type { AuctionDetailSeller } from '@/types/ui/auction.ui'
 
 interface SellerCardProps {
-  seller: AuctionSeller
+  seller: AuctionDetailSeller | null
 }
 
 export function SellerCard({ seller }: SellerCardProps) {
-  const fullStars = Math.round(seller.rating)
+  if (!seller) return null
 
   return (
     <section>
@@ -16,17 +17,12 @@ export function SellerCard({ seller }: SellerCardProps) {
       <div className="flex items-center justify-between gap-4 border border-[var(--color-border-default)] rounded-lg p-4">
         <div className="flex items-center gap-3">
           <UserAvatar name={seller.name} avatarUrl={seller.avatarUrl} size="lg" />
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             <span className="font-display font-medium text-base leading-tight">{seller.name}</span>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="text-amber-400 text-xs tracking-tight">
-                {'★'.repeat(fullStars)}
-                <span className="text-muted-foreground/40">{'★'.repeat(5 - fullStars)}</span>
-              </span>
-              <span className="font-mono">{seller.rating.toFixed(1)}</span>
-              <span>·</span>
-              <span><span className="font-mono">{seller.totalAuctions}</span> auctions</span>
-            </div>
+            <span className="flex items-center gap-1 text-[11px] text-[var(--color-success-text)]">
+              <BadgeCheck className="size-3.5" />
+              Verified Seller
+            </span>
           </div>
         </div>
         <button
