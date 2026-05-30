@@ -1,4 +1,4 @@
-import { mapAuctionSummaryToSellerAuction, mapAuctionDetailResponse } from '@/types/mappers/auction.mapper'
+import { mapAuctionDetailResponse } from '@/types/mappers/auction.mapper'
 import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
 import type { Auction, BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
 import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
