@@ -1,15 +1,19 @@
 package com.bidnow.auction.service.impl;
 
+import com.bidnow.auction.config.CacheConfig;
 import com.bidnow.auction.domain.entity.AuctionCategory;
 import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.entity.AuctionStatusHistory;
+import com.bidnow.auction.domain.enums.AuctionSortBy;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
+import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
@@ -31,13 +35,18 @@ import com.bidnow.common.util.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jobrunr.scheduling.BackgroundJob;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -46,6 +55,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -374,6 +384,86 @@ public class AuctionServiceImpl implements AuctionService {
         auctionItemRepository.save(auction);
 
         log.info("Soft-deleted auction {} by seller {}", auctionId, sellerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<AuctionSummaryResponse> browseAuctions(PublicAuctionFilterRequest filter) {
+        if (filter.getMinPrice() != null && filter.getMaxPrice() != null
+                && filter.getMinPrice().compareTo(filter.getMaxPrice()) > 0) {
+            throw new BadRequestException("minPrice must not be greater than maxPrice", ErrorCodes.INVALID_INPUT);
+        }
+
+        // categoryId takes precedence; fall back to slug lookup
+        UUID resolvedCategoryId = filter.getCategoryId();
+        if (resolvedCategoryId == null && StringUtils.hasText(filter.getCategorySlug())) {
+            Optional<AuctionCategory> cat =
+                    auctionCategoryRepository.findBySlugAndIsActiveTrue(filter.getCategorySlug());
+            if (cat.isEmpty()) {
+                PageRequest emptyPageable = PageRequest.of(filter.getPage(), filter.getSize());
+                return PaginationUtils.toPageResponse(new PageImpl<>(List.of(), emptyPageable, 0), List.of());
+            }
+            resolvedCategoryId = cat.get().getId();
+        }
+
+        OffsetDateTime endingSoonFrom = null;
+        OffsetDateTime endingSoonTo = null;
+        if (Boolean.TRUE.equals(filter.getEndingSoon())) {
+            endingSoonFrom = OffsetDateTime.now();
+            endingSoonTo = endingSoonFrom.plusHours(24);
+        }
+
+        Specification<AuctionItem> spec = SpecificationBuilder.<AuctionItem>forEntity()
+                .with("status", SearchOperator.EQUAL, AuctionStatus.ACTIVE)
+                .withIsNull("deletedAt")
+                .withIfPresent("category.id", SearchOperator.EQUAL, resolvedCategoryId)
+                .withIfPresent("currentPrice", SearchOperator.GREATER_THAN_OR_EQUAL, filter.getMinPrice())
+                .withIfPresent("currentPrice", SearchOperator.LESS_THAN_OR_EQUAL, filter.getMaxPrice())
+                .withLikeIfPresent("title", filter.getKeyword())
+                .withBetweenIfPresent("endTime", endingSoonFrom, endingSoonTo)
+                .build();
+
+        if (Boolean.TRUE.equals(filter.getBuyNowAvailable())) {
+            spec = spec.and((root, query, cb) -> cb.isNotNull(root.get("buyNowPrice")));
+        }
+
+        AuctionSortBy sortBy = filter.getSortBy() != null ? filter.getSortBy() : AuctionSortBy.END_TIME_ASC;
+        Sort sort = switch (sortBy) {
+            case NEWLY_LISTED   -> Sort.by("createdAt").descending();
+            case PRICE_LOW_HIGH -> Sort.by("currentPrice").ascending();
+            case PRICE_HIGH_LOW -> Sort.by("currentPrice").descending();
+            case MOST_BIDS      -> Sort.by("totalBids").descending();
+            default             -> Sort.by("endTime").ascending();
+        };
+
+        PageRequest pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+        Page<AuctionItem> page = auctionItemRepository.findAll(spec, pageable);
+
+        if (page.isEmpty()) {
+            return PaginationUtils.toPageResponse(page, List.of());
+        }
+
+        List<UUID> auctionIds = page.getContent().stream().map(AuctionItem::getId).toList();
+        Map<UUID, List<AuctionImage>> imagesByAuction = auctionImageRepository
+                .findByAuctionIdInOrderByDisplayOrderAsc(auctionIds)
+                .stream()
+                .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
+
+        List<AuctionSummaryResponse> summaries = page.getContent().stream()
+                .map(auction -> {
+                    List<AuctionImage> images = imagesByAuction.getOrDefault(auction.getId(), List.of());
+                    AuctionImage primary = images.isEmpty() ? null : images.get(0);
+                    return auctionMapper.toSummaryResponse(auction, primary);
+                })
+                .toList();
+
+        return PaginationUtils.toPageResponse(page, summaries);
+    }
+
+    @Override
+    @Cacheable(value = CacheConfig.CACHE_CATEGORY_COUNTS, key = "'active'")
+    public List<CategoryCountResponse> getCategoryAuctionCounts() {
+        return auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE);
     }
 
     private void scheduleActivationJob(UUID auctionId, Instant activateAt) {

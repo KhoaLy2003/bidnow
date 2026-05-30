@@ -2,9 +2,11 @@ package com.bidnow.auction.controller;
 
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
+import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
@@ -21,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -48,6 +52,26 @@ public class AuctionController {
      * HTTP 200 on success, 404 if not found or soft-deleted.
      * =============================================================
      */
+    @Operation(summary = "Browse active auctions with filtering and sorting (public)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Auction list returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid filter parameters")
+    })
+    @GetMapping("/public")
+    public ResponseEntity<BaseResponse<PageResponse<AuctionSummaryResponse>>> browseAuctions(
+            @Valid @ModelAttribute PublicAuctionFilterRequest filter) {
+        PageResponse<AuctionSummaryResponse> response = auctionService.browseAuctions(filter);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @Operation(summary = "Get active auction count per category (public, cached)")
+    @ApiResponse(responseCode = "200", description = "Category counts returned")
+    @GetMapping("/public/category-counts")
+    public ResponseEntity<BaseResponse<List<CategoryCountResponse>>> getCategoryAuctionCounts() {
+        List<CategoryCountResponse> response = auctionService.getCategoryAuctionCounts();
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
     @Operation(summary = "Get auction details by ID (public)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Auction retrieved successfully"),
