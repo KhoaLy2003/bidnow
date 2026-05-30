@@ -5,7 +5,7 @@ import { MOCK_CURRENT_USER_ID } from '@/lib/mock-data'
 import { BidPanelUpcoming } from './BidPanelUpcoming'
 import { BidPanelLive }     from './BidPanelLive'
 import { BidPanelEnded }    from './BidPanelEnded'
-import type { Auction } from '@/types/ui/auction.ui'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 const LIVE_STATUSES = new Set<AuctionStatus>([
   AuctionStatus.Active,
@@ -21,7 +21,7 @@ const ENDED_STATUSES = new Set<AuctionStatus>([
 ])
 
 interface BidPanelProps {
-  auction: Auction
+  auction: AuctionDetail
 }
 
 export function BidPanel({ auction }: BidPanelProps) {
@@ -36,6 +36,5 @@ export function BidPanel({ auction }: BidPanelProps) {
   if (ENDED_STATUSES.has(auction.status)) {
     return <BidPanelEnded auction={auction} />
   }
-  // Fallback — treat unknown status as live
   return <BidPanelLive auction={auction} isCurrentUserWinning={isCurrentUserWinning} />
 }
