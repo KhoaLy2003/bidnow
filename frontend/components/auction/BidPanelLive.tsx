@@ -5,20 +5,18 @@ import { CountdownTimer } from './CountdownTimer'
 import { CurrentBidDisplay } from './CurrentBidDisplay'
 import { BidForm } from './BidForm'
 import { StatusBadge } from './StatusBadge'
-import { WatchingFooter } from './WatchingFooter'
 import { formatCurrency } from '@/lib/format'
 import { useWalletStore } from '@/store/walletStore'
-import type { Auction } from '@/types/ui/auction.ui'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelLiveProps {
-  auction:               Auction
+  auction:               AuctionDetail
   isCurrentUserWinning:  boolean
 }
 
 export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProps) {
   const walletAvailable = useWalletStore((s) => s.available)
 
-  // MOCK: seed display-only balance for dev. Remove when real wallet API is wired.
   useEffect(() => {
     if (useWalletStore.getState().available === 0) {
       useWalletStore.getState().setBalance({ available: 240_000, held: 0, total: 240_000 })
@@ -59,15 +57,40 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
       </div>
 
       {/* Bid form */}
-      <div className="px-[18px] pt-3 pb-[18px]">
+      <div className="px-[18px] pt-3 pb-[18px] flex flex-col gap-2">
         <BidForm
           auctionId={auction.id}
           currentBid={auction.currentBid}
-          minIncrement={100}
+          minIncrement={auction.bidIncrement}
         />
+
+        {/* Buy Now block — only when buyNowPrice is set */}
+        {auction.buyNowPrice !== undefined && (
+          <div className="border border-[var(--color-success-border)] rounded-lg p-3 bg-[var(--color-success-subtle)] flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-mono uppercase tracking-widest text-[var(--color-success-text)]">
+                or buy it now
+              </span>
+              <span className="font-mono text-sm font-bold text-[var(--color-success-text)]">
+                {formatCurrency(auction.buyNowPrice)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {}}
+              className="w-full h-9 rounded text-sm font-medium bg-[var(--color-success-default)] text-white flex items-center justify-center transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:opacity-90"
+            >
+              Buy Now →
+            </button>
+          </div>
+        )}
       </div>
 
-      <WatchingFooter n={auction.watchers} />
+      {/* Footer */}
+      <div className="flex items-center justify-end gap-4 px-[18px] py-3 border-t text-xs text-muted-foreground bg-[var(--color-bg-elevated)]">
+        <span className="underline underline-offset-2 cursor-pointer">Share</span>
+        <span className="underline underline-offset-2 cursor-pointer">Save</span>
+      </div>
     </div>
   )
 }
