@@ -46,11 +46,12 @@ public class AuctionController {
 
     /**
      * =============================================================
-     * Get auction details by ID (public — no auth required).
+     * Browse active auctions with optional filtering and sorting (public — no auth required).
      *
-     * @param id UUID of the auction
-     * @return ResponseEntity containing a BaseResponse with the AuctionResponse.
-     * HTTP 200 on success, 404 if not found or soft-deleted.
+     * @param filter PublicAuctionFilterRequest bound from query parameters (category, price range,
+     *               keyword, endingSoon, buyNowAvailable, sortBy, page, size)
+     * @return ResponseEntity containing a BaseResponse with a PageResponse of AuctionBrowseItem.
+     * HTTP 200 on success, 400 on invalid filter parameters.
      * =============================================================
      */
     @Operation(summary = "Browse active auctions with filtering and sorting (public)")
@@ -65,6 +66,15 @@ public class AuctionController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * =============================================================
+     * Get active auction count per category (public — no auth required).
+     * Result is cached in Redis (TTL 60 s); degrades gracefully when Redis is unavailable.
+     *
+     * @return ResponseEntity containing a BaseResponse with a list of CategoryCountResponse.
+     * HTTP 200 on success.
+     * =============================================================
+     */
     @Operation(summary = "Get active auction count per category (public, cached)")
     @ApiResponse(responseCode = "200", description = "Category counts returned")
     @GetMapping("/public/category-counts")
@@ -73,6 +83,15 @@ public class AuctionController {
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
+    /**
+     * =============================================================
+     * Get full auction details by ID (public — no auth required).
+     *
+     * @param id UUID of the auction
+     * @return ResponseEntity containing a BaseResponse with the AuctionResponse.
+     * HTTP 200 on success, 404 if not found or soft-deleted.
+     * =============================================================
+     */
     @Operation(summary = "Get auction details by ID (public)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Auction retrieved successfully"),
@@ -177,7 +196,7 @@ public class AuctionController {
      * @param id       UUID of the auction to delete (path variable)
      * @return ResponseEntity with no content (HTTP 204) on successful deletion.
      * Possible responses: 204, 400 (cannot delete), 403 (not owner), 404 (not found).
-     * ------------------------------------------------------------
+     * =============================================================
      */
     @Operation(summary = "Delete (soft) an auction (only allowed before it starts)")
     @ApiResponses({
