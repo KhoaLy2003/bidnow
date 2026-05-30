@@ -1,5 +1,6 @@
+import { mapAuctionSummaryToSellerAuction, mapAuctionDetailResponse } from '@/types/mappers/auction.mapper'
 import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
-import type { Auction, BidHistoryItem } from '@/types/ui/auction.ui'
+import type { Auction, BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
 import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
 import type {
@@ -7,7 +8,8 @@ import type {
   UpdateAuctionRequest,
   AuctionResponse,
   AuctionSummaryResponse,
-  AuctionCategoryResponse
+  AuctionCategoryResponse,
+  AuctionDetailResponse,
 } from '@/types/api/auction.api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -40,6 +42,67 @@ const MOCK_BUY_NOW_PRICES: Record<string, number> = {
   '5': 120_000,   // Nike Air Jordan
   '8': 95_000,    // Leica M3
 }
+
+const MOCK_DETAIL_RESPONSES: AuctionDetailResponse[] = [
+  {
+    id: '1',
+    title: 'Vintage Omega Seamaster 1968',
+    description: 'An exceptional example of the iconic Omega Seamaster in near-mint condition. Dial, hands, and case all original. Serviced 2023. Rare cal. 565 movement, original dial, box and papers.',
+    category: { id: 'watches', name: 'Watches', slug: 'watches' },
+    startingPrice: 500,
+    bidIncrement: 10,
+    depositAmount: 200,
+    currentPrice: 1350,
+    totalBids: 14,
+    status: 'ACTIVE',
+    startTime: new Date(Date.now() - 3_600_000).toISOString(),
+    endTime: new Date(Date.now() + 7_200_000).toISOString(),
+    originalEndTime: new Date(Date.now() + 7_200_000).toISOString(),
+    extensionCount: 0,
+    images: [],
+    seller: { id: 'u1', name: 'Marcus W.', avatarUrl: undefined },
+    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
+  },
+  {
+    id: '2',
+    title: 'Gibson Les Paul Custom 1974',
+    description: 'All-original Black Beauty with case, OHSC.',
+    category: { id: 'music', name: 'Music', slug: 'music' },
+    startingPrice: 1000,
+    bidIncrement: 50,
+    buyNowPrice: 3500,
+    depositAmount: 500,
+    currentPrice: 2800,
+    totalBids: 31,
+    status: 'ACTIVE',
+    startTime: new Date(Date.now() - 7_200_000).toISOString(),
+    endTime: new Date(Date.now() + 3_600_000).toISOString(),
+    originalEndTime: new Date(Date.now() + 3_600_000).toISOString(),
+    extensionCount: 0,
+    images: [],
+    seller: { id: 'u2', name: 'Vintage Strings', avatarUrl: undefined },
+    createdAt: new Date(Date.now() - 172_800_000).toISOString(),
+  },
+  {
+    id: '3',
+    title: "First Edition Harry Potter Philosopher's Stone",
+    description: 'Bloomsbury 1997, first print run, unread condition.',
+    category: { id: 'books', name: 'Books & Literature', slug: 'books' },
+    startingPrice: 2000,
+    bidIncrement: 100,
+    depositAmount: 1000,
+    currentPrice: 5400,
+    totalBids: 57,
+    status: 'ACTIVE',
+    startTime: new Date(Date.now() - 86_400_000).toISOString(),
+    endTime: new Date(Date.now() + 1_800_000).toISOString(),
+    originalEndTime: new Date(Date.now() + 1_800_000).toISOString(),
+    extensionCount: 0,
+    images: [],
+    seller: { id: 'u3', name: 'RareBooks Co.', avatarUrl: undefined },
+    createdAt: new Date(Date.now() - 259_200_000).toISOString(),
+  },
+]
 
 export const auctionService = {
   /**
@@ -206,9 +269,15 @@ export const auctionService = {
   /**
    * Fetch a single auction by its ID.
    */
-  async getAuctionById(id: string): Promise<Auction | null> {
+  async getAuctionById(id: string): Promise<AuctionDetail | null> {
     await delay(300)
-    return MOCK_AUCTIONS.find((a) => a.id === id) ?? null
+    // TODO: replace with real API call:
+    // const response = await fetch(`${API_URL}/api/v1/auctions/public/${id}`, { cache: 'no-store' })
+    // if (!response.ok) return null
+    // const body: ApiResponse<AuctionDetailResponse> = await response.json()
+    // return mapAuctionDetailResponse(body.data)
+    const dto = MOCK_DETAIL_RESPONSES.find((a) => a.id === id)
+    return dto ? mapAuctionDetailResponse(dto) : null
   },
 
   /**
