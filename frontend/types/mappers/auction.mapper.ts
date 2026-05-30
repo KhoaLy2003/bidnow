@@ -1,6 +1,6 @@
 import type { AuctionSummaryResponse, AuctionDetailResponse } from '@/types/api/auction.api'
 import { SellerAuction, SellerAuctionStatus } from '@/types/ui/seller.ui'
-import type { AuctionDetail, AuctionDetailSeller } from '@/types/ui/auction.ui'
+import type { AuctionDetail, AuctionDetailSeller, AuctionImage } from '@/types/ui/auction.ui'
 import { AuctionStatus } from '@/lib/design-tokens'
 
 export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): SellerAuction {
@@ -69,7 +69,13 @@ export function mapAuctionDetailResponse(dto: AuctionDetailResponse): AuctionDet
     extensionCount:  dto.extensionCount,
     completedAt:     dto.completedAt ? new Date(dto.completedAt) : undefined,
     winnerId:        dto.winnerId,
-    images:          dto.images,
+    images:          dto.images.map((img): AuctionImage => ({
+      id:           img.id,
+      imageUrl:     img.imageUrl,
+      thumbnailUrl: img.thumbnailUrl || undefined,
+      displayOrder: img.displayOrder,
+      isPrimary:    img.isPrimary,
+    })),
     seller,
     createdAt:       new Date(dto.createdAt),
   }

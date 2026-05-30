@@ -4,10 +4,10 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { AuctionImageResponse } from '@/types/api/auction.api'
+import type { AuctionImage } from '@/types/ui/auction.ui'
 
 interface AuctionGalleryProps {
-  readonly images: AuctionImageResponse[]
+  readonly images: AuctionImage[]
   readonly title:  string
 }
 
