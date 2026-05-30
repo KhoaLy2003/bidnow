@@ -7,6 +7,7 @@ import { BidForm } from './BidForm'
 import { StatusBadge } from './StatusBadge'
 import { formatCurrency } from '@/lib/format'
 import { useWalletStore } from '@/store/walletStore'
+import { PanelFooter } from './PanelFooter'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelLiveProps {
@@ -68,7 +69,7 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
         {auction.buyNowPrice !== undefined && (
           <div className="border border-[var(--color-success-border)] rounded-lg p-3 bg-[var(--color-success-subtle)] flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-mono uppercase tracking-widest text-[var(--color-success-text)]">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-success-text)]">
                 or buy it now
               </span>
               <span className="font-mono text-sm font-bold text-[var(--color-success-text)]">
@@ -77,7 +78,7 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
             </div>
             <button
               type="button"
-              onClick={() => {}}
+              onClick={() => { /* TODO: wire Buy Now flow */ }}
               className="w-full h-9 rounded text-sm font-medium bg-[var(--color-success-default)] text-white flex items-center justify-center transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:opacity-90"
             >
               Buy Now →
@@ -86,11 +87,7 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
         )}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-4 px-[18px] py-3 border-t text-xs text-muted-foreground bg-[var(--color-bg-elevated)]">
-        <span className="underline underline-offset-2 cursor-pointer">Share</span>
-        <span className="underline underline-offset-2 cursor-pointer">Save</span>
-      </div>
+      <PanelFooter />
     </div>
   )
 }

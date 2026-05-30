@@ -8,6 +8,7 @@ import { useCountdown } from '@/hooks/useCountdown'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
+import { PanelFooter } from './PanelFooter'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelUpcomingProps {
@@ -98,11 +99,7 @@ export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
         </button>
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-4 px-[18px] py-3 border-t text-xs text-muted-foreground bg-[var(--color-bg-elevated)]">
-        <span className="underline underline-offset-2 cursor-pointer">Share</span>
-        <span className="underline underline-offset-2 cursor-pointer">Save</span>
-      </div>
+      <PanelFooter />
     </div>
   )
 }

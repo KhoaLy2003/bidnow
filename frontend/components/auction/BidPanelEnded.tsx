@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { AuctionResultBanner } from './AuctionResultBanner'
 import { AuctionStatus } from '@/lib/design-tokens'
+import { PanelFooter } from './PanelFooter'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelEndedProps {
@@ -88,11 +89,7 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-4 px-[18px] py-3 border-t text-xs text-muted-foreground bg-[var(--color-bg-elevated)]">
-        <span className="underline underline-offset-2 cursor-pointer">Share</span>
-        <span className="underline underline-offset-2 cursor-pointer">Save</span>
-      </div>
+      <PanelFooter />
     </div>
   )
 }
