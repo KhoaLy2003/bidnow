@@ -31,17 +31,19 @@ export function AuctionBrowseList({
 
 function BrowseListSkeleton() {
   return (
-    <div className="flex gap-3 p-3 rounded-xl border border-border">
-      <Skeleton className="w-28 aspect-square shrink-0 rounded-lg" />
+    <div className="flex gap-4 p-4 rounded-xl border border-border">
+      <Skeleton className="w-40 aspect-square shrink-0 rounded-lg" />
       <div className="flex-1 flex flex-col justify-between py-0.5">
         <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-3 w-1/4" />
+          <Skeleton className="h-2.5 w-16" />
           <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
-        <div className="flex flex-col gap-1">
-          <Skeleton className="h-5 w-1/3" />
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-2.5 w-16" />
+          <Skeleton className="h-6 w-1/3" />
           <Skeleton className="h-3 w-1/4" />
-          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="h-3 w-2/5" />
         </div>
       </div>
     </div>
