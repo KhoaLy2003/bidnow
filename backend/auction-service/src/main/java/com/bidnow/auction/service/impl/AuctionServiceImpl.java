@@ -476,6 +476,7 @@ public class AuctionServiceImpl implements AuctionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.CACHE_CATEGORY_COUNTS, key = "'active'")
     public List<CategoryCountResponse> getCategoryAuctionCounts() {
         return auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE);
