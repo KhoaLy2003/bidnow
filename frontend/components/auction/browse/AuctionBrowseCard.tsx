@@ -2,10 +2,7 @@
 
 import Image from 'next/image'
 import Link  from 'next/link'
-import { Tag } from 'lucide-react'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Badge }          from '@/components/ui/badge'
-import { Button }         from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge }    from '@/components/auction/StatusBadge'
 import { CountdownTimer } from '@/components/auction/CountdownTimer'
 import { formatCurrency } from '@/lib/format'
@@ -19,22 +16,24 @@ interface AuctionBrowseCardProps {
 }
 
 export function AuctionBrowseCard({ item, className }: AuctionBrowseCardProps) {
-  const isClosed  = item.status === AuctionStatus.Closed
-  const isEnding  =
+  const isClosed = item.status === AuctionStatus.Closed
+  const isEnding =
     item.status === AuctionStatus.EndingSoon ||
     item.status === AuctionStatus.Critical
-  const imageUrl  = item.primaryImageUrl ?? '/placeholder-auction.png'
+  const imageUrl = item.primaryImageUrl ?? '/placeholder-auction.png'
 
   return (
-    <Link href={`/auctions/${item.id}`} className="group block min-w-[240px] max-w-[360px]">
+    // w-full fills the grid cell; h-full lets the card stretch to row height
+    <Link href={`/auctions/${item.id}`} className="group block w-full h-full">
       <Card
         className={cn(
-          'transition-[border-color,opacity] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]',
+          // h-full + pt-0: card fills row, image flush to card top
+          'h-full pt-0 transition-[border-color] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:border-brand-300',
           className,
         )}
       >
-        {/* Image */}
-        <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-muted">
+        {/* Image — edge-to-edge at top, clipped by Card's overflow-hidden rounded-xl */}
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <Image
             src={imageUrl}
             alt={item.title}
@@ -45,59 +44,61 @@ export function AuctionBrowseCard({ item, className }: AuctionBrowseCardProps) {
             )}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
-
-          {/* Status badge */}
           <div className="absolute top-2 left-2">
             <StatusBadge status={item.status} />
           </div>
-
-          {/* Buy Now badge */}
-          {item.buyNowPrice !== null && (
-            <div className="absolute top-2 right-2">
-              <Badge variant="secondary" className="gap-1 text-[10px]">
-                <Tag className="size-2.5" />
-                Buy Now
-              </Badge>
-            </div>
-          )}
-
-          {/* Countdown banner when ending */}
           {isEnding && (
-            <div className="absolute bottom-0 inset-x-0 flex items-center justify-center gap-1.5 py-1.5 bg-[var(--color-auction-ending-bg)]/90 backdrop-blur-sm">
+            <div className="absolute bottom-0 inset-x-0 flex items-center justify-center py-1.5 bg-[var(--color-auction-ending-bg)]/90 backdrop-blur-sm">
               <CountdownTimer endsAt={item.endTime} size="sm" />
             </div>
           )}
         </div>
 
-        <CardContent className="pt-3">
-          <p className="text-xs text-muted-foreground mb-0.5">{item.categoryName}</p>
-          <h3 className="font-medium text-sm leading-snug line-clamp-2">
-            {item.title}
-          </h3>
-          <p className="mt-1 font-mono font-medium text-[length:var(--font-size-price-sm)]">
-            {formatCurrency(item.currentPrice)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {item.totalBids} bid{item.totalBids !== 1 ? 's' : ''}
-          </p>
-        </CardContent>
+        {/* Content — flex-1 fills remaining height; justify-between anchors
+            identity to top and pricing to bottom regardless of title length */}
+        <CardContent className="flex-1 flex flex-col justify-between pt-0 pb-0">
+          {/* Top: category + title */}
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              {item.categoryName}
+            </p>
+            <h3 className="mt-1 font-medium text-sm leading-snug line-clamp-2">
+              {item.title}
+            </h3>
+          </div>
 
-        <CardFooter className="pt-0 pb-3 px-4 flex flex-col gap-1.5">
-          {isClosed ? (
-            <Button variant="outline" size="sm" className="w-full">
-              View Item
-            </Button>
-          ) : (
-            <Button variant="brand" size="sm" className="w-full">
-              Place Bid
-            </Button>
-          )}
-          {item.buyNowPrice !== null && !isClosed && (
-            <Button variant="outline" size="sm" className="w-full">
-              Buy Now · {formatCurrency(item.buyNowPrice)}
-            </Button>
-          )}
-        </CardFooter>
+          {/* Bottom: pricing + meta */}
+          <div className="flex flex-col gap-1.5 mt-3">
+            {/* Current bid */}
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mb-0.5">
+                Current Bid
+              </p>
+              <p className="font-mono font-medium text-[length:var(--font-size-price-sm)] leading-none">
+                {formatCurrency(item.currentPrice)}
+              </p>
+            </div>
+
+            {/* Buy Now — always rendered; invisible spacer when absent */}
+            <p
+              className={cn(
+                'text-xs text-muted-foreground',
+                item.buyNowPrice === null && 'invisible select-none',
+              )}
+              aria-hidden={item.buyNowPrice === null ? true : undefined}
+            >
+              Buy Now&nbsp;·&nbsp;
+              <span className="font-mono">
+                {item.buyNowPrice !== null ? formatCurrency(item.buyNowPrice) : '$0'}
+              </span>
+            </p>
+
+            {/* Bid count */}
+            <p className="text-xs text-muted-foreground">
+              {item.totalBids}&nbsp;{item.totalBids === 1 ? 'bid' : 'bids'}
+            </p>
+          </div>
+        </CardContent>
       </Card>
     </Link>
   )
