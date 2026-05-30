@@ -31,10 +31,15 @@ export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): S
   };
 }
 
+// Won/Lost/Outbid are UI-only states derived from current-user context after mapping.
+// The server only returns ACTIVE, SCHEDULED, COMPLETED, CANCELLED, FAILED.
 function parseDetailStatus(status: string): AuctionStatus {
   switch (status?.toUpperCase()) {
     case 'ACTIVE':    return AuctionStatus.Active
     case 'SCHEDULED': return AuctionStatus.Scheduled
+    case 'COMPLETED':
+    case 'CANCELLED':
+    case 'FAILED':    return AuctionStatus.Closed
     default:          return AuctionStatus.Closed
   }
 }
