@@ -25,7 +25,7 @@ interface BidPanelProps {
 }
 
 export function BidPanel({ auction }: BidPanelProps) {
-  const isCurrentUserWinning = auction.winnerId === MOCK_CURRENT_USER_ID
+  const isCurrentUserWinning = auction.currentWinnerId === MOCK_CURRENT_USER_ID
 
   if (auction.status === AuctionStatus.Scheduled) {
     return <BidPanelUpcoming auction={auction} />
