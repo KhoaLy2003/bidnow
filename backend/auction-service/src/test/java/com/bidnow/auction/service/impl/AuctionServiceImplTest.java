@@ -7,15 +7,20 @@ import com.bidnow.auction.domain.enums.AuctionSortBy;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
 import com.bidnow.auction.repository.AuctionCategoryRepository;
 import com.bidnow.auction.repository.AuctionImageRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
+import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.common.dto.PageResponse;
+import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.exception.BadRequestException;
+import com.bidnow.common.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -52,6 +57,7 @@ class AuctionServiceImplTest {
     @Mock private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     @Mock private AuctionMapper auctionMapper;
     @Mock private AuctionKafkaProducer auctionKafkaProducer;
+    @Mock private UserServiceClient userServiceClient;
 
     @InjectMocks
     private AuctionServiceImpl auctionService;
@@ -235,6 +241,64 @@ class AuctionServiceImplTest {
         auctionService.browseAuctions(defaultFilter());
 
         verify(auctionImageRepository, times(1)).findByAuctionIdInOrderByDisplayOrderAsc(anyList());
+    }
+
+    // -------------------------------------------------------
+    // getAuctionById
+    // -------------------------------------------------------
+
+    @Test
+    void getAuctionById_userServiceReturnsProfile_sellerPopulated() {
+        UUID auctionId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+        AuctionItem item = buildItem(auctionId);
+        item.setSellerId(sellerId);
+
+        UserSummaryResponse seller = UserSummaryResponse.builder()
+                .id(sellerId).name("Alice").avatarUrl("https://cdn.example.com/alice.jpg").build();
+        AuctionDetailResponse expected = AuctionDetailResponse.builder()
+                .id(auctionId).seller(seller).build();
+
+        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(item));
+        when(auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(item)).thenReturn(List.of());
+        when(userServiceClient.getUserSummary(sellerId))
+                .thenReturn(BaseResponse.<UserSummaryResponse>builder().data(seller).build());
+        when(auctionMapper.toDetailResponse(eq(item), anyList(), eq(seller))).thenReturn(expected);
+
+        AuctionDetailResponse result = auctionService.getAuctionById(auctionId);
+
+        assertThat(result.getSeller()).isNotNull();
+        assertThat(result.getSeller().getName()).isEqualTo("Alice");
+    }
+
+    @Test
+    void getAuctionById_userServiceThrows_sellerIsNullAndAuctionStillReturned() {
+        UUID auctionId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+        AuctionItem item = buildItem(auctionId);
+        item.setSellerId(sellerId);
+
+        AuctionDetailResponse expected = AuctionDetailResponse.builder()
+                .id(auctionId).seller(null).build();
+
+        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(item));
+        when(auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(item)).thenReturn(List.of());
+        when(userServiceClient.getUserSummary(sellerId)).thenThrow(new RuntimeException("user-service down"));
+        when(auctionMapper.toDetailResponse(eq(item), anyList(), eq(null))).thenReturn(expected);
+
+        AuctionDetailResponse result = auctionService.getAuctionById(auctionId);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getSeller()).isNull();
+    }
+
+    @Test
+    void getAuctionById_unknownId_throwsNotFoundException() {
+        UUID auctionId = UUID.randomUUID();
+        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> auctionService.getAuctionById(auctionId))
+                .isInstanceOf(NotFoundException.class);
     }
 
     // -------------------------------------------------------

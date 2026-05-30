@@ -5,6 +5,7 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
@@ -88,7 +89,7 @@ public class AuctionController {
      * Get full auction details by ID (public — no auth required).
      *
      * @param id UUID of the auction
-     * @return ResponseEntity containing a BaseResponse with the SellerAuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with AuctionDetailResponse (includes seller summary).
      * HTTP 200 on success, 404 if not found or soft-deleted.
      * =============================================================
      */
@@ -98,8 +99,8 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction not found")
     })
     @GetMapping("/public/{id}")
-    public ResponseEntity<BaseResponse<SellerAuctionResponse>> getAuctionById(@PathVariable UUID id) {
-        SellerAuctionResponse response = auctionService.getAuctionById(id);
+    public ResponseEntity<BaseResponse<AuctionDetailResponse>> getAuctionById(@PathVariable UUID id) {
+        AuctionDetailResponse response = auctionService.getAuctionById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 

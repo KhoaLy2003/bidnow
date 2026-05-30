@@ -12,9 +12,11 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
@@ -25,6 +27,7 @@ import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
+import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.exception.BadRequestException;
@@ -75,14 +78,25 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     private final AuctionMapper auctionMapper;
     private final AuctionKafkaProducer auctionKafkaProducer;
+    private final UserServiceClient userServiceClient;
 
     @Override
     @Transactional(readOnly = true)
-    public SellerAuctionResponse getAuctionById(UUID id) {
+    public AuctionDetailResponse getAuctionById(UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
         List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
-        return auctionMapper.toResponse(auction, images);
+        UserSummaryResponse seller = fetchSellerSummary(auction.getSellerId());
+        return auctionMapper.toDetailResponse(auction, images, seller);
+    }
+
+    private UserSummaryResponse fetchSellerSummary(UUID sellerId) {
+        try {
+            return userServiceClient.getUserSummary(sellerId).getData();
+        } catch (Exception e) {
+            log.warn("Could not fetch seller summary for sellerId={}: {}", sellerId, e.getMessage());
+            return null;
+        }
     }
 
     @Override

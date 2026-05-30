@@ -5,6 +5,7 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
@@ -16,7 +17,7 @@ import java.util.UUID;
 
 public interface AuctionService {
 
-    SellerAuctionResponse getAuctionById(UUID id);
+    AuctionDetailResponse getAuctionById(UUID id);
 
     SellerAuctionResponse publishAuction(UUID sellerId, UUID id);
 

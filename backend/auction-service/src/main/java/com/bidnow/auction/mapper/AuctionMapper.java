@@ -6,9 +6,11 @@ import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionCategoryResponse;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionImageResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.common.dto.UserSummaryResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -87,6 +89,33 @@ public abstract class AuctionMapper {
                 .id(category.getId())
                 .name(category.getName())
                 .slug(category.getSlug())
+                .build();
+    }
+
+    public AuctionDetailResponse toDetailResponse(AuctionItem item, List<AuctionImage> images, UserSummaryResponse seller) {
+        if (item == null) return null;
+        return AuctionDetailResponse.builder()
+                .id(item.getId())
+                .title(item.getTitle())
+                .description(item.getDescription())
+                .category(toCategory(item.getCategory()))
+                .startingPrice(item.getStartingPrice())
+                .bidIncrement(item.getBidIncrement())
+                .buyNowPrice(item.getBuyNowPrice())
+                .depositAmount(item.getDepositAmount())
+                .currentPrice(item.getCurrentPrice())
+                .currentWinnerId(item.getCurrentWinnerId())
+                .totalBids(item.getTotalBids())
+                .status(item.getStatus())
+                .startTime(item.getStartTime())
+                .endTime(item.getEndTime())
+                .originalEndTime(item.getOriginalEndTime())
+                .extensionCount(item.getExtensionCount())
+                .completedAt(item.getCompletedAt())
+                .winnerId(item.getWinnerId())
+                .images(images.stream().map(this::toImageResponse).toList())
+                .seller(seller)
+                .createdAt(item.getCreatedAt())
                 .build();
     }
 
