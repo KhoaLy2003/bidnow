@@ -40,6 +40,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -309,6 +310,9 @@ public class AuctionServiceImpl implements AuctionService {
             throw new BadRequestException("Must provide between 1 and 10 images", ErrorCodes.INVALID_INPUT);
         }
 
+        boolean wasScheduled = auction.getStatus() == AuctionStatus.SCHEDULED;
+        OffsetDateTime oldStartTime = auction.getStartTime();
+
         auctionMapper.updateFromRequest(request, auction);
 
         if (request.getImageUrls() != null) {
@@ -318,6 +322,28 @@ public class AuctionServiceImpl implements AuctionService {
         }
 
         auction = auctionItemRepository.save(auction);
+
+        if (wasScheduled
+                && request.getStartTime() != null
+                && !request.getStartTime().toInstant().equals(oldStartTime.toInstant())) {
+            UUID jobId = activationJobId(auctionId);
+            Instant newStartInstant = auction.getStartTime().toInstant();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        BackgroundJob.delete(jobId);
+                    } catch (Exception e) {
+                        log.warn("Could not delete old activation job {} (may have already executed): {}",
+                                jobId, e.getMessage());
+                    }
+                    BackgroundJob.<AuctionActivationJob>schedule(
+                            jobId, newStartInstant, job -> job.activateAuction(auctionId));
+                    log.info("Rescheduled activation job {} for auction {} at {}",
+                            jobId, auctionId, newStartInstant);
+                }
+            });
+        }
 
         log.info("Updated auction {} by seller {}", auctionId, sellerId);
         List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
@@ -351,13 +377,19 @@ public class AuctionServiceImpl implements AuctionService {
     }
 
     private void scheduleActivationJob(UUID auctionId, Instant activateAt) {
+        UUID jobId = activationJobId(auctionId);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                BackgroundJob.<AuctionActivationJob>schedule(activateAt, job -> job.activateAuction(auctionId));
-                log.info("Scheduled activation job for auction {} at {}", auctionId, activateAt);
+                BackgroundJob.<AuctionActivationJob>schedule(jobId, activateAt, job -> job.activateAuction(auctionId));
+                log.info("Scheduled activation job {} for auction {} at {}", jobId, auctionId, activateAt);
             }
         });
+    }
+
+    private static UUID activationJobId(UUID auctionId) {
+        return UUID.nameUUIDFromBytes(
+                ("auction-activation:" + auctionId).getBytes(StandardCharsets.UTF_8));
     }
 
     private AuctionStatus resolveStatus(AuctionStatus requested, OffsetDateTime startTime) {

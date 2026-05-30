@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Slf4j
@@ -33,6 +34,11 @@ public class AuctionActivationService {
         }
         if (auction.getStatus() != AuctionStatus.SCHEDULED) {
             log.info("Activation skipped — auction {} is already in status {}", auctionId, auction.getStatus());
+            return;
+        }
+        if (Instant.now().isBefore(auction.getStartTime().toInstant())) {
+            log.warn("Activation job fired before startTime for auction {} — expected {}, skipping",
+                    auctionId, auction.getStartTime());
             return;
         }
 
