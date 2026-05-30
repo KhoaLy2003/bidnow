@@ -154,6 +154,20 @@ public class SpecificationBuilder<T> {
         return this;
     }
 
+    /**
+     * Adds an IS_NOT_NULL condition only if {@code condition} is true.
+     *
+     * @param field     the entity field name
+     * @param condition when false the condition is skipped entirely
+     * @return this builder for chaining
+     */
+    public SpecificationBuilder<T> withIsNotNullIf(String field, boolean condition) {
+        if (condition) {
+            withIsNotNull(field);
+        }
+        return this;
+    }
+
     // ==================== Conditional Methods (skip if null/blank) ====================
 
     /**

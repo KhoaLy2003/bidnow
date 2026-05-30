@@ -437,11 +437,8 @@ public class AuctionServiceImpl implements AuctionService {
                 .withIfPresent("currentPrice", SearchOperator.LESS_THAN_OR_EQUAL, filter.getMaxPrice())
                 .withLikeIfPresent("title", filter.getKeyword())
                 .withBetweenIfPresent("endTime", endingSoonFrom, endingSoonTo)
+                .withIsNotNullIf("buyNowPrice", Boolean.TRUE.equals(filter.getBuyNowAvailable()))
                 .build();
-
-        if (Boolean.TRUE.equals(filter.getBuyNowAvailable())) {
-            spec = spec.and((root, query, cb) -> cb.isNotNull(root.get("buyNowPrice")));
-        }
 
         AuctionSortBy sortBy = filter.getSortBy() != null ? filter.getSortBy() : AuctionSortBy.END_TIME_ASC;
         Sort sort = switch (sortBy) {
