@@ -3,7 +3,7 @@ import { UserAvatar } from '@/components/shared/UserAvatar'
 import type { AuctionDetailSeller } from '@/types/ui/auction.ui'
 
 interface SellerCardProps {
-  seller: AuctionDetailSeller | null
+  readonly seller: AuctionDetailSeller | null
 }
 
 export function SellerCard({ seller }: SellerCardProps) {
