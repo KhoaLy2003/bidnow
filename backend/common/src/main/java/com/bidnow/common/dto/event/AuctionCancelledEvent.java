@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,10 +12,11 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuctionCreatedEvent {
+public class AuctionCancelledEvent {
     private UUID auctionId;
     private UUID sellerId;
-    private String title;
-    private BigDecimal startingPrice;
-    private Instant endTime;
+    private String auctionTitle;
+    private String previousStatus;
+    private String reason;
+    private Instant cancelledAt;
 }

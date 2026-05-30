@@ -10,6 +10,7 @@ import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
 import com.bidnow.auction.repository.AuctionCategoryRepository;
@@ -19,6 +20,7 @@ import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
+import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.ForbiddenException;
@@ -28,23 +30,33 @@ import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.common.util.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jobrunr.scheduling.BackgroundJob;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuctionServiceImpl implements AuctionService {
+
+    private static final Set<AuctionStatus> TERMINAL_STATUSES =
+            Set.of(AuctionStatus.CANCELLED, AuctionStatus.COMPLETED, AuctionStatus.FAILED);
 
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionCategoryRepository auctionCategoryRepository;
@@ -102,8 +114,10 @@ public class AuctionServiceImpl implements AuctionService {
                     .sellerId(sellerId)
                     .title(auction.getTitle())
                     .startingPrice(auction.getStartingPrice())
-                    .endTime(auction.getEndTime().toLocalDateTime())
+                    .endTime(auction.getEndTime().toInstant())
                     .build());
+        } else if (newStatus == AuctionStatus.SCHEDULED) {
+            scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
 
         log.info("Published auction {} to status {} by seller {}", id, newStatus, sellerId);
@@ -140,6 +154,17 @@ public class AuctionServiceImpl implements AuctionService {
         auctionItemRepository.save(auction);
 
         recordStatusHistory(auction, oldStatus, AuctionStatus.CANCELLED, sellerId, reason);
+
+        if (oldStatus == AuctionStatus.ACTIVE || oldStatus == AuctionStatus.SCHEDULED) {
+            auctionKafkaProducer.publishAuctionCancelled(AuctionCancelledEvent.builder()
+                    .auctionId(auction.getId())
+                    .sellerId(sellerId)
+                    .auctionTitle(auction.getTitle())
+                    .previousStatus(oldStatus.name())
+                    .reason(reason)
+                    .cancelledAt(now.toInstant())
+                    .build());
+        }
 
         log.info("Cancelled auction {} (was {}) by seller {}", id, oldStatus, sellerId);
     }
@@ -190,8 +215,10 @@ public class AuctionServiceImpl implements AuctionService {
                     .sellerId(sellerId)
                     .title(auction.getTitle())
                     .startingPrice(auction.getStartingPrice())
-                    .endTime(auction.getEndTime().toLocalDateTime())
+                    .endTime(auction.getEndTime().toInstant())
                     .build());
+        } else if (status == AuctionStatus.SCHEDULED) {
+            scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
 
         log.info("Created auction {} with status {} for seller {}", auction.getId(), status, sellerId);
@@ -214,9 +241,18 @@ public class AuctionServiceImpl implements AuctionService {
 
         Page<AuctionItem> page = auctionItemRepository.findAll(spec, pageable);
 
-        List<AuctionSummaryResponse> summaries = page.getContent().stream()
+        List<AuctionItem> auctions = page.getContent();
+        if (auctions.isEmpty()) {
+            return PaginationUtils.toPageResponse(page, List.of());
+        }
+        List<UUID> auctionIds = auctions.stream().map(AuctionItem::getId).toList();
+        Map<UUID, List<AuctionImage>> imagesByAuction = auctionImageRepository
+                .findByAuctionIdInOrderByDisplayOrderAsc(auctionIds)
+                .stream()
+                .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
+        List<AuctionSummaryResponse> summaries = auctions.stream()
                 .map(item -> {
-                    List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(item);
+                    List<AuctionImage> images = imagesByAuction.getOrDefault(item.getId(), List.of());
                     AuctionImage primary = images.stream()
                             .filter(AuctionImage::getIsPrimary)
                             .findFirst()
@@ -236,6 +272,11 @@ public class AuctionServiceImpl implements AuctionService {
 
         if (!auction.getSellerId().equals(sellerId)) {
             throw new ForbiddenException("You do not own this auction", ErrorCodes.ACCESS_DENIED);
+        }
+
+        if (TERMINAL_STATUSES.contains(auction.getStatus())) {
+            throw new BadRequestException(
+                    "Cannot modify a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
         }
 
         if (auction.getStatus() != AuctionStatus.DRAFT &&
@@ -263,18 +304,46 @@ public class AuctionServiceImpl implements AuctionService {
             }
         }
 
+        // Validate image count BEFORE mutating the entity via mapper
+        if (request.getImageUrls() != null &&
+                (request.getImageUrls().size() < 1 || request.getImageUrls().size() > 10)) {
+            throw new BadRequestException("Must provide between 1 and 10 images", ErrorCodes.INVALID_INPUT);
+        }
+
+        boolean wasScheduled = auction.getStatus() == AuctionStatus.SCHEDULED;
+        OffsetDateTime oldStartTime = auction.getStartTime();
+
         auctionMapper.updateFromRequest(request, auction);
 
         if (request.getImageUrls() != null) {
-            if (request.getImageUrls().size() < 1 || request.getImageUrls().size() > 10) {
-                throw new BadRequestException("Must provide between 1 and 10 images", ErrorCodes.INVALID_INPUT);
-            }
             auctionImageRepository.deleteByAuction(auction);
             List<AuctionImage> newImages = buildImages(auction, request.getImageUrls());
             auctionImageRepository.saveAll(newImages);
         }
 
         auction = auctionItemRepository.save(auction);
+
+        if (wasScheduled
+                && request.getStartTime() != null
+                && !request.getStartTime().toInstant().equals(oldStartTime.toInstant())) {
+            UUID jobId = activationJobId(auctionId);
+            Instant newStartInstant = auction.getStartTime().toInstant();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        BackgroundJob.delete(jobId);
+                    } catch (Exception e) {
+                        log.warn("Could not delete old activation job {} (may have already executed): {}",
+                                jobId, e.getMessage());
+                    }
+                    BackgroundJob.<AuctionActivationJob>schedule(
+                            jobId, newStartInstant, job -> job.activateAuction(auctionId));
+                    log.info("Rescheduled activation job {} for auction {} at {}",
+                            jobId, auctionId, newStartInstant);
+                }
+            });
+        }
 
         log.info("Updated auction {} by seller {}", auctionId, sellerId);
         List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
@@ -291,6 +360,11 @@ public class AuctionServiceImpl implements AuctionService {
             throw new ForbiddenException("You do not own this auction", ErrorCodes.ACCESS_DENIED);
         }
 
+        if (TERMINAL_STATUSES.contains(auction.getStatus())) {
+            throw new BadRequestException(
+                    "Cannot delete a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
+        }
+
         if (auction.getStatus() != AuctionStatus.DRAFT &&
                 !auction.getStartTime().isAfter(OffsetDateTime.now())) {
             throw new BadRequestException("Auction cannot be deleted after it has started", ErrorCodes.INVALID_INPUT);
@@ -300,6 +374,22 @@ public class AuctionServiceImpl implements AuctionService {
         auctionItemRepository.save(auction);
 
         log.info("Soft-deleted auction {} by seller {}", auctionId, sellerId);
+    }
+
+    private void scheduleActivationJob(UUID auctionId, Instant activateAt) {
+        UUID jobId = activationJobId(auctionId);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                BackgroundJob.<AuctionActivationJob>schedule(jobId, activateAt, job -> job.activateAuction(auctionId));
+                log.info("Scheduled activation job {} for auction {} at {}", jobId, auctionId, activateAt);
+            }
+        });
+    }
+
+    private static UUID activationJobId(UUID auctionId) {
+        return UUID.nameUUIDFromBytes(
+                ("auction-activation:" + auctionId).getBytes(StandardCharsets.UTF_8));
     }
 
     private AuctionStatus resolveStatus(AuctionStatus requested, OffsetDateTime startTime) {

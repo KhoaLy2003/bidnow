@@ -1,5 +1,6 @@
 package com.bidnow.auction.kafka;
 
+import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,11 +13,17 @@ import org.springframework.stereotype.Component;
 public class AuctionKafkaProducer {
 
     private static final String AUCTION_CREATED_TOPIC = "auction-created-topic";
+    private static final String AUCTION_CANCELLED_TOPIC = "auction-cancelled-topic";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public void publishAuctionCreated(AuctionCreatedEvent event) {
         kafkaTemplate.send(AUCTION_CREATED_TOPIC, event.getAuctionId().toString(), event);
         log.info("Published AuctionCreatedEvent for auction: {}", event.getAuctionId());
+    }
+
+    public void publishAuctionCancelled(AuctionCancelledEvent event) {
+        kafkaTemplate.send(AUCTION_CANCELLED_TOPIC, event.getAuctionId().toString(), event);
+        log.info("Published AuctionCancelledEvent for auction: {}", event.getAuctionId());
     }
 }
