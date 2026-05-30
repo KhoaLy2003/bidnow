@@ -4,6 +4,7 @@ import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
@@ -29,7 +30,7 @@ public interface AuctionService {
 
     void deleteAuction(UUID sellerId, UUID auctionId);
 
-    PageResponse<AuctionSummaryResponse> browseAuctions(PublicAuctionFilterRequest filter);
+    PageResponse<AuctionBrowseItem> browseAuctions(PublicAuctionFilterRequest filter);
 
     List<CategoryCountResponse> getCategoryAuctionCounts();
 }

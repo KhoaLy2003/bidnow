@@ -4,6 +4,7 @@ import com.bidnow.auction.domain.entity.AuctionCategory;
 import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionCategoryResponse;
 import com.bidnow.auction.dto.response.AuctionImageResponse;
 import com.bidnow.auction.dto.response.AuctionResponse;
@@ -86,6 +87,22 @@ public abstract class AuctionMapper {
                 .id(category.getId())
                 .name(category.getName())
                 .slug(category.getSlug())
+                .build();
+    }
+
+    public AuctionBrowseItem toBrowseItem(AuctionItem item, AuctionImage primaryImage) {
+        if (item == null) return null;
+        AuctionCategory category = item.getCategory();
+        return AuctionBrowseItem.builder()
+                .id(item.getId())
+                .title(item.getTitle())
+                .primaryImageUrl(primaryImage != null ? primaryImage.getImageUrl() : null)
+                .currentPrice(item.getCurrentPrice())
+                .totalBids(item.getTotalBids())
+                .endTime(item.getEndTime())
+                .status(item.getStatus())
+                .buyNowPrice(item.getBuyNowPrice())
+                .categoryName(category != null ? category.getName() : null)
                 .build();
     }
 

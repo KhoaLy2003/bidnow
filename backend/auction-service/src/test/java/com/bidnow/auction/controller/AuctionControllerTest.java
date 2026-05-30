@@ -1,6 +1,6 @@
 package com.bidnow.auction.controller;
 
-import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.dto.PageResponse;
@@ -43,8 +43,8 @@ class AuctionControllerTest {
                 .build();
     }
 
-    private PageResponse<AuctionSummaryResponse> emptyPage() {
-        return PageResponse.<AuctionSummaryResponse>builder()
+    private PageResponse<AuctionBrowseItem> emptyPage() {
+        return PageResponse.<AuctionBrowseItem>builder()
                 .data(List.of())
                 .pagination(PaginationMeta.builder()
                         .page(0).limit(20).total(0L).totalPages(0)

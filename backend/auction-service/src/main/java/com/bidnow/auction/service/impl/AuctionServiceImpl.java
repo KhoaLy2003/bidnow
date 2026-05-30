@@ -11,6 +11,7 @@ import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
@@ -388,7 +389,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<AuctionSummaryResponse> browseAuctions(PublicAuctionFilterRequest filter) {
+    public PageResponse<AuctionBrowseItem> browseAuctions(PublicAuctionFilterRequest filter) {
         if (filter.getMinPrice() != null && filter.getMaxPrice() != null
                 && filter.getMinPrice().compareTo(filter.getMaxPrice()) > 0) {
             throw new BadRequestException("minPrice must not be greater than maxPrice", ErrorCodes.INVALID_INPUT);
@@ -449,15 +450,15 @@ public class AuctionServiceImpl implements AuctionService {
                 .stream()
                 .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
 
-        List<AuctionSummaryResponse> summaries = page.getContent().stream()
+        List<AuctionBrowseItem> items = page.getContent().stream()
                 .map(auction -> {
                     List<AuctionImage> images = imagesByAuction.getOrDefault(auction.getId(), List.of());
                     AuctionImage primary = images.isEmpty() ? null : images.get(0);
-                    return auctionMapper.toSummaryResponse(auction, primary);
+                    return auctionMapper.toBrowseItem(auction, primary);
                 })
                 .toList();
 
-        return PaginationUtils.toPageResponse(page, summaries);
+        return PaginationUtils.toPageResponse(page, items);
     }
 
     @Override

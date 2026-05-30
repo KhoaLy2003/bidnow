@@ -6,7 +6,7 @@ import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.enums.AuctionSortBy;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
-import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
@@ -101,7 +101,7 @@ class AuctionServiceImplTest {
                 .imageUrl("https://img.example.com/watch.jpg")
                 .auction(item)
                 .build();
-        AuctionSummaryResponse summary = AuctionSummaryResponse.builder()
+        AuctionBrowseItem browseItem = AuctionBrowseItem.builder()
                 .id(id)
                 .title("Vintage Watch")
                 .build();
@@ -109,9 +109,9 @@ class AuctionServiceImplTest {
         givenFindAllReturns(List.of(item));
         when(auctionImageRepository.findByAuctionIdInOrderByDisplayOrderAsc(anyList()))
                 .thenReturn(List.of(image));
-        when(auctionMapper.toSummaryResponse(eq(item), any())).thenReturn(summary);
+        when(auctionMapper.toBrowseItem(eq(item), any())).thenReturn(browseItem);
 
-        PageResponse<AuctionSummaryResponse> result = auctionService.browseAuctions(defaultFilter());
+        PageResponse<AuctionBrowseItem> result = auctionService.browseAuctions(defaultFilter());
 
         assertThat(result.getData()).hasSize(1);
         assertThat(result.getData().get(0).getTitle()).isEqualTo("Vintage Watch");
@@ -141,7 +141,7 @@ class AuctionServiceImplTest {
                 .categorySlug("unknown-slug")
                 .build();
 
-        PageResponse<AuctionSummaryResponse> result = auctionService.browseAuctions(filter);
+        PageResponse<AuctionBrowseItem> result = auctionService.browseAuctions(filter);
 
         assertThat(result.getData()).isEmpty();
         assertThat(result.getPagination().getTotal()).isZero();
@@ -167,7 +167,7 @@ class AuctionServiceImplTest {
     void browseAuctions_emptyResultPage_returnsEmptyAndSkipsImageLoad() {
         givenFindAllReturns(List.of());
 
-        PageResponse<AuctionSummaryResponse> result = auctionService.browseAuctions(defaultFilter());
+        PageResponse<AuctionBrowseItem> result = auctionService.browseAuctions(defaultFilter());
 
         assertThat(result.getData()).isEmpty();
         verify(auctionImageRepository, never()).findByAuctionIdInOrderByDisplayOrderAsc(anyList());
@@ -229,8 +229,8 @@ class AuctionServiceImplTest {
         givenFindAllReturns(items);
         when(auctionImageRepository.findByAuctionIdInOrderByDisplayOrderAsc(anyList()))
                 .thenReturn(List.of());
-        when(auctionMapper.toSummaryResponse(any(), any()))
-                .thenReturn(AuctionSummaryResponse.builder().build());
+        when(auctionMapper.toBrowseItem(any(), any()))
+                .thenReturn(AuctionBrowseItem.builder().build());
 
         auctionService.browseAuctions(defaultFilter());
 

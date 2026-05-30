@@ -4,6 +4,7 @@ import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
@@ -58,9 +59,9 @@ public class AuctionController {
             @ApiResponse(responseCode = "400", description = "Invalid filter parameters")
     })
     @GetMapping("/public")
-    public ResponseEntity<BaseResponse<PageResponse<AuctionSummaryResponse>>> browseAuctions(
+    public ResponseEntity<BaseResponse<PageResponse<AuctionBrowseItem>>> browseAuctions(
             @Valid @ModelAttribute PublicAuctionFilterRequest filter) {
-        PageResponse<AuctionSummaryResponse> response = auctionService.browseAuctions(filter);
+        PageResponse<AuctionBrowseItem> response = auctionService.browseAuctions(filter);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
