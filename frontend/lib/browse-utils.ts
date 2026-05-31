@@ -15,8 +15,8 @@ export function parseBrowseFilters(
   return {
     categoryName: matchedCategory?.id ?? 'all',
     priceRange: {
-      min: params.minPrice ? Number(params.minPrice) : 0,
-      max: params.maxPrice ? Number(params.maxPrice) : DEFAULT_MAX_PRICE,
+      min: params.minPrice ? (Number(params.minPrice) || 0) : 0,
+      max: params.maxPrice ? (Number(params.maxPrice) || DEFAULT_MAX_PRICE) : DEFAULT_MAX_PRICE,
     },
     endingSoon: params.endingSoon === 'true',
     buyNow:     params.buyNow === 'true',
