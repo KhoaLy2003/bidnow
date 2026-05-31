@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { DEFAULT_SORT, SORT_OPTIONS, type SortOption } from '@/types/ui/browse.ui'
 import { parseBrowseFilters, buildBrowseUrl } from '@/lib/browse-utils'
 
@@ -16,9 +15,8 @@ const NAV_CLASSES =
 const DISABLED_NAV_CLASSES =
   'flex items-center justify-center size-8 rounded border border-border text-sm opacity-40 pointer-events-none'
 
-const PAGE_CLASSES = cn(
-  'flex items-center justify-center size-8 rounded border border-border text-sm font-mono text-muted-foreground transition-colors duration-[var(--duration-tesla)] hover:border-foreground hover:text-foreground',
-)
+const PAGE_CLASSES =
+  'flex items-center justify-center size-8 rounded border border-border text-sm font-mono text-muted-foreground transition-colors duration-[var(--duration-tesla)] hover:border-foreground hover:text-foreground'
 
 const ACTIVE_PAGE_CLASSES =
   'flex items-center justify-center size-8 rounded text-sm font-mono font-medium bg-foreground text-background pointer-events-none'
