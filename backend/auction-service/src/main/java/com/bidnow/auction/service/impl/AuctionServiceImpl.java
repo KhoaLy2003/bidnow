@@ -82,13 +82,11 @@ public class AuctionServiceImpl implements AuctionService {
     private final UserServiceClient userServiceClient;
 
     @Override
-    @Transactional(readOnly = true)
     public AuctionDetailResponse getAuctionById(UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
         List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
         UserSummaryResponse seller = fetchSellerSummary(auction.getSellerId());
-        log.info("Fetched auction details for id {}: {}, seller summary: {}", id, auction, seller);
         return auctionMapper.toDetailResponse(auction, images, seller);
     }
 

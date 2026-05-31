@@ -61,7 +61,6 @@ public class UserProfileController {
     public ResponseEntity<BaseResponse<UserSummaryResponse>> getUserSummary(
             @PathVariable UUID userId) {
         UserSummaryResponse response = userProfileService.getUserSummary(userId);
-        log.info("Fetched user summary for userId {}: {}", userId, response);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 

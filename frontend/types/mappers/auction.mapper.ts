@@ -39,7 +39,7 @@ export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): S
 
 // Won/Lost/Outbid are UI-only states derived from current-user context after mapping.
 // The server only returns ACTIVE, SCHEDULED, COMPLETED, CANCELLED, FAILED.
-function parseDetailStatus(status: string): AuctionStatus {
+function parseStatus(status: string): AuctionStatus {
   switch (status?.toUpperCase()) {
     case 'ACTIVE':    return AuctionStatus.Active
     case 'SCHEDULED': return AuctionStatus.Scheduled
@@ -68,7 +68,7 @@ export function mapAuctionDetailResponse(dto: AuctionDetailResponse): AuctionDet
     currentBid:      dto.currentPrice,
     currentWinnerId: dto.currentWinnerId,
     totalBids:       dto.totalBids,
-    status:          parseDetailStatus(dto.status),
+    status:          parseStatus(dto.status),
     startsAt:        new Date(dto.startTime),
     endsAt:          new Date(dto.endTime),
     originalEndAt:   new Date(dto.originalEndTime),
@@ -87,17 +87,6 @@ export function mapAuctionDetailResponse(dto: AuctionDetailResponse): AuctionDet
   }
 }
 
-function parseBrowseStatus(status: string): AuctionStatus {
-  switch (status?.toUpperCase()) {
-    case 'ACTIVE':    return AuctionStatus.Active
-    case 'SCHEDULED': return AuctionStatus.Scheduled
-    case 'COMPLETED':
-    case 'CANCELLED':
-    case 'FAILED':    return AuctionStatus.Closed
-    default:          return AuctionStatus.Closed
-  }
-}
-
 export function mapAuctionBrowseItem(dto: AuctionBrowseItemResponse): AuctionBrowseItem {
   return {
     id:              dto.id,
@@ -106,7 +95,7 @@ export function mapAuctionBrowseItem(dto: AuctionBrowseItemResponse): AuctionBro
     currentPrice:    dto.currentPrice,
     totalBids:       dto.totalBids,
     endTime:         new Date(dto.endTime),
-    status:          parseBrowseStatus(dto.status),
+    status:          parseStatus(dto.status),
     buyNowPrice:     dto.buyNowPrice,
     categoryName:    dto.categoryName,
   }
