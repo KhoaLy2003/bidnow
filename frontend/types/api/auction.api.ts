@@ -125,7 +125,9 @@ export interface AuctionBrowseItemResponse {
 }
 
 export interface CategoryCountResponse {
+  categoryId:    string;
   categoryName: string;
+  slug:         string;
   count:        number;
 }
 

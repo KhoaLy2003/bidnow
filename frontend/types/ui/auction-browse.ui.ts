@@ -13,6 +13,8 @@ export interface AuctionBrowseItem {
 }
 
 export interface CategoryCount {
+  categoryId:    string
   categoryName: string
+  slug:         string
   count:        number
 }

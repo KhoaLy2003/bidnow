@@ -1,19 +1,11 @@
-import { BROWSE_CATEGORIES, DEFAULT_MAX_PRICE, DEFAULT_SORT } from '@/types/ui/browse.ui'
+import { DEFAULT_MAX_PRICE, DEFAULT_SORT } from '@/types/ui/browse.ui'
 import type { BrowseFilters, SortOption } from '@/types/ui/browse.ui'
 
-/**
- * Converts raw URL search params to a typed BrowseFilters object.
- * Category name is matched case-insensitively against BROWSE_CATEGORIES.
- */
 export function parseBrowseFilters(
   params: Record<string, string | undefined>,
 ): BrowseFilters {
-  const matchedCategory = BROWSE_CATEGORIES.find(
-    (c) => c.id.toLowerCase() === (params.category ?? '').toLowerCase(),
-  )
-
   return {
-    categoryName: matchedCategory?.id ?? 'all',
+    categorySlug: params.category ?? 'all',
     priceRange: {
       min: params.minPrice ? (Number(params.minPrice) || 0) : 0,
       max: params.maxPrice ? (Number(params.maxPrice) || DEFAULT_MAX_PRICE) : DEFAULT_MAX_PRICE,
@@ -34,8 +26,8 @@ export function buildBrowseUrl(
 ): string {
   const params = new URLSearchParams()
 
-  if (filters.categoryName !== 'all') {
-    params.set('category', filters.categoryName.toLowerCase())
+  if (filters.categorySlug !== 'all') {
+    params.set('category', filters.categorySlug)
   }
   if (filters.priceRange.min > 0) {
     params.set('minPrice', String(filters.priceRange.min))
@@ -58,7 +50,7 @@ export function buildBrowseUrl(
  */
 export function countActiveFilters(filters: BrowseFilters): number {
   let count = 0
-  if (filters.categoryName !== 'all') count++
+  if (filters.categorySlug !== 'all') count++
   if (filters.priceRange.min > 0 || filters.priceRange.max < DEFAULT_MAX_PRICE) count++
   if (filters.endingSoon) count++
   if (filters.buyNow) count++

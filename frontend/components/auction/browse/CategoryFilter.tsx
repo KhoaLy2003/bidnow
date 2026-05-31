@@ -1,26 +1,30 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { BROWSE_CATEGORIES } from '@/types/ui/browse.ui'
 import type { CategoryCount } from '@/types/ui/auction-browse.ui'
 
 interface CategoryFilterProps {
   value:          string
   categoryCounts: CategoryCount[]
-  onChange:       (categoryName: string) => void
+  onChange:       (slug: string) => void
 }
 
 export function CategoryFilter({ value, categoryCounts, onChange }: CategoryFilterProps) {
   const allCount = categoryCounts.reduce((sum, c) => sum + c.count, 0)
 
-  function getCount(categoryId: string): number {
-    if (categoryId === 'all') return allCount
-    return categoryCounts.find((c) => c.categoryName === categoryId)?.count ?? 0
+  const categories = [
+    { id: 'all', label: 'All' },
+    ...categoryCounts.map((c) => ({ id: c.slug, label: c.categoryName })),
+  ]
+
+  function getCount(slug: string): number {
+    if (slug === 'all') return allCount
+    return categoryCounts.find((c) => c.slug === slug)?.count ?? 0
   }
 
   return (
     <ul className="flex flex-col gap-0.5" role="listbox" aria-label="Category">
-      {BROWSE_CATEGORIES.map(({ id, label }) => {
+      {categories.map(({ id, label }) => {
         const isActive = value === id
         const count    = getCount(id)
 

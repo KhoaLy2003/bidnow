@@ -16,16 +16,6 @@ export const SORT_LABELS: Record<SortOption, string> = {
   MOST_BIDS:      'Most Bids',
 }
 
-export const BROWSE_CATEGORIES = [
-  { id: 'all',      label: 'All' },
-  { id: 'Watches',  label: 'Watches' },
-  { id: 'Music',    label: 'Music' },
-  { id: 'Books',    label: 'Books' },
-  { id: 'Sneakers', label: 'Sneakers' },
-  { id: 'Cameras',  label: 'Cameras' },
-  { id: 'Art',      label: 'Art' },
-] as const
-
 export const DEFAULT_MAX_PRICE = 100_000
 
 export interface PriceRange {
@@ -34,7 +24,7 @@ export interface PriceRange {
 }
 
 export interface BrowseFilters {
-  categoryName: string      // 'all' = no filter; matches AuctionBrowseItem.categoryName
+  categorySlug: string      // 'all' = no filter; matches CategoryCount.slug
   priceRange:   PriceRange
   endingSoon:   boolean
   buyNow:       boolean
@@ -43,7 +33,7 @@ export interface BrowseFilters {
 export const DEFAULT_SORT: SortOption = 'END_TIME_ASC'
 
 export const DEFAULT_FILTERS: BrowseFilters = {
-  categoryName: 'all',
+  categorySlug: 'all',
   priceRange:   { min: 0, max: DEFAULT_MAX_PRICE },
   endingSoon:   false,
   buyNow:       false,

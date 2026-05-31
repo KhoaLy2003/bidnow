@@ -55,9 +55,9 @@ export function FilterPanel({
             <AccordionContent>
               <div className="pb-1">
                 <CategoryFilter
-                  value={pendingFilters.categoryName}
+                  value={pendingFilters.categorySlug}
                   categoryCounts={categoryCounts}
-                  onChange={(name: string) => onPendingChange({ categoryName: name })}
+                  onChange={(slug: string) => onPendingChange({ categorySlug: slug })}
                 />
               </div>
             </AccordionContent>

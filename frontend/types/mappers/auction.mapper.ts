@@ -114,7 +114,9 @@ export function mapAuctionBrowseItem(dto: AuctionBrowseItemResponse): AuctionBro
 
 export function mapCategoryCount(dto: CategoryCountResponse): CategoryCount {
   return {
+    categoryId:    dto.categoryId,
     categoryName: dto.categoryName,
+    slug:         dto.slug,
     count:        dto.count,
   }
 }
