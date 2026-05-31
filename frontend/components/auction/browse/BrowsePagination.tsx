@@ -58,7 +58,7 @@ export function BrowsePagination({
             <ChevronLeft className="size-4" />
           </Link>
         ) : (
-          <span className={DISABLED_NAV_CLASSES} aria-disabled>
+          <span className={DISABLED_NAV_CLASSES} aria-disabled="true">
             <ChevronLeft className="size-4" />
           </span>
         )}
@@ -70,7 +70,7 @@ export function BrowsePagination({
             </span>
           ) : (
             <Link
-              key={p}
+              key={String(p)}
               href={pageUrl(p)}
               aria-current={p === currentPage ? 'page' : undefined}
               className={p === currentPage ? ACTIVE_PAGE_CLASSES : PAGE_CLASSES}
@@ -85,7 +85,7 @@ export function BrowsePagination({
             <ChevronRight className="size-4" />
           </Link>
         ) : (
-          <span className={DISABLED_NAV_CLASSES} aria-disabled>
+          <span className={DISABLED_NAV_CLASSES} aria-disabled="true">
             <ChevronRight className="size-4" />
           </span>
         )}

@@ -136,7 +136,7 @@ export default async function HomePage() {
               <Star className="size-5 text-[var(--color-warning-text)]" />
               Featured Picks
             </h2>
-            <Link href="/auctions?featured=true" className="text-sm text-[var(--color-text-link)] hover:underline flex items-center gap-1">
+            <Link href="/auctions?sort=END_TIME_ASC" className="text-sm text-[var(--color-text-link)] hover:underline flex items-center gap-1">
               View all <ArrowRight className="size-3.5" />
             </Link>
           </div>

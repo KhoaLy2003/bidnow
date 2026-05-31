@@ -1,4 +1,4 @@
-import { BROWSE_CATEGORIES, DEFAULT_FILTERS, DEFAULT_MAX_PRICE, DEFAULT_SORT } from '@/types/ui/browse.ui'
+import { BROWSE_CATEGORIES, DEFAULT_MAX_PRICE, DEFAULT_SORT } from '@/types/ui/browse.ui'
 import type { BrowseFilters, SortOption } from '@/types/ui/browse.ui'
 
 /**

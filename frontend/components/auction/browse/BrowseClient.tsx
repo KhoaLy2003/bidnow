@@ -87,7 +87,7 @@ export function BrowseClient({
 
   function handleSortChange(newSort: SortOption) {
     setSort(newSort)
-    router.push(buildBrowseUrl(pending, newSort))
+    router.push(buildBrowseUrl(parseBrowseFilters(searchParams), newSort))
   }
 
   const panelProps = {
