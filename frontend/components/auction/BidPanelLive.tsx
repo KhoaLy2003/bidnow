@@ -29,7 +29,6 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
       {/* Panel header */}
       <div className="flex items-center justify-between px-[18px] pt-[14px]">
         <StatusBadge status={auction.status} />
-        <span className="font-mono text-xs text-muted-foreground">#{auction.id}</span>
       </div>
 
       {/* Current bid */}

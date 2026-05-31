@@ -59,7 +59,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
 
         {/* Meta row */}
         <p className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground mb-6">
-          {auction.categoryName} · #{auction.id} · Listed {formatRelativeTime(auction.startsAt)}
+          {auction.categoryName} · Listed {formatRelativeTime(auction.startsAt)}
         </p>
 
         {/* Gallery */}
