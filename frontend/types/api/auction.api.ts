@@ -95,7 +95,7 @@ export interface AuctionDetailResponse {
   category: AuctionCategoryResponse;
   startingPrice: number;
   bidIncrement: number;
-  buyNowPrice?: number;
+  buyNowPrice: number | null;
   depositAmount: number;
   currentPrice: number;
   currentWinnerId?: string;

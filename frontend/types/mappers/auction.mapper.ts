@@ -63,7 +63,7 @@ export function mapAuctionDetailResponse(dto: AuctionDetailResponse): AuctionDet
     categoryName:    dto.category.name,
     startingPrice:   dto.startingPrice,
     bidIncrement:    dto.bidIncrement,
-    buyNowPrice:     dto.buyNowPrice,
+    buyNowPrice:     dto.buyNowPrice ?? undefined,
     depositAmount:   dto.depositAmount,
     currentBid:      dto.currentPrice,
     currentWinnerId: dto.currentWinnerId,
