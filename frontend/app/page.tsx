@@ -62,9 +62,11 @@ const TRUST_CARDS = [
 ] as const
 
 export default async function HomePage() {
-  const featuredPicks = await auctionService.getBrowseAuctions({ featured: true })
-  const allAuctions   = await auctionService.getBrowseAuctions()
-  const hotAuctions   = allAuctions.filter(
+  const [{ items: featuredPicks }, { items: allAuctions }] = await Promise.all([
+    auctionService.getBrowseAuctions({ sortBy: 'ending', size: 8 }),
+    auctionService.getBrowseAuctions({ size: 20 }),
+  ])
+  const hotAuctions = allAuctions.filter(
     (a) => a.status === AuctionStatus.Critical || a.status === AuctionStatus.EndingSoon,
   )
 
