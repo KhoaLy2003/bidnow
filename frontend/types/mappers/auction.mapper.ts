@@ -94,7 +94,7 @@ function parseBrowseStatus(status: string): AuctionStatus {
     case 'COMPLETED':
     case 'CANCELLED':
     case 'FAILED':    return AuctionStatus.Closed
-    default:          return AuctionStatus.Active
+    default:          return AuctionStatus.Closed
   }
 }
 
