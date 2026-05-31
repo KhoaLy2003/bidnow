@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -59,6 +61,7 @@ public class UserProfileController {
     public ResponseEntity<BaseResponse<UserSummaryResponse>> getUserSummary(
             @PathVariable UUID userId) {
         UserSummaryResponse response = userProfileService.getUserSummary(userId);
+        log.info("Fetched user summary for userId {}: {}", userId, response);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 

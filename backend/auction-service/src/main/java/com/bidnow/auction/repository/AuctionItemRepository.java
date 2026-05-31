@@ -16,10 +16,13 @@ public interface AuctionItemRepository extends JpaRepository<AuctionItem, UUID>,
 
     Optional<AuctionItem> findByIdAndDeletedAtIsNull(UUID id);
 
-    @Query("SELECT ai.category.id AS categoryId, ai.category.name AS categoryName, " +
-            "ai.category.slug AS slug, COUNT(ai) AS count " +
-            "FROM AuctionItem ai " +
-            "WHERE ai.status = :status AND ai.deletedAt IS NULL AND ai.category.isActive = true " +
-            "GROUP BY ai.category.id, ai.category.name, ai.category.slug")
+    @Query("SELECT ac.id AS categoryId, ac.name AS categoryName, ac.slug AS slug, " +
+            "COUNT(ai.id) AS count " +
+            "FROM AuctionCategory ac " +
+            "LEFT JOIN AuctionItem ai ON ai.category = ac " +
+            "AND ai.status = :status " +
+            "AND ai.deletedAt IS NULL " +
+            "WHERE ac.isActive = true " +
+            "GROUP BY ac.id, ac.name, ac.slug")
     List<CategoryAuctionCount> countByStatusGroupByCategory(@Param("status") AuctionStatus status);
 }

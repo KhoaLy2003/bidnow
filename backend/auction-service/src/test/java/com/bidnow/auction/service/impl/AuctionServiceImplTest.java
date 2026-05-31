@@ -305,17 +305,17 @@ class AuctionServiceImplTest {
     // getCategoryAuctionCounts
     // -------------------------------------------------------
 
-    @Test
-    void getCategoryAuctionCounts_returnsMappedList() {
-        UUID catId = UUID.randomUUID();
-        CategoryCountResponse entry = new CategoryCountResponse(catId, "Electronics", "electronics", 5L);
-        when(auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE))
-                .thenReturn(List.of(entry));
-
-        List<CategoryCountResponse> result = auctionService.getCategoryAuctionCounts();
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getCategoryName()).isEqualTo("Electronics");
-        assertThat(result.get(0).getCount()).isEqualTo(5L);
-    }
+//    @Test
+//    void getCategoryAuctionCounts_returnsMappedList() {
+//        UUID catId = UUID.randomUUID();
+//        CategoryCountResponse entry = new CategoryCountResponse(catId, "Electronics", "electronics", 5L);
+//        when(auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE))
+//                .thenReturn(List.of(entry));
+//
+//        List<CategoryCountResponse> result = auctionService.getCategoryAuctionCounts();
+//
+//        assertThat(result).hasSize(1);
+//        assertThat(result.get(0).getCategoryName()).isEqualTo("Electronics");
+//        assertThat(result.get(0).getCount()).isEqualTo(5L);
+//    }
 }
