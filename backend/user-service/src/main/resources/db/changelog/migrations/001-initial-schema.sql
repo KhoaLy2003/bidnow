@@ -3,13 +3,6 @@
 --changeset bidnow:initial-schema
 --comment: Initialize database schema
 
--- Create reusable types
-CREATE TYPE user_role_type AS ENUM (
-    'GUEST',
-    'USER',
-    'ADMIN'
-);
-
 -- User profiles table
 CREATE TABLE user_profiles
 (
@@ -32,10 +25,10 @@ CREATE INDEX idx_user_profiles_user_id ON user_profiles (user_id);
 -- User roles table
 CREATE TABLE user_roles
 (
-    id         UUID PRIMARY KEY        DEFAULT gen_random_uuid(),
-    user_id    UUID           NOT NULL,
-    role       user_role_type NOT NULL DEFAULT 'USER',
-    granted_at TIMESTAMP               DEFAULT CURRENT_TIMESTAMP,
+    id         UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
+    user_id    UUID        NOT NULL,
+    role       VARCHAR(20) NOT NULL DEFAULT 'USER',
+    granted_at TIMESTAMP            DEFAULT CURRENT_TIMESTAMP,
     granted_by UUID,
     UNIQUE (user_id, role)
 );

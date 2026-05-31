@@ -7,7 +7,7 @@ import { CountdownTimer } from './CountdownTimer'
 import { formatCurrency } from '@/lib/format'
 import { getAuctionStatus } from '@/lib/auction-utils'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 import { cn } from '@/lib/utils'
 
 interface AuctionCardProps {
@@ -25,7 +25,7 @@ export function AuctionCard({ auction, className }: AuctionCardProps) {
     <Link href={`/auctions/${auction.id}`} className="group block min-w-[240px] max-w-[360px]">
       <Card
         className={cn(
-          'transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--color-brand-200)]',
+          'transition-[border-color,opacity] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]',
           className,
         )}
       >
@@ -36,7 +36,7 @@ export function AuctionCard({ auction, className }: AuctionCardProps) {
             alt={auction.title}
             fill
             className={cn(
-              'object-cover transition-transform duration-300 group-hover:scale-[1.02]',
+              'object-cover transition-transform duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:scale-[1.02]',
               isClosed && 'grayscale-[60%]',
             )}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -59,7 +59,7 @@ export function AuctionCard({ auction, className }: AuctionCardProps) {
           <h3 className="font-medium text-sm leading-snug line-clamp-2">
             {auction.title}
           </h3>
-          <p className="mt-1 font-mono font-bold text-[length:var(--font-size-price-sm)]">
+          <p className="mt-1 font-mono font-medium text-[length:var(--font-size-price-sm)]">
             {formatCurrency(auction.currentBid)}
           </p>
           <p className="text-xs text-muted-foreground">

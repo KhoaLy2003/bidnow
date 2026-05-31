@@ -13,7 +13,7 @@ sequenceDiagram
     participant DB_BS as Bidding DB
     participant DB_AS as Auction DB
     participant MQ as Message Broker
-    participant NS as Notification Service
+    participant NS as Media Service
 
     Note over Bidder, NS: Real-time Bidding Process
     

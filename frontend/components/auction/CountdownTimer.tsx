@@ -18,9 +18,9 @@ const SIZE_CLASSES = {
 } as const
 
 const STATE_CLASSES = {
-  normal:   'font-mono font-bold text-muted-foreground',
-  warning:  'font-mono font-bold text-[var(--color-warning-text)] bg-[var(--color-auction-ending-bg)] rounded-full px-2 py-0.5',
-  critical: 'font-mono font-extrabold text-[var(--color-danger-text)] bg-[var(--color-auction-critical-bg)] border-2 border-[var(--color-auction-critical-border)] rounded-full px-2 py-0.5',
+  normal:   'font-mono font-medium text-muted-foreground',
+  warning:  'font-mono font-medium text-[var(--color-warning-text)] bg-[var(--color-auction-ending-bg)] rounded-full px-2 py-0.5',
+  critical: 'font-mono font-medium text-[var(--color-danger-text)] bg-[var(--color-auction-critical-bg)] border-2 border-[var(--color-auction-critical-border)] rounded-full px-2 py-0.5',
 } as const
 
 export function CountdownTimer({ endsAt, size = 'md', className }: CountdownTimerProps) {
@@ -30,14 +30,21 @@ export function CountdownTimer({ endsAt, size = 'md', className }: CountdownTime
 
   return (
     <div className={cn('inline-flex flex-col items-center gap-0.5', className)}>
-      {/* key forces animation replay on each tick */}
-      <span
-        key={secondsLeft}
-        style={{ animation: 'countdown-tick 150ms ease-in-out' }}
-        className={cn(SIZE_CLASSES[size], STATE_CLASSES[timerState])}
-      >
-        {formatCountdown(secondsLeft)}
-      </span>
+      {secondsLeft === null ? (
+        // Placeholder rendered on server and first client paint — same dims, no content flash
+        <span className={cn(SIZE_CLASSES[size], 'font-mono font-medium text-muted-foreground opacity-0')}>
+          0:00:00
+        </span>
+      ) : (
+        /* key forces animation replay on each tick */
+        <span
+          key={secondsLeft}
+          style={{ animation: 'countdown-tick 150ms ease-in-out' }}
+          className={cn(SIZE_CLASSES[size], STATE_CLASSES[timerState])}
+        >
+          {formatCountdown(secondsLeft)}
+        </span>
+      )}
       {timerState === 'critical' && (
         <span className="flex items-center gap-0.5 text-[length:var(--font-size-2xs)] text-[var(--color-danger-text)]">
           <Zap className="size-2.5" />

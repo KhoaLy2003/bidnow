@@ -16,7 +16,11 @@ public class ApplicationConstants {
 
     //Auth
     public static final String X_USER_ID_HEADER = "X-User-Id";
+    public static final String X_USER_ROLES_HEADER = "X-User-Roles";
     public static final String BEARER_PREFIX = "Bearer ";
+
+    //Audit
+    public static final String SYSTEM_ACTOR = "SYSTEM";
 
     private ApplicationConstants() {
     }

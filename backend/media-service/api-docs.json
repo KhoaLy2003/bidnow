@@ -1,80 +1,192 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "BidNow Media Service API",
-    "description": "API documentation for Media operations in Media Service — file upload, presigned URLs, and download.",
-    "version": "1.0.0"
+    "title": "BidNow API",
+    "description": "Documentation for BidNow Auction System APIs. \n\nAccess all microservices through the API Gateway. \nAuthentication is handled via JWT Bearer tokens.",
+    "contact": {
+      "name": "BidNow Support",
+      "email": "support@bidnow.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    },
+    "version": "1.0"
   },
   "servers": [
     {
-      "url": "http://localhost:8086",
-      "description": "Local server (direct)"
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Admin Email Logs",
+      "description": "Endpoints for administrators to view and retry email delivery logs"
     },
     {
-      "url": "http://localhost:8080",
-      "description": "Local server (via API Gateway)"
+      "name": "Test Endpoints",
+      "description": "Endpoints for internal testing and verification"
+    },
+    {
+      "name": "Admin Notification Templates",
+      "description": "Endpoints for administrators to manage and test notification templates"
+    },
+    {
+      "name": "Media",
+      "description": "APIs for file upload, download, and presigned URL generation"
     }
   ],
   "paths": {
-    "/api/v1/media/upload": {
-      "post": {
+    "/api/v1/admin/templates/{id}": {
+      "get": {
         "tags": [
-          "Media Controller"
+          "Admin Notification Templates"
         ],
-        "summary": "Upload a file (server-side)",
-        "description": "The file passes through the media-service for validation, resizing (max 1920px), and then is uploaded to S3. Allowed types: image/jpeg, image/png, image/webp. Max size: 10 MB.",
+        "summary": "Get template by ID",
+        "description": "Fetches details of a specific notification template.",
+        "operationId": "getTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "UUID of the template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Template not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Template fetched successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Admin Notification Templates"
+        ],
+        "summary": "Update template",
+        "description": "Updates an existing notification template.",
+        "operationId": "updateTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "UUID of the template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "file"
-                ],
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "Image file to upload (JPEG, PNG, WebP — max 10 MB)"
-                  },
-                  "entityId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "Optional: UUID of the entity this file belongs to (e.g. auctionId)"
-                  },
-                  "entityType": {
-                    "type": "string",
-                    "description": "Optional: type label for the entity (e.g. AUCTION_ITEM, USER_AVATAR)"
-                  }
-                }
+                "$ref": "#/components/schemas/TemplateRequest"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "201": {
-            "description": "File uploaded successfully",
+          "404": {
+            "description": "Template not found",
             "content": {
-              "application/json": {
+              "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseMediaUploadResponse"
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Template updated successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid file type or file exceeds size limit",
+            "description": "Invalid input",
             "content": {
-              "application/json": {
+              "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseString"
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized — missing or invalid JWT token"
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -84,45 +196,571 @@
         ]
       }
     },
-    "/api/v1/media/presigned-url": {
-      "get": {
+    "/api/v1/media/upload": {
+      "post": {
         "tags": [
-          "Media Controller"
+          "Media"
         ],
-        "summary": "Generate a presigned upload URL (client-side direct upload)",
-        "description": "Returns a short-lived S3 presigned PUT URL (valid 15 minutes). The client uploads the file directly to S3 using this URL — the file never passes through the media-service server. Note: no server-side resizing or MIME enforcement is applied.",
+        "summary": "Upload a file (server-side)",
+        "description": "The file passes through the media-service for validation, resizing, and then is uploaded to S3. Allowed types: image/jpeg, image/png, image/webp. Max size: 10 MB.",
+        "operationId": "uploadFile",
         "parameters": [
           {
-            "name": "fileName",
+            "name": "entityId",
             "in": "query",
-            "required": true,
+            "description": "Optional: ID of the entity this file belongs to (e.g. auctionId)",
+            "required": false,
             "schema": {
-              "type": "string"
-            },
-            "description": "Original file name — used to derive the S3 object extension"
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
-            "name": "contentType",
+            "name": "entityType",
             "in": "query",
-            "required": true,
+            "description": "Optional: Type of the entity (e.g. USER_AVATAR, AUCTION_ITEM)",
+            "required": false,
             "schema": {
               "type": "string",
               "enum": [
-                "image/jpeg",
-                "image/png",
-                "image/webp"
+                "USER_AVATAR",
+                "AUCTION_ITEM"
               ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "description": "Image file to upload",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Invalid file type or size",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMediaUploadResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "File uploaded successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMediaUploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/templates": {
+      "get": {
+        "tags": [
+          "Admin Notification Templates"
+        ],
+        "summary": "Get templates",
+        "description": "Returns a paginated list of notification templates, optionally filtered by criteria.",
+        "operationId": "getTemplates",
+        "parameters": [
+          {
+            "name": "criteria",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TemplateCriteria"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortDir",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePageResponseTemplateResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Templates fetched successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePageResponseTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Admin Notification Templates"
+        ],
+        "summary": "Create template",
+        "description": "Creates a new notification template (Email/In-app).",
+        "operationId": "createTemplate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Template created successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseTemplateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/templates/{id}/test": {
+      "post": {
+        "tags": [
+          "Admin Notification Templates"
+        ],
+        "summary": "Test template delivery",
+        "description": "Dispatches a test email using the specified template and variables.",
+        "operationId": "testTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "UUID of the template to test",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             },
-            "description": "MIME type of the file to be uploaded"
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "404": {
+            "description": "Template not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or variables",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Test email dispatched successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/templates/{id}/send": {
+      "post": {
+        "tags": [
+          "Admin Notification Templates"
+        ],
+        "summary": "Send template email to group",
+        "description": "Sends an email template to all active users or specific users based on the request configuration.",
+        "operationId": "sendTemplateToGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "UUID of the template to send",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendTemplateEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "404": {
+            "description": "Template not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or variables",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Emails dispatched successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/email-logs/{id}/retry": {
+      "post": {
+        "tags": [
+          "Admin Email Logs"
+        ],
+        "summary": "Retry email delivery",
+        "description": "Manually triggers a retry for a failed email log entry.",
+        "operationId": "retryEmail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "UUID of the email log entry",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
           }
         ],
         "responses": {
           "200": {
-            "description": "Presigned URL generated successfully",
+            "description": "Retry initiated successfully",
             "content": {
-              "application/json": {
+              "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponsePresignedUrlResponse"
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Log entry not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/test/email": {
+      "get": {
+        "tags": [
+          "Test Endpoints"
+        ],
+        "summary": "Test email sending",
+        "description": "Sends a simple test email to verify SMTP configuration.",
+        "operationId": "testEmail",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Recipient email address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "test@example.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/media/presigned-url": {
+      "get": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Generate a presigned upload URL (client-side direct upload)",
+        "description": "Returns a short-lived S3 presigned PUT URL. The client uploads the file directly to S3 using this URL — the file never passes through the media-service server. URL is valid for 15 minutes.",
+        "operationId": "getPresignedUploadUrl",
+        "parameters": [
+          {
+            "name": "fileName",
+            "in": "query",
+            "description": "Original file name (used to derive the S3 extension)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contentType",
+            "in": "query",
+            "description": "MIME type of the file, e.g. image/png",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Presigned URL generated",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignedUrlResponse"
                 }
               }
             }
@@ -130,55 +768,155 @@
           "400": {
             "description": "Unsupported content type",
             "content": {
-              "application/json": {
+              "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseString"
+                  "$ref": "#/components/schemas/BaseResponsePresignedUrlResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized — missing or invalid JWT token"
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePresignedUrlResponse"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
+        }
       }
     },
     "/api/v1/media/download": {
       "get": {
         "tags": [
-          "Media Controller"
+          "Media"
         ],
         "summary": "Get a presigned download URL",
-        "description": "Returns a presigned S3 GET URL (valid 1 hour) for the given s3Key. Use the s3Key returned from the upload endpoint. The URL can be used directly as an image src or to trigger a file download.",
+        "description": "Returns a presigned S3 GET URL (valid 1 hour) for the given S3 key. Use the s3Key returned from the upload endpoint.",
+        "operationId": "getDownloadUrl",
         "parameters": [
           {
             "name": "s3Key",
             "in": "query",
+            "description": "S3 object key returned from upload",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "description": "The S3 object key returned from the upload endpoint (e.g. uploads/userId/fileId.jpg)"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Download URL generated successfully",
+            "description": "Download URL generated",
             "content": {
-              "application/json": {
+              "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           },
           "401": {
-            "description": "Unauthorized — missing or invalid JWT token"
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/email-logs": {
+      "get": {
+        "tags": [
+          "Admin Email Logs"
+        ],
+        "summary": "Get email logs",
+        "description": "Returns a paginated list of email delivery logs.",
+        "operationId": "getEmailLogs",
+        "parameters": [
+          {
+            "name": "criteria",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EmailLogCriteria"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "sortDir",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs fetched successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePageResponseEmailLogResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePageResponseEmailLogResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -190,121 +928,710 @@
     }
   },
   "components": {
+    "schemas": {
+      "TemplateRequest": {
+        "required": [
+          "active",
+          "bodyText",
+          "language",
+          "name",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the template",
+            "example": "WELCOME_EMAIL"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of the template (e.g., EMAIL, SMS, PUSH)",
+            "example": "EMAIL"
+          },
+          "language": {
+            "type": "string",
+            "description": "Language of the template",
+            "example": "en"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject of the email",
+            "example": "Welcome to BidNow!"
+          },
+          "bodyHtml": {
+            "type": "string",
+            "description": "HTML content of the template",
+            "example": "<h1>Welcome!</h1>"
+          },
+          "bodyText": {
+            "type": "string",
+            "description": "Plain text content of the template",
+            "example": "Welcome to BidNow!"
+          },
+          "variables": {
+            "type": "array",
+            "description": "List of variables used in the template",
+            "example": [
+              "userName",
+              "verificationLink"
+            ],
+            "items": {
+              "type": "string",
+              "description": "List of variables used in the template",
+              "example": "[\"userName\",\"verificationLink\"]"
+            }
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the template is active",
+            "example": true
+          }
+        },
+        "description": "Email or notification template creation/update request"
+      },
+      "TemplateResponse": {
+        "required": [
+          "active",
+          "bodyText",
+          "createdAt",
+          "id",
+          "language",
+          "name",
+          "type",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the template",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the template",
+            "example": "WELCOME_EMAIL"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of the template (e.g., EMAIL, SMS, PUSH)",
+            "example": "EMAIL"
+          },
+          "language": {
+            "type": "string",
+            "description": "Language of the template",
+            "example": "en"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject of the email",
+            "example": "Welcome to BidNow!"
+          },
+          "bodyHtml": {
+            "type": "string",
+            "description": "HTML content of the template",
+            "example": "<h1>Welcome!</h1>"
+          },
+          "bodyText": {
+            "type": "string",
+            "description": "Plain text content of the template",
+            "example": "Welcome to BidNow!"
+          },
+          "variables": {
+            "type": "array",
+            "description": "List of variables used in the template",
+            "example": [
+              "userName",
+              "verificationLink"
+            ],
+            "items": {
+              "type": "string",
+              "description": "List of variables used in the template",
+              "example": "[\"userName\",\"verificationLink\"]"
+            }
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the template is active",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the template was created",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the template was last updated",
+            "format": "date-time"
+          }
+        },
+        "description": "Email or notification template details response"
+      },
+      "BaseResponseTemplateResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TemplateResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "MediaUploadResponse": {
+        "required": [
+          "contentType",
+          "createdAt",
+          "fileSize",
+          "id",
+          "originalName",
+          "s3Key"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the media record",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "originalName": {
+            "type": "string",
+            "description": "Original name of the uploaded file",
+            "example": "profile.jpg"
+          },
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key of the stored file",
+            "example": "media/550e8400-e29b-41d4-a716-446655440000/profile.jpg"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "MIME type of the file",
+            "example": "image/jpeg"
+          },
+          "fileSize": {
+            "type": "integer",
+            "description": "Size of the file in bytes",
+            "format": "int64",
+            "example": 102400
+          },
+          "width": {
+            "type": "integer",
+            "description": "Width of the image (if applicable)",
+            "format": "int32",
+            "example": 800
+          },
+          "height": {
+            "type": "integer",
+            "description": "Height of the image (if applicable)",
+            "format": "int32",
+            "example": 600
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the media was uploaded",
+            "format": "date-time"
+          }
+        },
+        "description": "Response containing uploaded media metadata"
+      },
+      "BaseResponseMediaUploadResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MediaUploadResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "EmailTestRequest": {
+        "required": [
+          "recipientEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "recipientEmail": {
+            "type": "string",
+            "description": "Email address to send the test to",
+            "example": "test@example.com"
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "description": "Variables to inject into the template for testing",
+              "example": {
+                "userName": "Test User"
+              }
+            },
+            "description": "Variables to inject into the template for testing",
+            "example": {
+              "userName": "Test User"
+            }
+          }
+        },
+        "description": "Request to send a test email using a specific template"
+      },
+      "BaseResponseString": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "type": "string",
+            "description": "Response data"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "SendTemplateEmailRequest": {
+        "type": "object",
+        "properties": {
+          "sendToAllActive": {
+            "type": "boolean",
+            "description": "Send to all active users in the system",
+            "example": true
+          },
+          "recipientEmails": {
+            "type": "array",
+            "description": "List of specific recipient email addresses",
+            "example": [
+              "user1@example.com",
+              "user2@example.com"
+            ],
+            "items": {
+              "type": "string",
+              "description": "List of specific recipient email addresses",
+              "example": "[\"user1@example.com\",\"user2@example.com\"]"
+            }
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "description": "Variables to inject into the template",
+              "example": {
+                "appName": "BidNow",
+                "title": "Auction Update"
+              }
+            },
+            "description": "Variables to inject into the template",
+            "example": {
+              "appName": "BidNow",
+              "title": "Auction Update"
+            }
+          }
+        },
+        "description": "Request to send an email template to all active users or specific users"
+      },
+      "PresignedUrlResponse": {
+        "required": [
+          "expiresAt",
+          "s3Key",
+          "uploadUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "description": "Presigned URL to upload the file to S3",
+            "example": "https://bidnow-media.s3.amazonaws.com/..."
+          },
+          "s3Key": {
+            "type": "string",
+            "description": "S3 key for the uploaded file",
+            "example": "uploads/uuid/image.jpg"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Timestamp when the presigned URL expires",
+            "format": "date-time",
+            "example": "2023-10-27T10:15:00Z"
+          }
+        },
+        "description": "Presigned URL for media upload"
+      },
+      "BaseResponsePresignedUrlResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PresignedUrlResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "TemplateCriteria": {
+        "type": "object",
+        "properties": {
+          "types": {
+            "type": "array",
+            "description": "Filter by template types",
+            "example": [
+              "EMAIL",
+              "SMS"
+            ],
+            "items": {
+              "type": "string",
+              "description": "Filter by template types",
+              "example": "[\"EMAIL\",\"SMS\"]"
+            }
+          },
+          "languages": {
+            "type": "array",
+            "description": "Filter by languages",
+            "example": [
+              "en",
+              "vi"
+            ],
+            "items": {
+              "type": "string",
+              "description": "Filter by languages",
+              "example": "[\"en\",\"vi\"]"
+            }
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Filter by active status",
+            "example": true
+          },
+          "search": {
+            "type": "string",
+            "description": "Search term for name or subject",
+            "example": "Welcome"
+          }
+        },
+        "description": "Criteria for searching and filtering templates"
+      },
+      "PageResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "List of data items",
+            "items": {
+              "type": "object",
+              "description": "List of data items"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "description": "Paginated response wrapper"
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Current page number (zero-based)",
+            "format": "int32",
+            "example": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "format": "int32",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "format": "int64",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "format": "int32",
+            "example": 10
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": false
+          }
+        },
+        "description": "Metadata for paginated results"
+      },
+      "BaseResponsePageResponseTemplateResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResponseTemplateResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "PageResponseTemplateResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "List of data items",
+            "items": {
+              "$ref": "#/components/schemas/TemplateResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "description": "Paginated response wrapper"
+      },
+      "EmailLogCriteria": {
+        "type": "object",
+        "properties": {
+          "recipientEmail": {
+            "type": "string",
+            "description": "Filter by recipient email",
+            "example": "user@example.com"
+          },
+          "templateNames": {
+            "type": "array",
+            "description": "Filter by template names",
+            "example": [
+              "WELCOME_EMAIL"
+            ],
+            "items": {
+              "type": "string",
+              "description": "Filter by template names",
+              "example": "[\"WELCOME_EMAIL\"]"
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "description": "Filter by statuses",
+            "example": [
+              "SENT",
+              "FAILED"
+            ],
+            "items": {
+              "type": "string",
+              "description": "Filter by statuses",
+              "example": "[\"SENT\",\"FAILED\"]"
+            }
+          },
+          "search": {
+            "type": "string",
+            "description": "Search term for subject",
+            "example": "Welcome"
+          }
+        },
+        "description": "Criteria for searching and filtering email logs"
+      },
+      "BaseResponsePageResponseEmailLogResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResponseEmailLogResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "EmailLogResponse": {
+        "required": [
+          "createdAt",
+          "id",
+          "recipientEmail",
+          "retryCount",
+          "status",
+          "subject",
+          "templateName",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the email log",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "notificationId": {
+            "type": "string",
+            "description": "Associated notification identifier",
+            "format": "uuid",
+            "example": "660e8400-e29b-41d4-a716-446655440001"
+          },
+          "recipientEmail": {
+            "type": "string",
+            "description": "Email address of the recipient",
+            "example": "user@example.com"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject of the email sent",
+            "example": "Welcome to BidNow!"
+          },
+          "templateName": {
+            "type": "string",
+            "description": "Name of the template used",
+            "example": "WELCOME_EMAIL"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current status of the email delivery",
+            "example": "SENT"
+          },
+          "failureReason": {
+            "type": "string",
+            "description": "Reason for failure if status is FAILED",
+            "example": "Invalid recipient address"
+          },
+          "retryCount": {
+            "type": "integer",
+            "description": "Number of retries attempted",
+            "format": "int32",
+            "example": 0
+          },
+          "sentAt": {
+            "type": "string",
+            "description": "Timestamp when the email was actually sent",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp when the log was created",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Timestamp when the log was last updated",
+            "format": "date-time"
+          }
+        },
+        "description": "Email log details response"
+      },
+      "PageResponseEmailLogResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "List of data items",
+            "items": {
+              "$ref": "#/components/schemas/EmailLogResponse"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "description": "Paginated response wrapper"
+      }
+    },
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT"
-      }
-    },
-    "schemas": {
-      "MediaUploadResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "originalName": {
-            "type": "string"
-          },
-          "s3Key": {
-            "type": "string",
-            "description": "S3 object key — use this to request a download URL"
-          },
-          "contentType": {
-            "type": "string"
-          },
-          "fileSize": {
-            "type": "integer",
-            "format": "int64",
-            "description": "File size in bytes (after server-side processing)"
-          },
-          "width": {
-            "type": "integer",
-            "description": "Image width in pixels after processing"
-          },
-          "height": {
-            "type": "integer",
-            "description": "Image height in pixels after processing"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "PresignedUrlResponse": {
-        "type": "object",
-        "properties": {
-          "uploadUrl": {
-            "type": "string",
-            "description": "Short-lived S3 presigned PUT URL — use HTTP PUT to upload the file directly to this URL"
-          },
-          "s3Key": {
-            "type": "string",
-            "description": "S3 object key assigned to the file — save this for generating download URLs later"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Expiry time of the presigned URL (15 minutes from generation)"
-          }
-        }
-      },
-      "ApiResponseMediaUploadResponse": {
-        "type": "object",
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/MediaUploadResponse"
-          }
-        }
-      },
-      "ApiResponsePresignedUrlResponse": {
-        "type": "object",
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/PresignedUrlResponse"
-          }
-        }
-      },
-      "ApiResponseString": {
-        "type": "object",
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "integer"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "string"
-          }
-        }
       }
     }
   }

@@ -1,6 +1,6 @@
 import { ArrowUp, ArrowDown, RefreshCw, CircleDollarSign } from 'lucide-react'
 import { formatCurrency, formatRelativeTime } from '@/lib/format'
-import type { Transaction } from '@/types/wallet'
+import type { Transaction } from '@/types/ui/wallet.ui'
 import { cn } from '@/lib/utils'
 
 interface TransactionRowProps {
@@ -43,7 +43,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
 
       <span
         className={cn(
-          'font-mono font-semibold text-sm shrink-0',
+          'font-mono font-medium text-sm shrink-0',
           positive
             ? 'text-[var(--color-wallet-positive)]'
             : 'text-[var(--color-wallet-negative)]',

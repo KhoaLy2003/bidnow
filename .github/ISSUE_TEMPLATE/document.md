@@ -17,9 +17,7 @@ What needs to be documented?
 Who will read this documentation?
 
 ## Content Outline
-- Section 1
-- Section 2
-- Section 3
+What sections or topics should be covered?
 
 ## Deliverables
 - [ ] Draft version
@@ -28,3 +26,8 @@ Who will read this documentation?
 
 ## Location
 Where will this documentation live?
+
+## Acceptance Criteria
+- [ ] Content is accurate and complete
+- [ ] Reviewed by at least one peer
+- [ ] Published to the correct location

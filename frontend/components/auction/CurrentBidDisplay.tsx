@@ -5,11 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
-import type { VariantProps } from 'class-variance-authority'
-import { badgeVariants } from '@/components/ui/badge'
-
-type BadgeVariant = VariantProps<typeof badgeVariants>['variant']
-
 interface CurrentBidDisplayProps {
   amount:               number        // cents
   isCurrentUserWinning?: boolean
@@ -47,7 +42,7 @@ export function CurrentBidDisplay({
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <span className="text-xs tracking-widest text-muted-foreground uppercase font-medium">
+      <span className="text-xs text-muted-foreground uppercase font-medium">
         Current Bid
       </span>
 
@@ -64,7 +59,7 @@ export function CurrentBidDisplay({
           <span
             aria-hidden
             className={cn(
-              'absolute inset-0 font-mono font-bold leading-none',
+              'absolute inset-0 font-mono font-medium leading-none',
               PRICE_SIZE[size],
               '[animation:price-roll-out_250ms_ease-in_forwards]',
             )}
@@ -75,7 +70,7 @@ export function CurrentBidDisplay({
         {/* Current price */}
         <span
           className={cn(
-            'block font-mono font-bold leading-none',
+            'block font-mono font-medium leading-none',
             PRICE_SIZE[size],
             animating && '[animation:price-roll-in_250ms_ease-out_forwards]',
           )}
@@ -85,12 +80,12 @@ export function CurrentBidDisplay({
       </div>
 
       {isCurrentUserWinning && !isOutbid && (
-        <Badge variant={'won' as BadgeVariant} className="w-fit">
+        <Badge variant="won" className="w-fit">
           You&apos;re winning
         </Badge>
       )}
       {isOutbid && (
-        <Badge variant={'outbid' as BadgeVariant} className="w-fit">
+        <Badge variant="outbid" className="w-fit">
           You&apos;ve been outbid
         </Badge>
       )}

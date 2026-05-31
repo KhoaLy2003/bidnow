@@ -3,6 +3,7 @@
  */
 package com.bidnow.media.kafka;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AvatarUploadedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Loggable(level = Loggable.Level.DEBUG)
 public class MediaKafkaProducer {
 
     private static final String AVATAR_UPLOADED_TOPIC = "avatar-uploaded-topic";

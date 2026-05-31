@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Bid } from '@/types/auction'
+import type { Bid } from '@/types/ui/auction.ui'
 
 interface AuctionState {
   currentBid:      number
@@ -27,7 +27,7 @@ export const useAuctionStore = create<AuctionState>((set) => ({
   setBid: (amount) => set({ currentBid: amount }),
 
   addBidToHistory: (bid) =>
-    set((state) => ({ bidHistory: [bid, ...state.bidHistory] })),
+    set((state) => ({ bidHistory: [bid, ...state.bidHistory].slice(0, 100) })),
 
   setStatus: (status) => set({ status }),
 

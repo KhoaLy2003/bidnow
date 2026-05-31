@@ -26,7 +26,7 @@ This sheet is used to manage and track sensitive environment configuration infor
 | System | DB Type | Host | Port | Database Name | Username | Password Location | Access Owner | Rotation Policy | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | User Service | PostgreSQL |  | 5432 |  |  | Vault / Secret Manager |  | Every 90 days |  |
-| Notification Service | PostgreSQL |  | 5432 |  |  | Vault / Secret Manager |  | Every 90 days |  |
+| Media Service | PostgreSQL |  | 5432 |  |  | Vault / Secret Manager |  | Every 90 days |  |
 | Auth Service | MySQL |  | 3306 |  |  | Vault / Secret Manager |  | Every 90 days |  |
 
 ---
@@ -68,7 +68,7 @@ This sheet is used to manage and track sensitive environment configuration infor
 | System | DB Type | Host | Port | Database Name | Username | Password Location | Access Owner | Rotation Policy | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | User Service | PostgreSQL |  | 5432 |  |  | Vault / Secret Manager |  | Every 60 days | Restricted access |
-| Notification Service | PostgreSQL |  | 5432 |  |  | Vault / Secret Manager |  | Every 60 days | Restricted access |
+| Media Service | PostgreSQL |  | 5432 |  |  | Vault / Secret Manager |  | Every 60 days | Restricted access |
 | Auth Service | MySQL |  | 3306 |  |  | Vault / Secret Manager |  | Every 60 days | Restricted access |
 
 ---

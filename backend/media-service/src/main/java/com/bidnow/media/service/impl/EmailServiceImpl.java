@@ -1,10 +1,19 @@
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
+import com.bidnow.common.constant.ErrorCodes;
+import com.bidnow.common.exception.InternalServerException;
+import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.media.domain.entity.EmailLog;
 import com.bidnow.media.domain.entity.NotificationTemplate;
 import com.bidnow.media.domain.enums.EmailStatus;
+import com.bidnow.media.dto.request.SendTemplateEmailRequest;
+import com.bidnow.media.dto.request.criteria.EmailLogCriteria;
 import com.bidnow.media.dto.response.EmailLogResponse;
+import com.bidnow.media.feign.IdentityServiceClient;
 import com.bidnow.media.repository.EmailLogRepository;
+import com.bidnow.media.repository.NotificationTemplateRepository;
 import com.bidnow.media.service.EmailService;
 import com.bidnow.media.service.TemplateService;
 import jakarta.mail.internet.MimeMessage;
@@ -17,6 +26,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -25,11 +35,14 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable(logResult = false)
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
     private final TemplateService templateService;
     private final EmailLogRepository emailLogRepository;
+    private final NotificationTemplateRepository templateRepository;
+    private final IdentityServiceClient identityServiceClient;
 
     @Value("${mail.from}")
     private String fromEmail;
@@ -47,7 +60,7 @@ public class EmailServiceImpl implements EmailService {
             log.info("Email sent successfully to: {}", to);
         } catch (Exception e) {
             log.error("Failed to send email to: {}", to, e);
-            throw new RuntimeException("Email sending failed", e);
+            throw new InternalServerException("Email sending failed: " + e.getMessage(), ErrorCodes.UNEXPECTED_ERROR);
         }
     }
 
@@ -96,9 +109,36 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public Page<EmailLogResponse> getEmailLogs(Pageable pageable) {
-        return emailLogRepository.findAll(pageable)
-                .map(log -> com.bidnow.media.dto.response.EmailLogResponse.builder()
+    public void sendTestEmail(UUID templateId, String recipientEmail, Map<String, Object> variables) {
+        var template = templateRepository.findById(templateId)
+                .orElseThrow(() -> new NotFoundException("Template not found with id: " + templateId, ErrorCodes.NOT_FOUND));
+
+        sendTemplateEmail(recipientEmail, template, variables);
+    }
+
+    @Override
+    public Page<EmailLogResponse> getEmailLogs(EmailLogCriteria criteria, Pageable pageable) {
+        SpecificationBuilder<EmailLog> builder = SpecificationBuilder.forEntity();
+
+        builder.withLikeIfPresent("recipientEmail", criteria.getRecipientEmail());
+        builder.withInIfPresent("templateName", criteria.getTemplateNames());
+        if (criteria.getStatuses() != null && !criteria.getStatuses().isEmpty()) {
+            builder.withIn("status", criteria.getStatuses().stream()
+                    .map(EmailStatus::valueOf)
+                    .toList());
+        }
+
+        if (StringUtils.hasText(criteria.getSearch())) {
+            String likePattern = "%" + criteria.getSearch().toLowerCase() + "%";
+            builder.orGroup(or -> or
+                    .withLike("subject", likePattern)
+                    .withLike("recipientEmail", likePattern)
+                    .withLike("templateName", likePattern)
+            );
+        }
+
+        return emailLogRepository.findAll(builder.build(), pageable)
+                .map(log -> EmailLogResponse.builder()
                         .id(log.getId())
                         .notificationId(log.getNotificationId())
                         .recipientEmail(log.getRecipientEmail())
@@ -111,6 +151,50 @@ public class EmailServiceImpl implements EmailService {
                         .createdAt(log.getCreatedAt())
                         .updatedAt(log.getUpdatedAt())
                         .build());
+    }
+
+    @Override
+    public int sendTemplateEmailToGroup(UUID templateId, SendTemplateEmailRequest request) {
+        log.info("Processing template email send request for template ID: {}", templateId);
+
+        var template = templateRepository.findById(templateId)
+                .orElseThrow(() -> new NotFoundException("Template not found with id: " + templateId, ErrorCodes.NOT_FOUND));
+
+        java.util.Set<String> emailRecipients = new java.util.HashSet<>();
+
+        // 1. If sendToAllActive is true, fetch all active user emails
+        if (Boolean.TRUE.equals(request.getSendToAllActive())) {
+            log.info("Fetching all active user emails from identity-service");
+            var response = identityServiceClient.getActiveUserEmails();
+            if (response != null && response.getData() != null) {
+                emailRecipients.addAll(response.getData());
+            }
+        } else {
+            // 2. Add specific email recipients directly
+            if (request.getRecipientEmails() != null) {
+                emailRecipients.addAll(request.getRecipientEmails());
+            }
+        }
+
+        if (emailRecipients.isEmpty()) {
+            log.warn("No recipients found for group template email sending");
+            return 0;
+        }
+
+        log.info("Sending template email to {} recipients", emailRecipients.size());
+        int successCount = 0;
+        for (String recipientEmail : emailRecipients) {
+            try {
+                EmailLog emailLog = sendTemplateEmail(recipientEmail, template, request.getVariables());
+                if (EmailStatus.SENT.equals(emailLog.getStatus())) {
+                    successCount++;
+                }
+            } catch (Exception e) {
+                log.error("Failed to send template email to recipient: {}", recipientEmail, e);
+            }
+        }
+
+        return successCount;
     }
 
     @Override

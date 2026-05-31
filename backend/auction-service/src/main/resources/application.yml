@@ -21,12 +21,21 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0  # reduce to 0.1 or lower in production
   endpoints:
     web:
       exposure:
@@ -40,3 +49,13 @@ springdoc:
     path: /api/v1/auctions/v3/api-docs
   swagger-ui:
     enabled: false
+
+org:
+  jobrunr:
+    background-job-server:
+      enabled: true
+    dashboard:
+      enabled: true
+      port: 8090
+    database:
+      skip-create: true

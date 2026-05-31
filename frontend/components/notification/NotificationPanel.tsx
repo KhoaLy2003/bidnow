@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { useNotifications } from '@/hooks/useNotifications'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Notification } from '@/types/notification'
+import type { Notification } from '@/types/ui/notification.ui'
 
 const TYPE_COLOR: Record<Notification['type'], string> = {
   outbid:      'bg-[var(--color-danger-default)]',
@@ -29,7 +29,7 @@ export function NotificationPanel() {
           <Bell className="size-4" />
           <span className="font-medium text-sm">Notifications</span>
           {unreadCount > 0 && (
-            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -61,12 +61,11 @@ export function NotificationPanel() {
                 <span
                   className={cn(
                     'mt-1 size-2 shrink-0 rounded-full',
-                    TYPE_COLOR[n.type],
-                    n.isRead && 'opacity-0',
+                    n.isRead ? 'invisible' : TYPE_COLOR[n.type],
                   )}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className={cn('text-sm', !n.isRead && 'font-semibold')}>
+                  <p className={cn('text-sm', !n.isRead && 'font-medium')}>
                     {n.title}
                   </p>
                   <p className="text-xs text-muted-foreground line-clamp-2">

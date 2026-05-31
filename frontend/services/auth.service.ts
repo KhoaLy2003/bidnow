@@ -4,7 +4,7 @@ import {
   RegisterResponse,
   VerifyOtpResponse,
   ResendOtpResponse,
-} from "@/types/auth";
+} from "@/types/api/auth.api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -19,7 +19,6 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     });
 
-    console.log(response);
     if (!response.ok) {
       const error = await response.json();
       throw error;
@@ -106,7 +105,6 @@ export const authService = {
       body: JSON.stringify({ refreshToken }),
     });
 
-    console.log(response);
     if (!response.ok) {
       // Even if logout fails on server, we should clear local state
       console.error("Logout failed on server");

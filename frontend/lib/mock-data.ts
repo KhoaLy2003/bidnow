@@ -1,5 +1,7 @@
 import { AuctionStatus } from './design-tokens'
-import type { Auction, BidHistoryItem } from '@/types/auction'
+import type { Auction, BidHistoryItem } from '@/types/ui/auction.ui'
+
+export const MOCK_CURRENT_USER_ID = 'current-user'
 
 export const MOCK_AUCTIONS: Auction[] = [
   {
@@ -17,6 +19,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 7_200_000),
     status: AuctionStatus.Active,
     isFeatured: true,
+    condition: 'Near Mint',
+    reserveMet: true,
+    seller: { id: 'u1', name: 'Marcus W.', rating: 4.9, totalAuctions: 218 },
   },
   {
     id: '2',
@@ -33,6 +38,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 3_600_000),
     status: AuctionStatus.EndingSoon,
     isFeatured: true,
+    condition: 'Good',
+    reserveMet: true,
+    seller: { id: 'u2', name: 'Vintage Strings', rating: 4.7, totalAuctions: 132 },
   },
   {
     id: '3',
@@ -49,6 +57,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 1_800_000),
     status: AuctionStatus.Critical,
     isFeatured: true,
+    condition: 'Excellent',
+    reserveMet: true,
+    seller: { id: 'u3', name: 'Rare Books Co.', rating: 4.8, totalAuctions: 76 },
   },
   {
     id: '4',
@@ -65,6 +76,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 14_400_000),
     status: AuctionStatus.Active,
     isFeatured: false,
+    condition: 'Mint',
+    reserveMet: false,
+    seller: { id: 'u4', name: 'Atelier Forty Six', rating: 4.9, totalAuctions: 311 },
   },
   {
     id: '5',
@@ -81,6 +95,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 10_800_000),
     status: AuctionStatus.Active,
     isFeatured: false,
+    condition: 'Deadstock',
+    reserveMet: true,
+    seller: { id: 'u5', name: 'Sole Archive', rating: 4.6, totalAuctions: 89 },
   },
   {
     id: '6',
@@ -97,6 +114,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 18_000_000),
     status: AuctionStatus.Active,
     isFeatured: false,
+    condition: 'Very Good',
+    reserveMet: false,
+    seller: { id: 'u6', name: 'Geneva Vault', rating: 5.0, totalAuctions: 44 },
   },
   {
     id: '7',
@@ -113,6 +133,9 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 21_600_000),
     status: AuctionStatus.Active,
     isFeatured: false,
+    condition: 'Excellent',
+    reserveMet: true,
+    seller: { id: 'u7', name: 'Street Art Gallery', rating: 4.8, totalAuctions: 57 },
   },
   {
     id: '8',
@@ -129,6 +152,69 @@ export const MOCK_AUCTIONS: Auction[] = [
     endsAt:   new Date(Date.now() + 28_800_000),
     status: AuctionStatus.Active,
     isFeatured: false,
+    condition: 'Near Mint',
+    reserveMet: true,
+    seller: { id: 'u8', name: 'Classic Glass', rating: 4.7, totalAuctions: 103 },
+  },
+  // --- Test states ---
+  {
+    id: '9',
+    title: '1968 Heuer Carrera 2447NS — Black Dial',
+    description: 'A handsome example of the second-execution Carrera reference 2447NS, produced for just a few years in the late 1960s. The black-on-white dial layout is the most photogenic of the line and remains highly collectible. Original Valjoux 72 movement, factory crown, unpolished stainless-steel case. Acquired from a single-owner Swiss estate; serviced 2024 by an authorised independent watchmaker. Condition: Excellent (8/10).',
+    imageUrls: [],
+    categoryId: 'watches',
+    sellerId: 'u9',
+    startingPrice: 850_000,
+    currentBid: 850_000,
+    totalBids: 0,
+    watchers: 134,
+    startsAt: new Date(Date.now() + 7_200_000),   // starts in 2 h
+    endsAt:   new Date(Date.now() + 93_600_000),  // ends in ~26 h
+    status: AuctionStatus.Scheduled,
+    isFeatured: false,
+    condition: 'Excellent (8/10)',
+    reserveMet: false,
+    seller: { id: 'u9', name: 'Atelier Forty Six', rating: 4.9, totalAuctions: 218 },
+  },
+  {
+    id: '10',
+    title: 'Vintage Rolex Submariner 5513 Maxi Dial',
+    description: 'Original matte dial, all-original case, service box included.',
+    imageUrls: [],
+    categoryId: 'watches',
+    sellerId: 'u1',
+    winnerId: MOCK_CURRENT_USER_ID,
+    startingPrice: 300_000,
+    currentBid: 940_000,
+    totalBids: 32,
+    watchers: 189,
+    startsAt: new Date(Date.now() - 172_800_000),
+    endsAt:   new Date(Date.now() - 3_600_000),   // ended 1 h ago
+    status: AuctionStatus.Won,
+    isFeatured: false,
+    condition: 'Very Good',
+    reserveMet: true,
+    seller: { id: 'u1', name: 'Marcus W.', rating: 4.9, totalAuctions: 218 },
+  },
+  {
+    id: '11',
+    title: 'Patek Philippe Calatrava 3796 White Gold',
+    description: 'Ultra-thin dress watch, original crown, papers from 1982.',
+    imageUrls: [],
+    categoryId: 'watches',
+    sellerId: 'u4',
+    winnerId: 'mw_collector',
+    startingPrice: 400_000,
+    currentBid: 720_000,
+    totalBids: 19,
+    watchers: 94,
+    startsAt: new Date(Date.now() - 259_200_000),
+    endsAt:   new Date(Date.now() - 7_200_000),   // ended 2 h ago
+    status: AuctionStatus.Lost,
+    isFeatured: false,
+    condition: 'Excellent',
+    reserveMet: true,
+    seller: { id: 'u4', name: 'Atelier Forty Six', rating: 4.9, totalAuctions: 311 },
   },
 ]
 

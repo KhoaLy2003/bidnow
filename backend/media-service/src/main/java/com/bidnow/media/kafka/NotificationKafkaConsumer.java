@@ -1,5 +1,6 @@
 package com.bidnow.media.kafka;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
 import com.bidnow.common.dto.event.BidPlacedEvent;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Loggable
 public class NotificationKafkaConsumer {
 
     private final NotificationService notificationService;

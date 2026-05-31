@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, LoginResponse } from '@/types/auth';
+import { User, LoginResponse } from '@/types/api/auth.api';
 
 interface AuthState {
   user: User | null;
@@ -26,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
           user: {
             id: response.userId,
             email: response.email,
+            role: response.role,
             // These will be updated from profile if needed
             accountStatus: 'ACTIVE', 
             isEmailVerified: true,

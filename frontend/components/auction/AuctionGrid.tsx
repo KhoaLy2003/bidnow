@@ -1,6 +1,6 @@
 import { AuctionCard } from './AuctionCard'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { Auction } from '@/types/auction'
+import type { Auction } from '@/types/ui/auction.ui'
 import { cn } from '@/lib/utils'
 
 interface AuctionGridProps {

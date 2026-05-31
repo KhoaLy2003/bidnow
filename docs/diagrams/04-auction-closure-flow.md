@@ -10,7 +10,7 @@ sequenceDiagram
     participant MQ as Message Broker
     participant WS as Wallet Service
     participant DB_WS as Wallet DB
-    participant NS as Notification Service
+    participant NS as Media Service
     actor Users as Winner & Losers
 
     Note over Job, Users: Automated Auction Closure Process

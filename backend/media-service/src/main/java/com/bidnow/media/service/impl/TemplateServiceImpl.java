@@ -1,5 +1,6 @@
 package com.bidnow.media.service.impl;
 
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Loggable
 public class TemplateServiceImpl implements TemplateService {
 
     private final NotificationTemplateRepository templateRepository;
@@ -114,13 +116,13 @@ public class TemplateServiceImpl implements TemplateService {
         if (criteria.getTypes() != null && !criteria.getTypes().isEmpty()) {
             builder.withIn("type", criteria.getTypes().stream()
                     .map(NotificationChannel::valueOf)
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         if (criteria.getLanguages() != null && !criteria.getLanguages().isEmpty()) {
             builder.withIn("language", criteria.getLanguages().stream()
                     .map(NotificationLanguage::valueOf)
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         builder.withIfPresent("active", SearchOperator.EQUAL, criteria.getActive());

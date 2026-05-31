@@ -1,4 +1,5 @@
 export enum AuctionStatus {
+  Scheduled  = 'scheduled',
   Active     = 'active',
   EndingSoon = 'ending-soon',
   Critical   = 'critical',
@@ -17,6 +18,12 @@ export interface StatusTokens {
 
 export function getStatusTokens(status: AuctionStatus): StatusTokens {
   const map: Record<AuctionStatus, StatusTokens> = {
+    [AuctionStatus.Scheduled]: {
+      bg:     'var(--color-auction-scheduled-bg)',
+      text:   'var(--color-auction-scheduled-text)',
+      border: 'var(--color-auction-scheduled-border)',
+      accent: 'var(--color-auction-scheduled-accent)',
+    },
     [AuctionStatus.Active]: {
       bg:     'var(--color-auction-active-bg)',
       text:   'var(--color-auction-active-text)',

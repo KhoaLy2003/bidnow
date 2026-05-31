@@ -109,7 +109,7 @@ Flow:
    - Create REFUND transaction
    - available_balance += locked_amount
    - Update lock status = RELEASED
-4. Notify users via Notification Service
+4. Notify users via Media Service
 ```
 
 ---

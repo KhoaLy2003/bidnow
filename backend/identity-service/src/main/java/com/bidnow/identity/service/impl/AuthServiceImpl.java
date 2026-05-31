@@ -1,12 +1,17 @@
 package com.bidnow.identity.service.impl;
 
+import com.bidnow.common.annotation.Audit;
+import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.event.UserRegisteredEvent;
 import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
+import com.bidnow.common.enums.AuditAction;
 import com.bidnow.common.exception.BadRequestException;
+import com.bidnow.common.exception.InternalServerException;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.exception.UnauthorizedException;
+import com.bidnow.common.util.AuditContextHolder;
 import com.bidnow.common.util.StringUtils;
 import com.bidnow.identity.domain.entity.RefreshToken;
 import com.bidnow.identity.domain.entity.User;
@@ -32,14 +37,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.DigestUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Loggable(logResult = false)
 public class AuthServiceImpl implements AuthService {
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
@@ -67,6 +75,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.CREATE, entityType = "User", reason = "User registered")
     public RegisterResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email already registered", ErrorCodes.INVALID_INPUT);
@@ -89,6 +98,8 @@ public class AuthServiceImpl implements AuthService {
 
         user = userRepository.save(user);
 
+        AuditContextHolder.setNewState(user);
+
         kafkaProducer.publishUserVerificationRequestedEvent(
                 UserVerificationRequestedEvent.builder()
                         .userId(user.getId())
@@ -109,6 +120,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.STATE_CHANGE, entityType = "User", reason = "User email verified")
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCodes.NOT_FOUND));
@@ -139,6 +151,17 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Invalid OTP", ErrorCodes.OTP_INVALID);
         }
 
+        // Snapshot old state before modifications for audit delta
+        AuditContextHolder.setOldState(User.builder()
+                .id(user.getId())
+                .isEmailVerified(user.getIsEmailVerified())
+                .isActive(user.getIsActive())
+                .accountStatus(user.getAccountStatus())
+                .verificationOtp(user.getVerificationOtp())
+                .otpExpiresAt(user.getOtpExpiresAt())
+                .otpFailedAttempts(user.getOtpFailedAttempts())
+                .build());
+
         // Scenario 1: Valid OTP — activate account and clear OTP fields
         user.setIsEmailVerified(true);
         user.setIsActive(true);
@@ -147,6 +170,7 @@ public class AuthServiceImpl implements AuthService {
         user.setOtpExpiresAt(null);
         user.setOtpFailedAttempts(0);
         user = userRepository.save(user);
+        AuditContextHolder.setNewState(user);
 
         // Synchronously create default profile in User Service
         userServiceClient.createUserProfile(CreateUserProfileRequest.builder()
@@ -154,7 +178,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .build());
 
-        // Emit USER_REGISTERED event (triggers Welcome Email in Notification Service)
+        // Emit USER_REGISTERED event (triggers Welcome Email in Media Service)
         kafkaProducer.publishUserRegisteredEvent(
                 UserRegisteredEvent.builder()
                         .userId(user.getId())
@@ -173,6 +197,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.STATE_CHANGE, entityType = "User", reason = "OTP resent")
     public ResendOtpResponse resendOtp(ResendOtpRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found", ErrorCodes.NOT_FOUND));
@@ -192,10 +217,20 @@ public class AuthServiceImpl implements AuthService {
         String otp = StringUtils.generateOtp();
         LocalDateTime otpExpiresAt = LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES);
 
+        AuditContextHolder.setOldState(User.builder()
+                .isEmailVerified(user.getIsEmailVerified())
+                .isActive(user.getIsActive())
+                .accountStatus(user.getAccountStatus())
+                .verificationOtp(user.getVerificationOtp())
+                .otpExpiresAt(user.getOtpExpiresAt())
+                .otpFailedAttempts(user.getOtpFailedAttempts())
+                .build());
+
         user.setVerificationOtp(otp);
         user.setOtpExpiresAt(otpExpiresAt);
-        user.setOtpFailedAttempts(0); // reset failed counter on resend
-        userRepository.save(user);
+        user.setOtpFailedAttempts(0);
+        user = userRepository.save(user);
+        AuditContextHolder.setNewState(user);
 
         kafkaProducer.publishUserVerificationRequestedEvent(
                 UserVerificationRequestedEvent.builder()
@@ -220,21 +255,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.LOGIN, entityType = "User", reason = "User logged in", captureDelta = false)
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials", ErrorCodes.UNAUTHORIZED));
 
-        if (user.getAccountStatus() == AccountStatus.PENDING_VERIFICATION) {
-            throw new UnauthorizedException("Email not verified. Please verify your OTP first.", ErrorCodes.UNAUTHORIZED);
-        }
-
-        if (!Boolean.TRUE.equals(user.getIsActive())) {
-            throw new UnauthorizedException("Account is disabled", ErrorCodes.UNAUTHORIZED);
-        }
-
-        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
-            throw new UnauthorizedException("Account is temporarily locked", ErrorCodes.UNAUTHORIZED);
-        }
+        validateAccountAccess(user);
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             int attempts = user.getFailedLoginAttempts() + 1;
@@ -252,27 +278,31 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        String accessToken = jwtService.generateToken(user);
-        String rawRefreshToken = UUID.randomUUID().toString();
-        String tokenHash = DigestUtils.md5DigestAsHex(rawRefreshToken.getBytes());
-
-        RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
-                .tokenHash(tokenHash)
-                .expiresAt(LocalDateTime.now().plusSeconds(jwtRefreshExpiration / 1000))
-                .isRevoked(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-        refreshTokenRepository.save(refreshToken);
-
         log.info("User logged in successfully: {}", user.getEmail());
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .expiresIn(jwtExpiration)
-                .userId(user.getId())
-                .email(user.getEmail())
-                .refreshToken(rawRefreshToken)
-                .build();
+        return issueTokenPair(user);
+    }
+
+    private void validateAccountAccess(User user) {
+        switch (user.getAccountStatus()) {
+            case PENDING_VERIFICATION ->
+                    throw new UnauthorizedException("Email not verified. Please verify your OTP first.", ErrorCodes.UNAUTHORIZED);
+            case SUSPENDED ->
+                    throw new UnauthorizedException("Your account has been suspended. Please contact support.", ErrorCodes.ACCOUNT_SUSPENDED);
+            case BANNED ->
+                    throw new UnauthorizedException("Your account has been permanently banned.", ErrorCodes.ACCOUNT_BANNED);
+            case ACTIVE -> {
+                // allow access
+            }
+            default -> throw new InternalServerException("Unknown account status", ErrorCodes.UNEXPECTED_ERROR);
+        }
+
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new UnauthorizedException("Account is disabled", ErrorCodes.UNAUTHORIZED);
+        }
+
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
+            throw new UnauthorizedException("Account is temporarily locked", ErrorCodes.UNAUTHORIZED);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -282,9 +312,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public LoginResponse refresh(String rawRefreshToken) {
-        String tokenHash = DigestUtils.md5DigestAsHex(rawRefreshToken.getBytes());
-
-        RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHash)
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hashToken(rawRefreshToken))
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token", ErrorCodes.UNAUTHORIZED));
 
         if (Boolean.TRUE.equals(stored.getIsRevoked())) {
@@ -299,35 +327,52 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(stored);
 
         User user = stored.getUser();
-        String newRawToken = UUID.randomUUID().toString();
-        String newHash = DigestUtils.md5DigestAsHex(newRawToken.getBytes());
+        validateAccountAccess(user);
 
-        RefreshToken newRefreshToken = RefreshToken.builder()
-                .user(user)
-                .tokenHash(newHash)
-                .expiresAt(LocalDateTime.now().plusSeconds(jwtRefreshExpiration / 1000))
-                .isRevoked(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-        refreshTokenRepository.save(newRefreshToken);
-
-        String accessToken = jwtService.generateToken(user);
-        return LoginResponse.builder()
-                .accessToken(accessToken)
-                .expiresIn(jwtExpiration)
-                .userId(user.getId())
-                .email(user.getEmail())
-                .refreshToken(newRawToken)
-                .build();
+        return issueTokenPair(user);
     }
 
     @Override
     @Transactional
+    @Audit(action = AuditAction.LOGOUT, entityType = "User", reason = "User logged out", captureDelta = false)
     public void logout(String rawRefreshToken) {
-        String tokenHash = DigestUtils.md5DigestAsHex(rawRefreshToken.getBytes());
-        refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
+        refreshTokenRepository.findByTokenHash(hashToken(rawRefreshToken)).ifPresent(token -> {
             token.setIsRevoked(true);
             refreshTokenRepository.save(token);
         });
+    }
+
+    private LoginResponse issueTokenPair(User user) {
+        String rawToken = UUID.randomUUID().toString();
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .tokenHash(hashToken(rawToken))
+                .expiresAt(LocalDateTime.now().plusSeconds(jwtRefreshExpiration / 1000))
+                .isRevoked(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        refreshTokenRepository.save(refreshToken);
+        return LoginResponse.builder()
+                .accessToken(jwtService.generateToken(user))
+                .expiresIn(jwtExpiration)
+                .userId(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .refreshToken(rawToken)
+                .build();
+    }
+
+    private String hashToken(String raw) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new InternalServerException("Hash algorithm not available", ErrorCodes.UNEXPECTED_ERROR);
+        }
     }
 }

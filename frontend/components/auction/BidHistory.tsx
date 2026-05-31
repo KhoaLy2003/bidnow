@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { UserAvatar } from '@/components/shared/UserAvatar'
 import { formatCurrency, formatRelativeTime } from '@/lib/format'
-import type { BidHistoryItem } from '@/types/auction'
+import type { BidHistoryItem } from '@/types/ui/auction.ui'
 import { cn } from '@/lib/utils'
 
 interface BidHistoryProps {
@@ -59,7 +59,7 @@ export function BidHistory({ items, onLoadMore, hasMore, className }: BidHistory
                 </div>
                 <span
                   className={cn(
-                    'font-mono font-semibold text-sm shrink-0',
+                    'font-mono font-medium text-sm shrink-0',
                     item.isWinning && 'text-[var(--color-success-text)]',
                   )}
                 >

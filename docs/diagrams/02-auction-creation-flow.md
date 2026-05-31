@@ -10,7 +10,7 @@ sequenceDiagram
     participant DB_AS as Auction DB
     participant WS as Wallet Service
     participant MQ as Message Broker
-    participant NS as Notification Service
+    participant NS as Media Service
 
     Note over Seller, NS: Auction Creation Process
     

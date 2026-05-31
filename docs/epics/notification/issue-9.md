@@ -1,10 +1,10 @@
-### Issue #9: Notification Service - Core Infrastructure Setup
+### Issue #9: Media Service - Core Infrastructure Setup
 
 **Title:** `Setup notification service infrastructure and database schema`
 
 **Description:**
 
-Set up the foundational infrastructure for the Notification Service including database schema, message broker integration, and WebSocket support for real-time notifications.
+Set up the foundational infrastructure for the Media Service including database schema, message broker integration, and WebSocket support for real-time notifications.
 
 **Tasks:**
 
@@ -40,7 +40,7 @@ Set up the foundational infrastructure for the Notification Service including da
 
 **Deliverables:**
 
-- Working Notification Service that can consume events
+- Working Media Service that can consume events
 - Database schema created and migrations ready
 - WebSocket server running and accepting connections
 - Health check endpoint functional

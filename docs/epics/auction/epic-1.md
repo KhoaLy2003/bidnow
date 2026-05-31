@@ -52,7 +52,7 @@ This epic encompasses all functionality related to creating, managing, and opera
 ❌ Direct bidding functionality (handled by Bidding Service)
 ❌ Payment processing (handled by Wallet Service)
 ❌ User authentication (handled by Identity Service)
-❌ Real-time WebSocket notifications (handled by Notification Service)
+❌ Real-time WebSocket notifications (handled by Media Service)
 ❌ Advanced analytics/reporting dashboards
 
 ---
@@ -66,7 +66,7 @@ This epic encompasses all functionality related to creating, managing, and opera
   - Identity Service (user validation)
   - Wallet Service (deposit validation)
   - Bidding Service (current bid synchronization)
-  - Notification Service (event consumers)
+  - Media Service (event consumers)
 
 ### Key Components
 
@@ -80,7 +80,7 @@ This epic encompasses all functionality related to creating, managing, and opera
 ```
 Seller → API Gateway → Auction Service → PostgreSQL
                     ↓
-                Message Broker → Notification Service
+                Message Broker → Media Service
                     ↑
 Bidding Service ────┘ (BID_PLACED event)
 ```

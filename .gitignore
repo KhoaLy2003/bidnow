@@ -37,5 +37,16 @@ Thumbs.db
 # Agent
 .agent/
 .gemini/
+.claude/
 
-#Docs
+# Docs
+# docs/superpowers/
+docs/design/
+docs/database/jobrunr/
+
+# Custom Ignores
+_backup/
+**/_backup/
+**/.*/
+!/.github/
+testing/

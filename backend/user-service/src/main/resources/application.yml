@@ -22,7 +22,12 @@ spring:
     enabled: true
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    template:
+      observation-enabled: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
       group-id: user-service-group
       auto-offset-reset: earliest
@@ -32,6 +37,8 @@ spring:
         spring.json.trusted.packages: "*"
         reconnect.backoff.ms: 5000
         reconnect.backoff.max.ms: 30000
+    listener:
+      observation-enabled: true
 
 eureka:
   instance:
@@ -41,6 +48,9 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0  # reduce to 0.1 or lower in production
   endpoints:
     web:
       exposure:
