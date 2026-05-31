@@ -5,8 +5,9 @@ import Link  from 'next/link'
 import { Card }           from '@/components/ui/card'
 import { StatusBadge }    from '@/components/auction/StatusBadge'
 import { CountdownTimer } from '@/components/auction/CountdownTimer'
-import { formatCurrency } from '@/lib/format'
-import { AuctionStatus }  from '@/lib/design-tokens'
+import { formatCurrency }   from '@/lib/format'
+import { AuctionStatus }    from '@/lib/design-tokens'
+import { useSecureImage }   from '@/hooks/useSecureImage'
 import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
 import { cn } from '@/lib/utils'
 
@@ -16,8 +17,9 @@ interface AuctionBrowseCardHorizontalProps {
 }
 
 export function AuctionBrowseCardHorizontal({ item, className }: AuctionBrowseCardHorizontalProps) {
-  const isClosed = item.status === AuctionStatus.Closed
-  const imageUrl = item.primaryImageUrl ?? '/placeholder-auction.png'
+  const isClosed      = item.status === AuctionStatus.Closed
+  const resolvedImage = useSecureImage(item.primaryImageUrl)
+  const imageUrl      = resolvedImage ?? '/placeholder-auction.png'
 
   return (
     <Link href={`/auctions/${item.id}`} className="group block">

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useSecureImage } from '@/hooks/useSecureImage'
 import type { AuctionImage } from '@/types/ui/auction.ui'
 
 interface AuctionGalleryProps {
@@ -11,13 +12,49 @@ interface AuctionGalleryProps {
   readonly title:  string
 }
 
+interface ThumbnailProps {
+  img:      AuctionImage
+  isActive: boolean
+  index:    number
+  title:    string
+  onClick:  () => void
+}
+
+function Thumbnail({ img, isActive, index, title, onClick }: ThumbnailProps) {
+  const src = useSecureImage(img.thumbnailUrl || img.imageUrl)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'relative size-[72px] shrink-0 overflow-hidden rounded-lg border transition-[outline,outline-offset] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]',
+        isActive
+          ? 'outline-2 outline-[var(--color-text-brand)] outline-offset-2'
+          : 'outline-none',
+      )}
+    >
+      {src && (
+        <Image
+          src={src}
+          alt={`${title} — thumbnail ${index + 1}`}
+          fill
+          className="object-cover"
+          sizes="72px"
+        />
+      )}
+    </button>
+  )
+}
+
 export function AuctionGallery({ images, title }: AuctionGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [dragStartX, setDragStartX] = useState<number | null>(null)
+  const [dragStartX, setDragStartX]   = useState<number | null>(null)
 
-  const sorted     = [...images].sort((a, b) => a.displayOrder - b.displayOrder)
-  const hasImages  = sorted.length > 0
+  const sorted      = [...images].sort((a, b) => a.displayOrder - b.displayOrder)
+  const hasImages   = sorted.length > 0
   const activeImage = sorted[activeIndex]
+
+  const resolvedActiveUrl = useSecureImage(activeImage?.imageUrl)
 
   function cancelDrag() { setDragStartX(null) }
 
@@ -40,9 +77,9 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
         onPointerCancel={cancelDrag}
         onPointerLeave={cancelDrag}
       >
-        {hasImages ? (
+        {hasImages && resolvedActiveUrl ? (
           <Image
-            src={activeImage.imageUrl}
+            src={resolvedActiveUrl}
             alt={`${title} — image ${activeIndex + 1}`}
             fill
             className="object-cover"
@@ -65,25 +102,14 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
       {hasImages && sorted.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {sorted.map((img, i) => (
-            <button
+            <Thumbnail
               key={img.id}
-              type="button"
+              img={img}
+              isActive={i === activeIndex}
+              index={i}
+              title={title}
               onClick={() => setActiveIndex(i)}
-              className={cn(
-                'relative size-[72px] shrink-0 overflow-hidden rounded-lg border transition-[outline,outline-offset] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]',
-                i === activeIndex
-                  ? 'outline-2 outline-[var(--color-text-brand)] outline-offset-2'
-                  : 'outline-none',
-              )}
-            >
-              <Image
-                src={img.thumbnailUrl || img.imageUrl}
-                alt={`${title} — thumbnail ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes="72px"
-              />
-            </button>
+            />
           ))}
         </div>
       )}

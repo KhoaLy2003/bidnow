@@ -5,8 +5,9 @@ import Link  from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge }    from '@/components/auction/StatusBadge'
 import { CountdownTimer } from '@/components/auction/CountdownTimer'
-import { formatCurrency } from '@/lib/format'
-import { AuctionStatus }  from '@/lib/design-tokens'
+import { formatCurrency }   from '@/lib/format'
+import { AuctionStatus }    from '@/lib/design-tokens'
+import { useSecureImage }   from '@/hooks/useSecureImage'
 import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
 import { cn } from '@/lib/utils'
 
@@ -16,11 +17,12 @@ interface AuctionBrowseCardProps {
 }
 
 export function AuctionBrowseCard({ item, className }: AuctionBrowseCardProps) {
-  const isClosed = item.status === AuctionStatus.Closed
-  const isEnding =
+  const isClosed       = item.status === AuctionStatus.Closed
+  const isEnding       =
     item.status === AuctionStatus.EndingSoon ||
     item.status === AuctionStatus.Critical
-  const imageUrl = item.primaryImageUrl ?? '/placeholder-auction.png'
+  const resolvedImage  = useSecureImage(item.primaryImageUrl)
+  const imageUrl       = resolvedImage ?? '/placeholder-auction.png'
 
   return (
     // w-full fills the grid cell; h-full lets the card stretch to row height
