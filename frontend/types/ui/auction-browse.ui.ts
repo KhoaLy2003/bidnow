@@ -4,11 +4,11 @@ export interface AuctionBrowseItem {
   id:              string
   title:           string
   primaryImageUrl: string | null
-  currentPrice:    number        // cents
+  currentPrice:    number        // dollars
   totalBids:       number
   endTime:         Date
   status:          AuctionStatus
-  buyNowPrice:     number | null // cents, null if not available
+  buyNowPrice:     number | null // dollars, null if not available
   categoryName:    string
 }
 

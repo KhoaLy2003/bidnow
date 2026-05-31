@@ -14,8 +14,8 @@ export interface SellerAuction {
   categoryId:    string
   categoryName?: string
   sellerId:      string
-  startingPrice: number   // cents
-  currentBid:    number   // cents
+  startingPrice: number   // dollars
+  currentBid:    number   // dollars
   totalBids:     number
   startsAt:      Date
   endsAt:        Date
@@ -26,7 +26,7 @@ export interface SellerAuction {
 export interface SellerBidItem {
   id:         string
   bidderName: string
-  amount:     number   // cents
+  amount:     number   // dollars
   placedAt:   Date
   isAutoBid:  boolean
   isWinning:  boolean
@@ -45,10 +45,10 @@ export interface CreateAuctionFormData {
   // Step 2 — Images
   images:      File[]
   // Step 3 — Pricing & Duration
-  startingPrice: number   // cents
-  bidIncrement:  number   // cents
-  buyNowPrice:   number   // cents (0 = not set)
-  depositAmount: number   // cents
+  startingPrice: number   // dollars
+  bidIncrement:  number   // dollars
+  buyNowPrice:   number   // dollars (0 = not set)
+  depositAmount: number   // dollars
   durationDays:  number
   startType:     'now' | 'scheduled'
   scheduledStartTime: Date | null

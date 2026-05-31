@@ -13,8 +13,6 @@ interface PriceRangeFilterProps {
 }
 
 export function PriceRangeFilter({ value, max, onChange }: PriceRangeFilterProps) {
-  const maxDollars = Math.round(max / 100)
-
   // Draft state is only active while the input is focused.
   // When not focused, the displayed value is derived directly from the prop.
   const [minFocused, setMinFocused] = useState(false)
@@ -22,69 +20,63 @@ export function PriceRangeFilter({ value, max, onChange }: PriceRangeFilterProps
   const [draftMin,   setDraftMin]   = useState('')
   const [draftMax,   setDraftMax]   = useState('')
 
-  const displayMin = minFocused ? draftMin : String(Math.round(value.min / 100))
-  const displayMax = maxFocused ? draftMax : String(Math.round(value.max / 100))
+  const displayMin = minFocused ? draftMin : String(value.min)
+  const displayMax = maxFocused ? draftMax : String(value.max)
 
   function handleMinFocus() {
-    setDraftMin(String(Math.round(value.min / 100)))
+    setDraftMin(String(value.min))
     setMinFocused(true)
   }
 
   function handleMaxFocus() {
-    setDraftMax(String(Math.round(value.max / 100)))
+    setDraftMax(String(value.max))
     setMaxFocused(true)
   }
 
   function handleMinChange(raw: string) {
     setDraftMin(raw)
-    const dollars = parseInt(raw, 10)
+    const dollars = parseFloat(raw)
     if (isNaN(dollars) || dollars < 0) return
-    const cents = dollars * 100
-    if (cents > value.max) return  // would invert the range — wait for blur to clamp
-    onChange({ min: cents, max: value.max })
+    if (dollars > value.max) return  // would invert the range — wait for blur to clamp
+    onChange({ min: dollars, max: value.max })
   }
 
   function handleMaxChange(raw: string) {
     setDraftMax(raw)
-    const dollars = parseInt(raw, 10)
+    const dollars = parseFloat(raw)
     if (isNaN(dollars) || dollars < 0) return
-    const cents = dollars * 100
-    if (cents < value.min) return  // would invert the range — wait for blur to clamp
-    onChange({ min: value.min, max: Math.min(cents, max) })
+    if (dollars < value.min) return  // would invert the range — wait for blur to clamp
+    onChange({ min: value.min, max: Math.min(dollars, max) })
   }
 
   function handleMinBlur() {
     setMinFocused(false)
-    const dollars = parseInt(draftMin, 10)
+    const dollars = parseFloat(draftMin)
     if (isNaN(dollars) || dollars < 0) {
       onChange({ min: 0, max: value.max })
     } else {
-      // Clamp: min cannot exceed max
-      const cents = Math.max(0, Math.min(dollars * 100, value.max))
-      onChange({ min: cents, max: value.max })
+      onChange({ min: Math.max(0, Math.min(dollars, value.max)), max: value.max })
     }
   }
 
   function handleMaxBlur() {
     setMaxFocused(false)
-    const dollars = parseInt(draftMax, 10)
+    const dollars = parseFloat(draftMax)
     if (isNaN(dollars) || dollars < 0) {
       onChange({ min: value.min, max })
     } else {
-      // Clamp: max cannot go below min or above ceiling
-      const cents = Math.max(value.min, Math.min(dollars * 100, max))
-      onChange({ min: value.min, max: cents })
+      onChange({ min: value.min, max: Math.max(value.min, Math.min(dollars, max)) })
     }
   }
 
   const minInvalid = minFocused && (() => {
-    const d = parseInt(draftMin, 10)
-    return !isNaN(d) && d * 100 > value.max
+    const d = parseFloat(draftMin)
+    return !isNaN(d) && d > value.max
   })()
 
   const maxInvalid = maxFocused && (() => {
-    const d = parseInt(draftMax, 10)
-    return !isNaN(d) && (d * 100 < value.min || d * 100 > max)
+    const d = parseFloat(draftMax)
+    return !isNaN(d) && (d < value.min || d > max)
   })()
 
   return (
@@ -92,7 +84,7 @@ export function PriceRangeFilter({ value, max, onChange }: PriceRangeFilterProps
       <Slider
         min={0}
         max={max}
-        step={100}
+        step={1}
         value={[value.min, value.max]}
         onValueChange={(rawValue) => {
           const vals = Array.isArray(rawValue) ? rawValue : [rawValue]
@@ -114,7 +106,7 @@ export function PriceRangeFilter({ value, max, onChange }: PriceRangeFilterProps
             onFocus={handleMinFocus}
             onBlur={handleMinBlur}
             min={0}
-            max={Math.round(value.max / 100)}
+            max={value.max}
             placeholder="Min"
             className={cn(
               'h-8 pl-6 text-sm font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
@@ -136,8 +128,8 @@ export function PriceRangeFilter({ value, max, onChange }: PriceRangeFilterProps
             onChange={(e) => handleMaxChange(e.target.value)}
             onFocus={handleMaxFocus}
             onBlur={handleMaxBlur}
-            min={Math.round(value.min / 100)}
-            max={maxDollars}
+            min={value.min}
+            max={max}
             placeholder="Max"
             className={cn(
               'h-8 pl-6 text-sm font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',

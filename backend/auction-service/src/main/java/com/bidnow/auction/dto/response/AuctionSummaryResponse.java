@@ -40,7 +40,7 @@ public class AuctionSummaryResponse {
     @Schema(description = "Current highest bid amount")
     private BigDecimal currentPrice;
 
-    @Schema(description = "Instant purchase price (null if not available)")
+    @Schema(description = "Instant purchase price (null if not available)", nullable = true)
     private BigDecimal buyNowPrice;
 
     @Schema(description = "Auction status")

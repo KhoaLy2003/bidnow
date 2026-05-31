@@ -13,15 +13,14 @@ export function formatEndOfDay(date: Date): string {
 }
 
 /**
- * Format an amount in cents as a locale currency string.
- * e.g. formatCurrency(150000) → "$1,500"
+ * Format a dollar amount as a locale currency string.
+ * e.g. formatCurrency(1500) → "$1,500"
  */
 export function formatCurrency(
-  cents: number,
+  dollars: number,
   locale = 'en-US',
   currency = 'USD',
 ): string {
-  const dollars = cents / 100
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

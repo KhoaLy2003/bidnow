@@ -16,10 +16,10 @@ export interface Auction {
   categoryId:    string
   sellerId:      string
   winnerId?:     string
-  startingPrice: number        // cents
-  currentBid:    number        // cents
-  reservePrice?: number        // cents
-  buyNowPrice?:  number        // cents
+  startingPrice: number        // dollars
+  currentBid:    number        // dollars
+  reservePrice?: number        // dollars
+  buyNowPrice?:  number        // dollars
   totalBids:     number
   watchers:      number
   startsAt:      Date
@@ -35,7 +35,7 @@ export interface Bid {
   id:        string
   auctionId: string
   bidderId:  string
-  amount:    number            // cents
+  amount:    number            // dollars
   placedAt:  Date
   isAutoBid: boolean
 }
