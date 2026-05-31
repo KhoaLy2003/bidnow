@@ -17,8 +17,8 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Full auction details")
-public class AuctionResponse {
+@Schema(description = "Full auction details returned to the authenticated seller after write operations")
+public class SellerAuctionResponse {
 
     @Schema(description = "Auction UUID")
     private UUID id;

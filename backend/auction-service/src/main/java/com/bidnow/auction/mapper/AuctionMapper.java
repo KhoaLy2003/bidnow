@@ -4,10 +4,13 @@ import com.bidnow.auction.domain.entity.AuctionCategory;
 import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionCategoryResponse;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionImageResponse;
-import com.bidnow.auction.dto.response.AuctionResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.common.dto.UserSummaryResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -18,9 +21,9 @@ import java.util.List;
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public abstract class AuctionMapper {
 
-    public AuctionResponse toResponse(AuctionItem item, List<AuctionImage> images) {
+    public SellerAuctionResponse toResponse(AuctionItem item, List<AuctionImage> images) {
         if (item == null) return null;
-        return AuctionResponse.builder()
+        return SellerAuctionResponse.builder()
                 .id(item.getId())
                 .sellerId(item.getSellerId())
                 .title(item.getTitle())
@@ -57,6 +60,7 @@ public abstract class AuctionMapper {
                 .categoryName(category != null ? category.getName() : null)
                 .startingPrice(item.getStartingPrice())
                 .currentPrice(item.getCurrentPrice())
+                .buyNowPrice(item.getBuyNowPrice())
                 .status(item.getStatus())
                 .startTime(item.getStartTime())
                 .endTime(item.getEndTime())
@@ -85,6 +89,49 @@ public abstract class AuctionMapper {
                 .id(category.getId())
                 .name(category.getName())
                 .slug(category.getSlug())
+                .build();
+    }
+
+    public AuctionDetailResponse toDetailResponse(AuctionItem item, List<AuctionImage> images, UserSummaryResponse seller) {
+        if (item == null) return null;
+        return AuctionDetailResponse.builder()
+                .id(item.getId())
+                .title(item.getTitle())
+                .description(item.getDescription())
+                .category(toCategory(item.getCategory()))
+                .startingPrice(item.getStartingPrice())
+                .bidIncrement(item.getBidIncrement())
+                .buyNowPrice(item.getBuyNowPrice())
+                .depositAmount(item.getDepositAmount())
+                .currentPrice(item.getCurrentPrice())
+                .currentWinnerId(item.getCurrentWinnerId())
+                .totalBids(item.getTotalBids())
+                .status(item.getStatus())
+                .startTime(item.getStartTime())
+                .endTime(item.getEndTime())
+                .originalEndTime(item.getOriginalEndTime())
+                .extensionCount(item.getExtensionCount())
+                .completedAt(item.getCompletedAt())
+                .winnerId(item.getWinnerId())
+                .images(images.stream().map(this::toImageResponse).toList())
+                .seller(seller)
+                .createdAt(item.getCreatedAt())
+                .build();
+    }
+
+    public AuctionBrowseItem toBrowseItem(AuctionItem item, AuctionImage primaryImage) {
+        if (item == null) return null;
+        AuctionCategory category = item.getCategory();
+        return AuctionBrowseItem.builder()
+                .id(item.getId())
+                .title(item.getTitle())
+                .primaryImageUrl(primaryImage != null ? primaryImage.getImageUrl() : null)
+                .currentPrice(item.getCurrentPrice())
+                .totalBids(item.getTotalBids())
+                .endTime(item.getEndTime())
+                .status(item.getStatus())
+                .buyNowPrice(item.getBuyNowPrice())
+                .categoryName(category != null ? category.getName() : null)
                 .build();
     }
 

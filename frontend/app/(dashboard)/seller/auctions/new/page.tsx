@@ -318,8 +318,8 @@ export default function CreateAuctionPage() {
                 error={errors.startingPrice}
               >
                 <CurrencyInput
-                  valueCents={data.startingPrice}
-                  onChangeCents={cents => update('startingPrice', cents)}
+                  value={data.startingPrice}
+                  onChange={v => update('startingPrice', v)}
                   placeholder="0.00"
                   hasError={!!errors.startingPrice}
                 />
@@ -330,8 +330,8 @@ export default function CreateAuctionPage() {
                 error={errors.bidIncrement}
               >
                 <CurrencyInput
-                  valueCents={data.bidIncrement}
-                  onChangeCents={cents => update('bidIncrement', cents)}
+                  value={data.bidIncrement}
+                  onChange={v => update('bidIncrement', v)}
                   placeholder="0.00"
                   hasError={!!errors.bidIncrement}
                 />
@@ -342,8 +342,8 @@ export default function CreateAuctionPage() {
                 error={errors.buyNowPrice}
               >
                 <CurrencyInput
-                  valueCents={data.buyNowPrice}
-                  onChangeCents={cents => update('buyNowPrice', cents)}
+                  value={data.buyNowPrice}
+                  onChange={v => update('buyNowPrice', v)}
                   placeholder="0.00"
                   hasError={!!errors.buyNowPrice}
                 />
@@ -351,8 +351,8 @@ export default function CreateAuctionPage() {
 
               <FieldWrap label="Reserve price (optional)" helper="Hidden from bidders">
                 <CurrencyInput
-                  valueCents={0}
-                  onChangeCents={() => {}}
+                  value={0}
+                  onChange={() => {}}
                   placeholder="0.00"
                   readOnly
                 />
@@ -361,9 +361,9 @@ export default function CreateAuctionPage() {
 
             {errors.depositAmount && <p className="text-sm text-destructive">{errors.depositAmount}</p>}
             <DepositRangeInput
-              depositCents={data.depositAmount}
-              startingPriceCents={data.startingPrice}
-              onChange={cents => update('depositAmount', cents)}
+              deposit={data.depositAmount}
+              startingPrice={data.startingPrice}
+              onChange={v => update('depositAmount', v)}
             />
 
             <FieldWrap label="Start time" required error={errors.startTime}>

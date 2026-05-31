@@ -1,12 +1,18 @@
+import { mapAuctionDetailResponse, mapAuctionBrowseItem, mapCategoryCount } from '@/types/mappers/auction.mapper'
 import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
-import type { Auction, BidHistoryItem } from '@/types/ui/auction.ui'
+import type { Auction, BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
+import type { AuctionBrowseItem, CategoryCount } from '@/types/ui/auction-browse.ui'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
-import type { 
-  CreateAuctionRequest, 
-  UpdateAuctionRequest, 
-  AuctionResponse, 
+import type {
+  CreateAuctionRequest,
+  UpdateAuctionRequest,
+  AuctionResponse,
   AuctionSummaryResponse,
-  AuctionCategoryResponse
+  AuctionCategoryResponse,
+  AuctionDetailResponse,
+  AuctionBrowseItemResponse,
+  CategoryCountResponse,
+  BrowseAuctionParams,
 } from '@/types/api/auction.api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -19,6 +25,8 @@ export interface GetAuctionsParams {
   category?: string
   featured?: boolean
 }
+
+
 
 export const auctionService = {
   /**
@@ -34,7 +42,7 @@ export const auctionService = {
       const errorText = await response.text();
       try {
         throw JSON.parse(errorText);
-      } catch (e) {
+      } catch {
         throw new Error(errorText || `Failed with status ${response.status}`);
       }
     }
@@ -155,11 +163,58 @@ export const auctionService = {
   },
 
   /**
+   * Browse active auctions with filtering, sorting, and pagination.
+   */
+  async getBrowseAuctions(params: BrowseAuctionParams): Promise<{
+    items:      AuctionBrowseItem[]
+    total:      number
+    totalPages: number
+    page:       number
+  }> {
+    const query = new URLSearchParams()
+    if (params.keyword)                query.set('keyword', params.keyword)
+    if (params.categorySlug)           query.set('categorySlug', params.categorySlug)
+    if (params.minPrice !== undefined) query.set('minPrice', String(params.minPrice))
+    if (params.maxPrice !== undefined) query.set('maxPrice', String(params.maxPrice))
+    if (params.endingSoon)             query.set('endingSoon', 'true')
+    if (params.buyNowAvailable)        query.set('buyNowAvailable', 'true')
+    if (params.sortBy)                 query.set('sortBy', params.sortBy)
+    query.set('page', String(params.page ?? 0))
+    query.set('size', String(params.size ?? 20))
+
+    const response = await fetch(`${API_URL}/api/v1/auctions/public?${query}`, { cache: 'no-store' })
+    if (!response.ok) return { items: [], total: 0, totalPages: 0, page: 0 }
+
+    const body: ApiResponse<PageResponse<AuctionBrowseItemResponse>> = await response.json()
+    return {
+      items:      body.data.data.map(mapAuctionBrowseItem),
+      total:      body.data.pagination.total,
+      totalPages: body.data.pagination.totalPages,
+      page:       body.data.pagination.page,
+    }
+  },
+
+  /**
+   * Fetch active auction counts per category.
+   * Independent of search/filter state — always reflects full catalogue counts.
+   */
+  async getCategoryCounts(): Promise<CategoryCount[]> {
+    const response = await fetch(`${API_URL}/api/v1/auctions/public/category-counts`, { cache: 'no-store' })
+    if (!response.ok) return []
+
+    const body: ApiResponse<CategoryCountResponse[]> = await response.json()
+    return body.data.map(mapCategoryCount)
+  },
+
+  /**
    * Fetch a single auction by its ID.
    */
-  async getAuctionById(id: string): Promise<Auction | null> {
-    await delay(300)
-    return MOCK_AUCTIONS.find((a) => a.id === id) ?? null
+  async getAuctionById(id: string): Promise<AuctionDetail | null> {
+    const response = await fetch(`${API_URL}/api/v1/auctions/public/${id}`, { cache: 'no-store' })
+    if (!response.ok) return null
+
+    const body: ApiResponse<AuctionDetailResponse> = await response.json()
+    return mapAuctionDetailResponse(body.data)
   },
 
   /**

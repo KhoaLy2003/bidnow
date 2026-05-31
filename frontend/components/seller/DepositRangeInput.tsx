@@ -7,33 +7,31 @@ import { cn }      from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 
 interface DepositRangeInputProps {
-  readonly depositCents:       number
-  readonly startingPriceCents: number
-  onChange(cents: number): void
+  readonly deposit:       number
+  readonly startingPrice: number
+  onChange(dollars: number): void
 }
 
 export function DepositRangeInput({
-  depositCents, startingPriceCents, onChange,
+  deposit, startingPrice, onChange,
 }: DepositRangeInputProps) {
-  const minCents = Math.ceil(startingPriceCents * 0.05)
-  const maxCents = Math.floor(startingPriceCents * 0.20)
+  const min = Math.ceil(startingPrice * 0.05)
+  const max = Math.floor(startingPrice * 0.20)
 
-  const pct = startingPriceCents > 0
-    ? ((depositCents / startingPriceCents) * 100).toFixed(1)
+  const pct = startingPrice > 0
+    ? ((deposit / startingPrice) * 100).toFixed(1)
     : '0.0'
 
-  const inRange = startingPriceCents > 0
-    ? depositCents >= minCents && depositCents <= maxCents
+  const inRange = startingPrice > 0
+    ? deposit >= min && deposit <= max
     : true
 
   const { thumbLeft } = useMemo(() => {
-    if (startingPriceCents === 0) return { thumbLeft: '0%' }
-    const range = maxCents - minCents
-    const clamped = Math.max(minCents, Math.min(maxCents, depositCents))
-    return { thumbLeft: range > 0 ? `${((clamped - minCents) / range) * 100}%` : '0%' }
-  }, [depositCents, minCents, maxCents, startingPriceCents])
-
-
+    if (startingPrice === 0) return { thumbLeft: '0%' }
+    const range = max - min
+    const clamped = Math.max(min, Math.min(max, deposit))
+    return { thumbLeft: range > 0 ? `${((clamped - min) / range) * 100}%` : '0%' }
+  }, [deposit, min, max, startingPrice])
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-primary/50 bg-primary/[0.06] p-4">
@@ -48,22 +46,22 @@ export function DepositRangeInput({
         <div className="flex flex-col gap-1.5 w-40">
           <Label className="text-xs font-medium text-muted-foreground">Amount</Label>
           <CurrencyInput
-            valueCents={depositCents}
-            onChangeCents={onChange}
+            value={deposit}
+            onChange={onChange}
             placeholder="0.00"
-            hasError={!inRange && startingPriceCents > 0}
+            hasError={!inRange && startingPrice > 0}
           />
           <p className={cn(
             'text-xs',
-            !inRange && startingPriceCents > 0 ? 'text-destructive' : 'text-muted-foreground',
+            !inRange && startingPrice > 0 ? 'text-destructive' : 'text-muted-foreground',
           )}>
-            {startingPriceCents > 0
-              ? `${pct}% of ${formatCurrency(startingPriceCents)} · must be 5–20%`
+            {startingPrice > 0
+              ? `${pct}% of ${formatCurrency(startingPrice)} · must be 5–20%`
               : 'Set starting price first'}
           </p>
         </div>
 
-        {startingPriceCents > 0 && (
+        {startingPrice > 0 && (
           <div className="flex flex-1 flex-col gap-1 pb-5">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">5%</span>
@@ -80,8 +78,8 @@ export function DepositRangeInput({
               <span className="text-xs text-muted-foreground">20%</span>
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground px-4">
-              <span>{formatCurrency(minCents)}</span>
-              <span>{formatCurrency(maxCents)}</span>
+              <span>{formatCurrency(min)}</span>
+              <span>{formatCurrency(max)}</span>
             </div>
           </div>
         )}

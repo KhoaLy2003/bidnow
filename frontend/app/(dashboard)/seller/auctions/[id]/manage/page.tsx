@@ -245,23 +245,23 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
             <Label htmlFor="starting">Starting price</Label>
             <CurrencyInput
               id="starting"
-              valueCents={startingPrice}
-              onChangeCents={setStartingPrice}
+              value={startingPrice}
+              onChange={setStartingPrice}
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="increment">Bid increment</Label>
             <CurrencyInput
               id="increment"
-              valueCents={bidIncrement}
-              onChangeCents={setBidIncrement}
+              value={bidIncrement}
+              onChange={setBidIncrement}
             />
           </div>
         </div>
 
         <DepositRangeInput
-          depositCents={depositAmount}
-          startingPriceCents={startingPrice}
+          deposit={depositAmount}
+          startingPrice={startingPrice}
           onChange={setDepositAmount}
         />
 

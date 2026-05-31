@@ -16,10 +16,10 @@ export interface Auction {
   categoryId:    string
   sellerId:      string
   winnerId?:     string
-  startingPrice: number        // cents
-  currentBid:    number        // cents
-  reservePrice?: number        // cents
-  buyNowPrice?:  number        // cents
+  startingPrice: number        // dollars
+  currentBid:    number        // dollars
+  reservePrice?: number        // dollars
+  buyNowPrice?:  number        // dollars
   totalBids:     number
   watchers:      number
   startsAt:      Date
@@ -35,7 +35,7 @@ export interface Bid {
   id:        string
   auctionId: string
   bidderId:  string
-  amount:    number            // cents
+  amount:    number            // dollars
   placedAt:  Date
   isAutoBid: boolean
 }
@@ -45,4 +45,43 @@ export interface BidHistoryItem extends Bid {
   bidderAvatarUrl?: string
   isCurrentUser:   boolean
   isWinning:       boolean
+}
+
+export interface AuctionDetailSeller {
+  id: string
+  name: string
+  avatarUrl?: string
+}
+
+export interface AuctionImage {
+  id: string
+  imageUrl: string
+  thumbnailUrl?: string
+  displayOrder: number
+  isPrimary: boolean
+}
+
+export interface AuctionDetail {
+  id: string
+  title: string
+  description: string
+  categoryId: string
+  categoryName: string
+  startingPrice: number
+  bidIncrement: number
+  buyNowPrice?: number
+  depositAmount: number
+  currentBid: number
+  currentWinnerId?: string
+  totalBids: number
+  status: AuctionStatus
+  startsAt: Date
+  endsAt: Date
+  originalEndAt: Date
+  extensionCount: number
+  completedAt?: Date
+  winnerId?: string
+  images: AuctionImage[]
+  seller: AuctionDetailSeller | null
+  createdAt: Date
 }

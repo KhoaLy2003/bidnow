@@ -14,15 +14,6 @@ import { auctionService }   from '@/services/auction.service'
 import { getAuctionStatus } from '@/lib/auction-utils'
 import { formatRelativeTime } from '@/lib/format'
 
-const CATEGORY_LABELS: Record<string, string> = {
-  watches:  'Watches',
-  music:    'Music',
-  books:    'Books & Literature',
-  art:      'Fine Art',
-  sneakers: 'Sneakers',
-  cameras:  'Cameras',
-}
-
 interface AuctionDetailPageProps {
   params: Promise<{ id: string }>
 }
@@ -42,10 +33,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   if (!auction) notFound()
 
   const effectiveStatus = getAuctionStatus(auction)
-  const categoryLabel   = CATEGORY_LABELS[auction.categoryId] ?? auction.categoryId
-
-  // Pass effective status to BidPanel so it picks the right sub-panel
-  const auctionWithStatus = { ...auction, status: effectiveStatus }
+  const displayAuction  = { ...auction, status: effectiveStatus }
 
   return (
     <>
@@ -56,7 +44,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
         <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6" aria-label="Breadcrumb">
           <span>Browse</span>
           <span>›</span>
-          <span>{categoryLabel}</span>
+          <span>{auction.categoryName}</span>
           <span>›</span>
           <span className="text-foreground truncate max-w-[200px]">{auction.title}</span>
         </nav>
@@ -71,20 +59,18 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
 
         {/* Meta row */}
         <p className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground mb-6">
-          {categoryLabel} · #{auction.id} · Listed {formatRelativeTime(auction.startsAt)}
+          {auction.categoryName} · Listed {formatRelativeTime(auction.startsAt)}
         </p>
 
-        {/* Gallery — full width */}
+        {/* Gallery */}
         <div className="mb-8">
-          <AuctionGallery images={auction.imageUrls} title={auction.title} />
+          <AuctionGallery images={auction.images} title={auction.title} />
         </div>
 
         {/* Two-column body */}
         <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_360px] md:gap-8 md:items-start mb-8">
 
-          {/* Left — details (order-2 on mobile so BidPanel shows first) */}
           <div className="order-2 md:order-1 flex flex-col gap-8">
-            {/* Description */}
             <section>
               <p className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground mb-3">
                 About this item
@@ -94,19 +80,17 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
               </p>
             </section>
 
-            <ItemSpecs auction={auction} categoryLabel={categoryLabel} />
+            <ItemSpecs auction={displayAuction} categoryLabel={auction.categoryName} />
             <SellerCard seller={auction.seller} />
           </div>
 
-          {/* Right — bid panel (order-1 on mobile = appears before details) */}
           <div className="order-1 md:order-2 md:sticky md:top-20 md:self-start">
-            <BidPanel auction={auctionWithStatus} />
+            <BidPanel auction={displayAuction} />
           </div>
         </div>
 
         <Separator className="mb-8" />
 
-        {/* Bid history — full width */}
         <section>
           <h2 className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
             Bid History · {auction.totalBids}

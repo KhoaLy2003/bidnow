@@ -2,16 +2,16 @@
 
 import Link from 'next/link'
 import { AuctionResultBanner } from './AuctionResultBanner'
-import { WatchingFooter } from './WatchingFooter'
 import { AuctionStatus } from '@/lib/design-tokens'
-import type { Auction } from '@/types/ui/auction.ui'
+import { PanelFooter } from './PanelFooter'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelEndedProps {
-  auction: Auction
+  auction: AuctionDetail
 }
 
 export function BidPanelEnded({ auction }: BidPanelEndedProps) {
-  const { status, categoryId, currentBid, watchers } = auction
+  const { status, categoryId, currentBid } = auction
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden flex flex-col">
@@ -60,9 +60,7 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
         <div className="flex flex-col gap-3 p-[18px]">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">You were outbid.</p>
-            <p className="text-sm text-muted-foreground">
-              Find similar auctions ending soon.
-            </p>
+            <p className="text-sm text-muted-foreground">Find similar auctions ending soon.</p>
           </div>
           <Link
             href={`/auctions?category=${categoryId}`}
@@ -80,9 +78,7 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
         <div className="flex flex-col gap-3 p-[18px]">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">This auction has ended.</p>
-            <p className="text-sm text-muted-foreground">
-              Discover more items in this category.
-            </p>
+            <p className="text-sm text-muted-foreground">Discover more items in this category.</p>
           </div>
           <Link
             href={`/auctions?category=${categoryId}`}
@@ -93,7 +89,7 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
         </div>
       )}
 
-      <WatchingFooter n={watchers} />
+      <PanelFooter />
     </div>
   )
 }

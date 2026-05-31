@@ -6,6 +6,7 @@ package com.bidnow.user.service.impl;
 import com.bidnow.common.annotation.Audit;
 import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
+import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.enums.AuditAction;
 import com.bidnow.common.exception.BadRequestException;
@@ -69,6 +70,18 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         log.info("Created user profile for userId: {}", request.getUserId());
         return userProfileMapper.toResponse(profile, List.of(role), preferences);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserSummaryResponse getUserSummary(UUID userId) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("User profile not found", ErrorCodes.NOT_FOUND));
+        return UserSummaryResponse.builder()
+                .id(profile.getUserId())
+                .name(profile.getDisplayName())
+                .avatarUrl(profile.getAvatarUrl())
+                .build();
     }
 
     @Override

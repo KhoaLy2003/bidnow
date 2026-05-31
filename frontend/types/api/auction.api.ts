@@ -81,3 +81,64 @@ export interface AuctionSummaryResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UserSummaryResponse {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+export interface AuctionDetailResponse {
+  id: string;
+  title: string;
+  description: string;
+  category: AuctionCategoryResponse;
+  startingPrice: number;
+  bidIncrement: number;
+  buyNowPrice: number | null;
+  depositAmount: number;
+  currentPrice: number;
+  currentWinnerId?: string;
+  totalBids: number;
+  status: string;
+  startTime: string;
+  endTime: string;
+  originalEndTime: string;
+  extensionCount: number;
+  completedAt?: string;
+  winnerId?: string;
+  images: AuctionImageResponse[];
+  seller: UserSummaryResponse | null;
+  createdAt: string;
+}
+
+export interface AuctionBrowseItemResponse {
+  id:              string;
+  title:           string;
+  primaryImageUrl: string | null;
+  currentPrice:    number;
+  totalBids:       number;
+  endTime:         string;
+  status:          string;
+  buyNowPrice:     number | null;
+  categoryName:    string;
+}
+
+export interface CategoryCountResponse {
+  categoryId:    string;
+  categoryName: string;
+  slug:         string;
+  count:        number;
+}
+
+export interface BrowseAuctionParams {
+  keyword?:         string;
+  categorySlug?:    string;
+  minPrice?:        number;
+  maxPrice?:        number;
+  endingSoon?:      boolean;
+  buyNowAvailable?: boolean;
+  sortBy?:          string;
+  page?:            number;
+  size?:            number;
+}
