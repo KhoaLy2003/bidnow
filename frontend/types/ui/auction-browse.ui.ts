@@ -11,3 +11,8 @@ export interface AuctionBrowseItem {
   buyNowPrice:     number | null // cents, null if not available
   categoryName:    string
 }
+
+export interface CategoryCount {
+  categoryName: string
+  count:        number
+}

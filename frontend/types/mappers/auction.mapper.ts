@@ -1,6 +1,12 @@
-import type { AuctionSummaryResponse, AuctionDetailResponse } from '@/types/api/auction.api'
+import type {
+  AuctionSummaryResponse,
+  AuctionDetailResponse,
+  AuctionBrowseItemResponse,
+  CategoryCountResponse,
+} from '@/types/api/auction.api'
 import { SellerAuction, SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { AuctionDetail, AuctionDetailSeller, AuctionImage } from '@/types/ui/auction.ui'
+import type { AuctionBrowseItem, CategoryCount } from '@/types/ui/auction-browse.ui'
 import { AuctionStatus } from '@/lib/design-tokens'
 
 export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): SellerAuction {
@@ -78,5 +84,37 @@ export function mapAuctionDetailResponse(dto: AuctionDetailResponse): AuctionDet
     })),
     seller,
     createdAt:       new Date(dto.createdAt),
+  }
+}
+
+function parseBrowseStatus(status: string): AuctionStatus {
+  switch (status?.toUpperCase()) {
+    case 'ACTIVE':    return AuctionStatus.Active
+    case 'SCHEDULED': return AuctionStatus.Scheduled
+    case 'COMPLETED':
+    case 'CANCELLED':
+    case 'FAILED':    return AuctionStatus.Closed
+    default:          return AuctionStatus.Closed
+  }
+}
+
+export function mapAuctionBrowseItem(dto: AuctionBrowseItemResponse): AuctionBrowseItem {
+  return {
+    id:              dto.id,
+    title:           dto.title,
+    primaryImageUrl: dto.primaryImageUrl,
+    currentPrice:    dto.currentPrice,
+    totalBids:       dto.totalBids,
+    endTime:         new Date(dto.endTime),
+    status:          parseBrowseStatus(dto.status),
+    buyNowPrice:     dto.buyNowPrice,
+    categoryName:    dto.categoryName,
+  }
+}
+
+export function mapCategoryCount(dto: CategoryCountResponse): CategoryCount {
+  return {
+    categoryName: dto.categoryName,
+    count:        dto.count,
   }
 }

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SlidersHorizontal, LayoutGrid, List } from 'lucide-react'
 import { Button }  from '@/components/ui/button'
 import { Badge }   from '@/components/ui/badge'
@@ -12,72 +13,84 @@ import {
   SheetTitle,
   SheetClose,
 } from '@/components/ui/sheet'
-import { FilterPanel }       from './FilterPanel'
-import { SortButton }        from './SortButton'
-import { AuctionBrowseGrid } from './AuctionBrowseGrid'
-import { AuctionBrowseList } from './AuctionBrowseList'
+import { FilterPanel }        from './FilterPanel'
+import { SortButton }         from './SortButton'
+import { AuctionBrowseGrid }  from './AuctionBrowseGrid'
+import { AuctionBrowseList }  from './AuctionBrowseList'
+import { AuctionSearchInput } from './AuctionSearchInput'
+import { BrowsePagination }   from './BrowsePagination'
 import {
-  applyFilters,
-  applySort,
-  deriveMaxPrice,
+  parseBrowseFilters,
+  buildBrowseUrl,
   countActiveFilters,
-  computeCategoryCounts,
 } from '@/lib/browse-utils'
 import {
-  DEFAULT_FILTERS,
   DEFAULT_SORT,
+  SORT_OPTIONS,
   type BrowseFilters,
   type SortOption,
 } from '@/types/ui/browse.ui'
-import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
+import type { AuctionBrowseItem, CategoryCount } from '@/types/ui/auction-browse.ui'
 
 interface BrowseClientProps {
-  items:        AuctionBrowseItem[]
-  searchQuery?: string
+  items:          AuctionBrowseItem[]
+  categoryCounts: CategoryCount[]
+  total:          number
+  totalPages:     number
+  currentPage:    number
+  searchParams:   Record<string, string | undefined>
 }
 
-export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
-  const maxPrice       = useMemo(() => deriveMaxPrice(items), [items])
-  const categoryCounts = useMemo(() => computeCategoryCounts(items), [items])
+export function BrowseClient({
+  items,
+  categoryCounts,
+  total,
+  totalPages,
+  currentPage,
+  searchParams,
+}: BrowseClientProps) {
+  const router = useRouter()
 
-  const initial: BrowseFilters = useMemo(
-    () => ({ ...DEFAULT_FILTERS, priceRange: { min: 0, max: maxPrice } }),
-    [maxPrice],
+  const [pending,    setPending]    = useState<BrowseFilters>(() => parseBrowseFilters(searchParams))
+  const [sort,       setSort]       = useState<SortOption>(
+    SORT_OPTIONS.includes(searchParams.sort as SortOption)
+      ? (searchParams.sort as SortOption)
+      : DEFAULT_SORT,
   )
-
-  const [filters,    setFilters]    = useState<BrowseFilters>(initial)
-  const [pending,    setPending]    = useState<BrowseFilters>(initial)
-  const [sort,       setSort]       = useState<SortOption>(DEFAULT_SORT)
   const [viewMode,   setViewMode]   = useState<'grid' | 'list'>('grid')
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const displayed = useMemo(
-    () => applySort(applyFilters(items, filters), sort),
-    [items, filters, sort],
-  )
+  // Count applied (URL) filters, not the pending draft — badge reflects committed state
+  const activeCount = countActiveFilters(parseBrowseFilters(searchParams))
 
-  const activeCount = useMemo(
-    () => countActiveFilters(filters, maxPrice),
-    [filters, maxPrice],
-  )
+  // preserveParams carries active filter/sort state as hidden inputs in the search form
+  // so searching while filters are active preserves them. Page is excluded (new search = page 0).
+  const preserveParams = Object.fromEntries(
+    Object.entries(searchParams).filter(
+      ([key, val]) => val !== undefined && key !== 'q' && key !== 'page',
+    ),
+  ) as Record<string, string>
 
   function handlePendingChange(partial: Partial<BrowseFilters>) {
     setPending((prev) => ({ ...prev, ...partial }))
   }
 
   function handleApply() {
-    setFilters(pending)
+    router.push(buildBrowseUrl(pending, sort))
     setMobileOpen(false)
   }
 
   function handleClearAll() {
-    setFilters(initial)
-    setPending(initial)
+    router.push('/auctions')
     setMobileOpen(false)
   }
 
+  function handleSortChange(newSort: SortOption) {
+    setSort(newSort)
+    router.push(buildBrowseUrl(parseBrowseFilters(searchParams), newSort))
+  }
+
   const panelProps = {
-    maxPrice,
     categoryCounts,
     pendingFilters:  pending,
     onPendingChange: handlePendingChange,
@@ -105,17 +118,24 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Toolbar */}
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="font-display font-medium text-[length:var(--font-size-2xl)]">
-              {searchQuery ? `Results for "${searchQuery}"` : 'Browse Auctions'}
+              {searchParams.q ? `Results for "${searchParams.q}"` : 'Browse Auctions'}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {displayed.length} listing{displayed.length !== 1 ? 's' : ''}
+              {total.toLocaleString()} listing{total !== 1 ? 's' : ''}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Search — preserves active filters on the browse page */}
+            <AuctionSearchInput
+              defaultValue={searchParams.q}
+              preserveParams={preserveParams}
+              className="w-48 sm:w-64"
+            />
+
             {/* Mobile filter trigger */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger
@@ -156,7 +176,7 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
               </SheetContent>
             </Sheet>
 
-            <SortButton value={sort} onChange={setSort} />
+            <SortButton value={sort} onChange={handleSortChange} />
 
             <Button
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -177,8 +197,8 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
           </div>
         </div>
 
-        {/* Grid or empty state */}
-        {displayed.length === 0 ? (
+        {/* Results */}
+        {items.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-24 text-center">
             <p className="text-sm text-muted-foreground">
               No auctions match the current filters.
@@ -188,9 +208,16 @@ export function BrowseClient({ items, searchQuery }: BrowseClientProps) {
             </Button>
           </div>
         ) : viewMode === 'grid'
-            ? <AuctionBrowseGrid items={displayed} />
-            : <AuctionBrowseList items={displayed} />
+            ? <AuctionBrowseGrid items={items} />
+            : <AuctionBrowseList items={items} />
         }
+
+        {/* Pagination */}
+        <BrowsePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          searchParams={searchParams}
+        />
       </div>
     </div>
   )

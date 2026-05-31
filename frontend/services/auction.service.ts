@@ -1,7 +1,7 @@
-import { mapAuctionDetailResponse } from '@/types/mappers/auction.mapper'
+import { mapAuctionDetailResponse, mapAuctionBrowseItem, mapCategoryCount } from '@/types/mappers/auction.mapper'
 import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
 import type { Auction, BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
-import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
+import type { AuctionBrowseItem, CategoryCount } from '@/types/ui/auction-browse.ui'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
 import type {
   CreateAuctionRequest,
@@ -10,6 +10,9 @@ import type {
   AuctionSummaryResponse,
   AuctionCategoryResponse,
   AuctionDetailResponse,
+  AuctionBrowseItemResponse,
+  CategoryCountResponse,
+  BrowseAuctionParams,
 } from '@/types/api/auction.api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -23,26 +26,6 @@ export interface GetAuctionsParams {
   featured?: boolean
 }
 
-export interface GetBrowseAuctionsParams {
-  q?:       string
-  featured?: boolean
-}
-
-const CATEGORY_NAMES: Record<string, string> = {
-  watches:  'Watches',
-  music:    'Music',
-  books:    'Books',
-  sneakers: 'Sneakers',
-  cameras:  'Cameras',
-  art:      'Art',
-}
-
-// Buy now prices added to select mock items for demo purposes
-const MOCK_BUY_NOW_PRICES: Record<string, number> = {
-  '2': 350_000,   // Gibson Les Paul
-  '5': 120_000,   // Nike Air Jordan
-  '8': 95_000,    // Leica M3
-}
 
 const MOCK_DETAIL_RESPONSES: AuctionDetailResponse[] = [
   {
@@ -357,35 +340,113 @@ export const auctionService = {
   },
 
   /**
-   * Fetch auction summaries for the public browse page.
-   * Returns AuctionBrowseItem[] shaped for the browse UI.
-   * Replace this mock with a real API call when the browse endpoint is available.
+   * Browse active auctions with filtering, sorting, and pagination.
    */
-  async getBrowseAuctions(params?: GetBrowseAuctionsParams): Promise<AuctionBrowseItem[]> {
+  async getBrowseAuctions(params: BrowseAuctionParams): Promise<{
+    items:      AuctionBrowseItem[]
+    total:      number
+    totalPages: number
+    page:       number
+  }> {
     await delay(300)
+    // TODO: replace with real API call:
+    // const query = new URLSearchParams()
+    // if (params.keyword)                  query.set('keyword', params.keyword)
+    // if (params.categorySlug)             query.set('categorySlug', params.categorySlug)
+    // if (params.minPrice !== undefined)   query.set('minPrice', String(params.minPrice))
+    // if (params.maxPrice !== undefined)   query.set('maxPrice', String(params.maxPrice))
+    // if (params.endingSoon)               query.set('endingSoon', 'true')
+    // if (params.buyNowAvailable)          query.set('buyNowAvailable', 'true')
+    // if (params.sortBy)                   query.set('sortBy', params.sortBy)
+    // query.set('page', String(params.page ?? 0))
+    // query.set('size', String(params.size ?? 20))
+    // const response = await fetch(`${API_URL}/api/v1/auctions/public?${query}`, { cache: 'no-store' })
+    // if (!response.ok) return { items: [], total: 0, totalPages: 0, page: 0 }
+    // const body: ApiResponse<PageResponse<AuctionBrowseItemResponse>> = await response.json()
+    // return {
+    //   items:      body.data.data.map(mapAuctionBrowseItem),
+    //   total:      body.data.pagination.total,
+    //   totalPages: body.data.pagination.totalPages,
+    //   page:       body.data.pagination.page,
+    // }
 
-    let results = [...MOCK_AUCTIONS]
-
-    if (params?.featured) {
-      results = results.filter((a) => a.isFeatured)
-    }
-
-    if (params?.q) {
-      const query = params.q.toLowerCase()
-      results = results.filter((a) => a.title.toLowerCase().includes(query))
-    }
-
-    return results.map((a): AuctionBrowseItem => ({
-      id:              a.id,
-      title:           a.title,
-      primaryImageUrl: a.imageUrls[0] ?? null,
-      currentPrice:    a.currentBid,
-      totalBids:       a.totalBids,
-      endTime:         a.endsAt,
-      status:          a.status,
-      buyNowPrice:     a.buyNowPrice ?? MOCK_BUY_NOW_PRICES[a.id] ?? null,
-      categoryName:    CATEGORY_NAMES[a.categoryId] ?? a.categoryId,
+    // Mock: derive browse items from MOCK_DETAIL_RESPONSES
+    let results: AuctionBrowseItemResponse[] = MOCK_DETAIL_RESPONSES.map((d) => ({
+      id:              d.id,
+      title:           d.title,
+      primaryImageUrl: d.images[0]?.imageUrl ?? null,
+      currentPrice:    d.currentPrice,
+      totalBids:       d.totalBids,
+      endTime:         d.endTime,
+      status:          d.status,
+      buyNowPrice:     d.buyNowPrice ?? null,
+      categoryName:    d.category.name,
     }))
+
+    if (params.keyword) {
+      const kw = params.keyword.toLowerCase()
+      results = results.filter((r) => r.title.toLowerCase().includes(kw))
+    }
+    if (params.categorySlug) {
+      const slug = params.categorySlug.toLowerCase()
+      results = results.filter((r) => r.categoryName.toLowerCase() === slug)
+    }
+    if (params.minPrice !== undefined) {
+      results = results.filter((r) => r.currentPrice >= params.minPrice!)
+    }
+    if (params.maxPrice !== undefined) {
+      results = results.filter((r) => r.currentPrice <= params.maxPrice!)
+    }
+    if (params.endingSoon) {
+      results = results.filter((r) => {
+        const ms = new Date(r.endTime).getTime() - Date.now()
+        return ms > 0 && ms <= 24 * 60 * 60 * 1_000
+      })
+    }
+    if (params.buyNowAvailable) {
+      results = results.filter((r) => r.buyNowPrice !== null)
+    }
+
+    const sort = params.sortBy ?? 'END_TIME_ASC'
+    results = [...results].sort((a, b) => {
+      switch (sort) {
+        case 'END_TIME_ASC':   return new Date(a.endTime).getTime() - new Date(b.endTime).getTime()
+        case 'NEWLY_LISTED':   return new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+        case 'PRICE_LOW_HIGH': return a.currentPrice - b.currentPrice
+        case 'PRICE_HIGH_LOW': return b.currentPrice - a.currentPrice
+        case 'MOST_BIDS':      return b.totalBids - a.totalBids
+        default:               return 0
+      }
+    })
+
+    const page       = params.page ?? 0
+    const size       = params.size ?? 20
+    const total      = results.length
+    const totalPages = Math.max(1, Math.ceil(total / size))
+    const items      = results.slice(page * size, (page + 1) * size).map(mapAuctionBrowseItem)
+
+    return { items, total, totalPages, page }
+  },
+
+  /**
+   * Fetch active auction counts per category.
+   * Independent of search/filter state — always reflects full catalogue counts.
+   */
+  async getCategoryCounts(): Promise<CategoryCount[]> {
+    await delay(100)
+    // TODO: replace with real API call:
+    // const response = await fetch(`${API_URL}/api/v1/auctions/public/category-counts`, { cache: 'no-store' })
+    // if (!response.ok) return []
+    // const body: ApiResponse<CategoryCountResponse[]> = await response.json()
+    // return body.data.map(mapCategoryCount)
+
+    // Mock: count by category from MOCK_DETAIL_RESPONSES
+    const counts: Record<string, number> = {}
+    for (const d of MOCK_DETAIL_RESPONSES) {
+      const name = d.category.name
+      counts[name] = (counts[name] ?? 0) + 1
+    }
+    return Object.entries(counts).map(([categoryName, count]) => ({ categoryName, count }))
   },
 
   /**

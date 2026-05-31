@@ -10,12 +10,13 @@ import {
 import { CategoryFilter }   from './CategoryFilter'
 import { PriceRangeFilter } from './PriceRangeFilter'
 import { QuickFilters }     from './QuickFilters'
+import { DEFAULT_MAX_PRICE } from '@/types/ui/browse.ui'
 import type { BrowseFilters, PriceRange } from '@/types/ui/browse.ui'
+import type { CategoryCount } from '@/types/ui/auction-browse.ui'
 
 interface FilterPanelProps {
-  maxPrice:        number
   pendingFilters:  BrowseFilters
-  categoryCounts:  Record<string, number>
+  categoryCounts:  CategoryCount[]
   onPendingChange: (partial: Partial<BrowseFilters>) => void
   onApply:         () => void
   onClearAll:      () => void
@@ -23,7 +24,6 @@ interface FilterPanelProps {
 }
 
 export function FilterPanel({
-  maxPrice,
   pendingFilters,
   categoryCounts,
   onPendingChange,
@@ -56,7 +56,7 @@ export function FilterPanel({
               <div className="pb-1">
                 <CategoryFilter
                   value={pendingFilters.categoryName}
-                  counts={categoryCounts}
+                  categoryCounts={categoryCounts}
                   onChange={(name: string) => onPendingChange({ categoryName: name })}
                 />
               </div>
@@ -71,7 +71,7 @@ export function FilterPanel({
               <div className="pb-1 pt-2">
                 <PriceRangeFilter
                   value={pendingFilters.priceRange}
-                  max={maxPrice}
+                  max={DEFAULT_MAX_PRICE}
                   onChange={(range: PriceRange) => onPendingChange({ priceRange: range })}
                 />
               </div>
