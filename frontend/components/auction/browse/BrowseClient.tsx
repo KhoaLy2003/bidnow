@@ -60,7 +60,8 @@ export function BrowseClient({
   const [viewMode,   setViewMode]   = useState<'grid' | 'list'>('grid')
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const activeCount = countActiveFilters(pending)
+  // Count applied (URL) filters, not the pending draft — badge reflects committed state
+  const activeCount = countActiveFilters(parseBrowseFilters(searchParams))
 
   // preserveParams carries active filter/sort state as hidden inputs in the search form
   // so searching while filters are active preserves them. Page is excluded (new search = page 0).
