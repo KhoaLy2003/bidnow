@@ -26,12 +26,6 @@ export interface GetAuctionsParams {
   featured?: boolean
 }
 
-// Buy now prices added to select mock items for demo purposes
-const MOCK_BUY_NOW_PRICES: Record<string, number> = {
-  '2': 350_000,   // Gibson Les Paul
-  '5': 120_000,   // Nike Air Jordan
-  '8': 95_000,    // Leica M3
-}
 
 const MOCK_DETAIL_RESPONSES: AuctionDetailResponse[] = [
   {
