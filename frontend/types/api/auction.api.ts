@@ -111,3 +111,32 @@ export interface AuctionDetailResponse {
   seller: UserSummaryResponse | null;
   createdAt: string;
 }
+
+export interface AuctionBrowseItemResponse {
+  id:              string;
+  title:           string;
+  primaryImageUrl: string | null;
+  currentPrice:    number;
+  totalBids:       number;
+  endTime:         string;
+  status:          string;
+  buyNowPrice:     number | null;
+  categoryName:    string;
+}
+
+export interface CategoryCountResponse {
+  categoryName: string;
+  count:        number;
+}
+
+export interface BrowseAuctionParams {
+  keyword?:         string;
+  categorySlug?:    string;
+  minPrice?:        number;
+  maxPrice?:        number;
+  endingSoon?:      boolean;
+  buyNowAvailable?: boolean;
+  sortBy?:          string;
+  page?:            number;
+  size?:            number;
+}
