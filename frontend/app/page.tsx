@@ -21,7 +21,7 @@ import {
 import { Header }        from '@/components/layout/Header'
 import { Footer }        from '@/components/layout/Footer'
 import { BottomNav }     from '@/components/layout/BottomNav'
-import { AuctionGrid }   from '@/components/auction/AuctionGrid'
+import { AuctionBrowseGrid } from '@/components/auction/browse'
 import { Button }        from '@/components/ui/button'
 import { CTASection }    from '@/components/home/CTASection'
 import { FAQAccordion }  from '@/components/home/FAQAccordion'
@@ -62,8 +62,8 @@ const TRUST_CARDS = [
 ] as const
 
 export default async function HomePage() {
-  const featuredPicks = await auctionService.getAuctions({ featured: true })
-  const allAuctions   = await auctionService.getAuctions()
+  const featuredPicks = await auctionService.getBrowseAuctions({ featured: true })
+  const allAuctions   = await auctionService.getBrowseAuctions()
   const hotAuctions   = allAuctions.filter(
     (a) => a.status === AuctionStatus.Critical || a.status === AuctionStatus.EndingSoon,
   )
@@ -123,7 +123,7 @@ export default async function HomePage() {
                 View all <ArrowRight className="size-3.5" />
               </Link>
             </div>
-            <AuctionGrid auctions={hotAuctions} />
+            <AuctionBrowseGrid items={hotAuctions} />
           </section>
         )}
 
@@ -138,7 +138,7 @@ export default async function HomePage() {
               View all <ArrowRight className="size-3.5" />
             </Link>
           </div>
-          <AuctionGrid auctions={featuredPicks} />
+          <AuctionBrowseGrid items={featuredPicks} />
         </section>
 
         {/* Category Browse */}

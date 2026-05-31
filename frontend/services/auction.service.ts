@@ -24,7 +24,8 @@ export interface GetAuctionsParams {
 }
 
 export interface GetBrowseAuctionsParams {
-  q?: string
+  q?:       string
+  featured?: boolean
 }
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -364,6 +365,10 @@ export const auctionService = {
     await delay(300)
 
     let results = [...MOCK_AUCTIONS]
+
+    if (params?.featured) {
+      results = results.filter((a) => a.isFeatured)
+    }
 
     if (params?.q) {
       const query = params.q.toLowerCase()
