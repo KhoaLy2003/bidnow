@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link                  from 'next/link'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { Button }            from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ActiveAuctionRow, HistoricalAuctionRow } from '@/components/seller/SellerAuctionRow'
@@ -13,8 +14,6 @@ import { useAuthStore } from '@/store/authStore'
 import { auctionService } from '@/services/auction.service'
 import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper'
 
-// Mock data removed.
-
 const ITEMS_PER_PAGE = 20
 
 function TableHead({ children, right }: { readonly children: React.ReactNode; readonly right?: boolean }) {
@@ -25,43 +24,58 @@ function TableHead({ children, right }: { readonly children: React.ReactNode; re
   )
 }
 
+function LoadingState() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      <span className="text-sm">Loading auctions…</span>
+    </div>
+  )
+}
+
+function ErrorState({ onRetry }: { onRetry(): void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+      <AlertCircle className="size-5 text-[var(--color-danger-text)]" />
+      <p className="text-sm text-muted-foreground">Failed to load auctions.</p>
+      <Button variant="outline" size="sm" onClick={onRetry}>Try again</Button>
+    </div>
+  )
+}
+
 export default function SellerAuctionsPage() {
   const { accessToken } = useAuthStore()
-  const [auctions, setAuctions] = useState<SellerAuction[]>([])
-  const [loading, setLoading] = useState(true)
+  const [auctions,  setAuctions]  = useState<SellerAuction[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState<string | null>(null)
 
-  const [search,      setSearch]      = useState('')
-  const [category,    setCategory]    = useState('All categories')
+  const [search,       setSearch]       = useState('')
+  const [category,     setCategory]     = useState('All categories')
   const [statusFilter, setStatusFilter] = useState('All statuses')
-  const [activePage,  setActivePage]  = useState(1)
-  const [histPage,    setHistPage]    = useState(1)
-  const [deletedIds,  setDeletedIds]  = useState<string[]>([])
+  const [activePage,   setActivePage]   = useState(1)
+  const [histPage,     setHistPage]     = useState(1)
+  const [deletedIds,   setDeletedIds]   = useState<string[]>([])
 
-  useEffect(() => {
+  const fetchAuctions = useCallback(async () => {
     if (!accessToken) return
-    let mounted = true
-    const fetchAuctions = async () => {
-      try {
-        setLoading(true)
-        const res = await auctionService.getMyAuctions({}, accessToken)
-        console.log(res)
-        if (mounted) {
-          setAuctions((res.data.data || []).map(mapAuctionSummaryToSellerAuction))
-        }
-      } catch (err) {
-        console.error('Failed to fetch auctions:', err)
-      } finally {
-        if (mounted) setLoading(false)
-      }
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await auctionService.getMyAuctions({}, accessToken)
+      setAuctions((res.data.data || []).map(mapAuctionSummaryToSellerAuction))
+    } catch (err) {
+      console.error('Failed to fetch auctions:', err)
+      setError('failed')
+    } finally {
+      setLoading(false)
     }
-    fetchAuctions()
-    return () => { mounted = false }
   }, [accessToken])
+
+  useEffect(() => { fetchAuctions() }, [fetchAuctions])
 
   const { allActive, allHistorical } = useMemo(() => {
     const active: SellerAuction[] = []
     const historical: SellerAuction[] = []
-    
     auctions.forEach(a => {
       if ([SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled].includes(a.status)) {
         historical.push(a)
@@ -90,10 +104,10 @@ export default function SellerAuctionsPage() {
     })
   }, [allHistorical, search, category, statusFilter])
 
-  const activePage_items  = activeAuctions.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE)
-  const histPage_items    = histAuctions.slice((histPage - 1)  * ITEMS_PER_PAGE, histPage  * ITEMS_PER_PAGE)
-  const activePageCount   = Math.max(1, Math.ceil(activeAuctions.length / ITEMS_PER_PAGE))
-  const histPageCount     = Math.max(1, Math.ceil(histAuctions.length  / ITEMS_PER_PAGE))
+  const activePage_items = activeAuctions.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE)
+  const histPage_items   = histAuctions.slice((histPage - 1)  * ITEMS_PER_PAGE, histPage  * ITEMS_PER_PAGE)
+  const activePageCount  = Math.max(1, Math.ceil(activeAuctions.length / ITEMS_PER_PAGE))
+  const histPageCount    = Math.max(1, Math.ceil(histAuctions.length  / ITEMS_PER_PAGE))
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
@@ -102,7 +116,10 @@ export default function SellerAuctionsPage() {
         <div className="flex flex-col gap-0.5">
           <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">My auctions</h1>
           <p className="text-sm text-muted-foreground">
-            {allActive.length + allHistorical.length} total · {allActive.length} active · {allHistorical.length} completed
+            {loading
+              ? 'Loading…'
+              : `${allActive.length + allHistorical.length} total · ${allActive.length} active · ${allHistorical.length} completed`
+            }
           </p>
         </div>
         <Button variant="brand" size="lg" render={<Link href="/seller/auctions/new" />} nativeButton={false}>
@@ -142,7 +159,11 @@ export default function SellerAuctionsPage() {
             shown={activePage_items.length}
           />
 
-          {activeAuctions.length === 0 ? (
+          {loading ? (
+            <LoadingState />
+          ) : error ? (
+            <ErrorState onRetry={fetchAuctions} />
+          ) : activeAuctions.length === 0 ? (
             <EmptyAuctions />
           ) : (
             <div className="overflow-x-auto">
@@ -171,7 +192,7 @@ export default function SellerAuctionsPage() {
             </div>
           )}
 
-          {activePageCount > 1 && (
+          {!loading && !error && activePageCount > 1 && (
             <Pagination page={activePage} total={activePageCount} onChange={setActivePage} count={activeAuctions.length} pageSize={ITEMS_PER_PAGE} />
           )}
         </TabsContent>
@@ -190,7 +211,11 @@ export default function SellerAuctionsPage() {
             shown={histPage_items.length}
           />
 
-          {histAuctions.length === 0 ? (
+          {loading ? (
+            <LoadingState />
+          ) : error ? (
+            <ErrorState onRetry={fetchAuctions} />
+          ) : histAuctions.length === 0 ? (
             <div className="py-20 text-center text-sm text-muted-foreground">No completed auctions yet.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -215,7 +240,7 @@ export default function SellerAuctionsPage() {
             </div>
           )}
 
-          {histPageCount > 1 && (
+          {!loading && !error && histPageCount > 1 && (
             <Pagination page={histPage} total={histPageCount} onChange={setHistPage} count={histAuctions.length} pageSize={ITEMS_PER_PAGE} />
           )}
         </TabsContent>

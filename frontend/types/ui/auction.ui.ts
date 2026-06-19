@@ -8,29 +8,6 @@ export interface AuctionSeller {
   totalAuctions: number
 }
 
-export interface Auction {
-  id:            string
-  title:         string
-  description:   string
-  imageUrls:     string[]
-  categoryId:    string
-  sellerId:      string
-  winnerId?:     string
-  startingPrice: number        // dollars
-  currentBid:    number        // dollars
-  reservePrice?: number        // dollars
-  buyNowPrice?:  number        // dollars
-  totalBids:     number
-  watchers:      number
-  startsAt:      Date
-  endsAt:        Date
-  status:        AuctionStatus
-  isFeatured:    boolean
-  condition:     string
-  reserveMet:    boolean
-  seller:        AuctionSeller
-}
-
 export interface Bid {
   id:        string
   auctionId: string

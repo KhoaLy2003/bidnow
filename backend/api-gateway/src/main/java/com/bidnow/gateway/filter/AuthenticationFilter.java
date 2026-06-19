@@ -54,7 +54,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/actuator",
             "/**/v3/api-docs/**",
             "/**/swagger-ui/**",
-            "/demo/**"
+            "/demo/**",
+            "/api/v1/media/download"
     );
 
     private final JwtUtil jwtUtil;

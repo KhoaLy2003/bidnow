@@ -1,6 +1,6 @@
 import { mapAuctionDetailResponse, mapAuctionBrowseItem, mapCategoryCount } from '@/types/mappers/auction.mapper'
-import { MOCK_AUCTIONS, MOCK_BIDS } from '@/lib/mock-data'
-import type { Auction, BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
+import { MOCK_BIDS } from '@/lib/mock-data'
+import type { BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
 import type { AuctionBrowseItem, CategoryCount } from '@/types/ui/auction-browse.ui'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
 import type {
@@ -136,30 +136,6 @@ export const auctionService = {
       const error = await response.json();
       throw error;
     }
-  },
-
-  /**
-   * Fetch a list of auctions with optional filtering.
-   */
-  async getAuctions(params?: GetAuctionsParams): Promise<Auction[]> {
-    await delay(300) // Simulate network latency
-
-    let results = [...MOCK_AUCTIONS]
-
-    if (params?.featured) {
-      results = results.filter((a) => a.isFeatured)
-    }
-
-    if (params?.category) {
-      results = results.filter((a) => a.categoryId === params.category)
-    }
-
-    if (params?.q) {
-      const query = params.q.toLowerCase()
-      results = results.filter((a) => a.title.toLowerCase().includes(query))
-    }
-
-    return results
   },
 
   /**
