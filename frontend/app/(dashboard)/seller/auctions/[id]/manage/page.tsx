@@ -28,6 +28,8 @@ import { ImageUploadGrid }      from '@/components/seller/ImageUploadGrid'
 import { CurrencyInput }        from '@/components/ui/currency-input'
 import { auctionService }       from '@/services/auction.service'
 import { mediaService }         from '@/services/media.service'
+import { toast }                from 'sonner'
+import { getErrorMessage }      from '@/lib/utils'
 
 function mapToSellerAuction(detail: AuctionDetail): SellerAuction {
   let status: SellerAuctionStatus
@@ -150,8 +152,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
       if (publish) onPublish()
       else onSave()
     } catch (error) {
-      console.error('Failed to update auction:', error)
-      alert('An error occurred while saving the auction.')
+      toast.error(getErrorMessage(error, 'Failed to save auction. Please try again.'))
     } finally {
       setSubmitting(false)
     }
@@ -299,8 +300,8 @@ export default function ManageAuctionPage() {
       await auctionService.deleteAuction(auction.id)
       setDeleteOpen(false)
       setDeleted(true)
-    } catch {
-      alert('Failed to delete auction. Please try again.')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete auction. Please try again.'))
     } finally {
       setDeleting(false)
     }
@@ -457,7 +458,7 @@ export default function ManageAuctionPage() {
         open={deleteOpen}
         auctionTitle={auction.title}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
+        onConfirm={() => handleDelete()}
       />
     </div>
   )

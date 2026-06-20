@@ -12,6 +12,8 @@ import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
 import { auctionService } from '@/services/auction.service'
 import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils'
 
 const ITEMS_PER_PAGE = 20
 
@@ -61,8 +63,8 @@ export default function SellerAuctionsPage() {
       const res = await auctionService.getMyAuctions({})
       setAuctions((res.data.data || []).map(mapAuctionSummaryToSellerAuction))
     } catch (err) {
-      console.error('Failed to fetch auctions:', err)
       setError('failed')
+      toast.error(getErrorMessage(err, 'Failed to load auctions.'))
     } finally {
       setLoading(false)
     }

@@ -23,7 +23,7 @@ import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { cn, getErrorMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 import { auctionService } from '@/services/auction.service'
 import { mediaService } from '@/services/media.service'
@@ -188,7 +188,7 @@ export default function CreateAuctionPage() {
       router.push('/seller/auctions')
     } catch (error) {
       console.error('Failed to create auction:', error)
-      toast.error('Failed to create auction. Please try again.')
+      toast.error(getErrorMessage(error, 'Failed to create auction. Please try again.'))
     } finally {
       setSubmitting(false)
     }
