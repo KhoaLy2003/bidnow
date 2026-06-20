@@ -6,9 +6,9 @@ import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
-import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.common.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
 

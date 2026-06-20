@@ -16,6 +16,12 @@ import {
   type SortDirection,
   type TemplateFilters,
 } from "@/types/api/admin.api";
+import {
+  type AdminAuctionDetailResponse,
+  type AdminAuctionFilters,
+  type AdminAuctionSummaryResponse,
+  type AuctionResponse,
+} from "@/types/api/auction.api";
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -169,5 +175,55 @@ export const adminService = {
     if (filters.toDate) params.append("toDate", filters.toDate);
     const response = await apiFetch(`/api/v1/admin/audit-logs?${params}`);
     return parseResponse<PageResponse<AuditLogResponse>>(response);
+  },
+
+  async getAuctions(
+    filters: AdminAuctionFilters = {},
+    page = 0,
+    size = 20,
+    sortBy = "createdAt",
+    sortDir: SortDirection = "desc"
+  ): Promise<PageResponse<AdminAuctionSummaryResponse>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sortBy,
+      sortDir,
+    });
+    if (filters.status && filters.status !== "ALL") params.append("status", filters.status);
+    if (filters.categoryId) params.append("categoryId", filters.categoryId);
+    if (filters.sellerId) params.append("sellerId", filters.sellerId);
+    if (filters.q?.trim()) params.append("q", filters.q.trim());
+    const response = await apiFetch(`/api/v1/admin/auctions?${params}`);
+    return parseResponse<PageResponse<AdminAuctionSummaryResponse>>(response);
+  },
+
+  async getAuctionDetail(auctionId: string): Promise<AdminAuctionDetailResponse> {
+    const response = await apiFetch(`/api/v1/admin/auctions/${auctionId}`);
+    return parseResponse<AdminAuctionDetailResponse>(response);
+  },
+
+  async rejectAuction(auctionId: string, reason: string): Promise<AuctionResponse> {
+    const response = await apiFetch(`/api/v1/admin/auctions/${auctionId}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    return parseResponse<AuctionResponse>(response);
+  },
+
+  async cancelAuction(auctionId: string, reason: string): Promise<AuctionResponse> {
+    const response = await apiFetch(`/api/v1/admin/auctions/${auctionId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    return parseResponse<AuctionResponse>(response);
+  },
+
+  async forceCloseAuction(auctionId: string, reason?: string): Promise<AuctionResponse> {
+    const response = await apiFetch(`/api/v1/admin/auctions/${auctionId}/force-close`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    return parseResponse<AuctionResponse>(response);
   },
 };

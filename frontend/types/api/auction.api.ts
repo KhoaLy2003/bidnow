@@ -142,3 +142,77 @@ export interface BrowseAuctionParams {
   page?:            number;
   size?:            number;
 }
+
+export type AdminAuctionStatus =
+  | "DRAFT"
+  | "SCHEDULED"
+  | "ACTIVE"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED"
+  | "REJECTED";
+
+export interface AdminAuctionSummaryResponse {
+  id: string;
+  title: string;
+  status: AdminAuctionStatus;
+  sellerId: string;
+  sellerName?: string | null;
+  category: AuctionCategoryResponse;
+  currentPrice: number;
+  startTime: string;
+  endTime: string;
+  totalBids: number;
+  createdAt: string;
+}
+
+export interface AuctionStatusHistoryResponse {
+  fromStatus: string | null;
+  toStatus: string;
+  reason?: string | null;
+  triggeredBy?: string | null;
+  createdAt: string;
+}
+
+export interface AdminAuctionDetailResponse {
+  id: string;
+  title: string;
+  description: string;
+  category: AuctionCategoryResponse;
+  sellerId: string;
+  sellerName?: string | null;
+  startingPrice: number;
+  bidIncrement: number;
+  buyNowPrice?: number | null;
+  depositAmount: number;
+  currentPrice: number;
+  currentWinnerId?: string | null;
+  totalBids: number;
+  status: AdminAuctionStatus;
+  startTime: string;
+  endTime: string;
+  originalEndTime: string;
+  extensionCount: number;
+  completedAt?: string | null;
+  winnerId?: string | null;
+  cancellationReason?: string | null;
+  cancelledBy?: string | null;
+  cancelledAt?: string | null;
+  rejectionReason?: string | null;
+  rejectedBy?: string | null;
+  rejectedAt?: string | null;
+  images: AuctionImageResponse[];
+  statusHistory: AuctionStatusHistoryResponse[];
+  createdAt: string;
+}
+
+export interface AdminAuctionFilters {
+  status?: AdminAuctionStatus | "ALL";
+  categoryId?: string;
+  sellerId?: string;
+  q?: string;
+}
+
+export interface AdminAuctionReasonRequest {
+  reason?: string;
+}

@@ -5,6 +5,7 @@ export enum SellerAuctionStatus {
   Completed  = 'completed',
   Failed     = 'failed',
   Cancelled  = 'cancelled',
+  Rejected   = 'rejected',
 }
 
 export interface SellerAuction {
