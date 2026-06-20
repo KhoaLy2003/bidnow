@@ -3,6 +3,8 @@ import { authService } from "@/services/auth.service";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+export const TOKEN_REFRESH_BUFFER_MS = 60_000;
+
 let refreshPromise: Promise<void> | null = null;
 
 export async function apiFetch(
@@ -13,7 +15,7 @@ export async function apiFetch(
   // Block-scoped to avoid naming conflicts with the reactive 401 path below.
   {
     const { accessToken, accessTokenExpiresAt, refreshToken } = useAuthStore.getState();
-    if (accessToken && accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - 60_000) {
+    if (accessToken && accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - TOKEN_REFRESH_BUFFER_MS) {
       if (!refreshToken) {
         forceLogout();
         throw new Error("session_expired");

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/auth.service'
+import { TOKEN_REFRESH_BUFFER_MS } from '@/lib/apiClient'
 import { Loader2 } from 'lucide-react'
 
 export function AdminGuard({ children }: { readonly children: React.ReactNode }) {
@@ -30,7 +31,7 @@ export function AdminGuard({ children }: { readonly children: React.ReactNode })
     }
 
     const nearExpiry =
-      accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - 60_000
+      accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - TOKEN_REFRESH_BUFFER_MS
 
     if (nearExpiry) {
       if (!refreshToken) {

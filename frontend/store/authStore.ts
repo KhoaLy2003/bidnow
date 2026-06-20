@@ -37,6 +37,7 @@ export const useAuthStore = create<AuthState>()(
             isActive: true,
           },
         }),
+      // Only updates tokens — caller must already be authenticated (does not set isAuthenticated)
       setTokens: (accessToken: string, refreshToken: string, expiresIn: number) =>
         set({ accessToken, refreshToken, accessTokenExpiresAt: Date.now() + expiresIn * 1000 }),
       logout: () =>
