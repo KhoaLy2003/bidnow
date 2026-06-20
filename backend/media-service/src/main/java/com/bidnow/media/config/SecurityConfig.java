@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SecurityConstants.PUBLIC_ENDPOINTS)
                         .permitAll()
-                        .requestMatchers("api/v1/media/download")
+                        .requestMatchers("/api/v1/media/download")
                         .permitAll()
                         .anyRequest()
                         .authenticated()
