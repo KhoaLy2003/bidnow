@@ -43,11 +43,16 @@ public class AuctionStartupRecoveryService {
         for (AuctionItem auction : overdueScheduled) {
             try {
                 activationService.activate(auction.getId());
-                if (!auction.getEndTime().isAfter(now)) {
-                    closureService.close(auction.getId());
-                }
             } catch (Exception e) {
-                log.error("Failed to recover overdue SCHEDULED auction {}: {}", auction.getId(), e.getMessage());
+                log.error("Failed to activate overdue SCHEDULED auction {}: {}", auction.getId(), e.getMessage());
+                continue;
+            }
+            if (!auction.getEndTime().isAfter(now)) {
+                try {
+                    closureService.close(auction.getId());
+                } catch (Exception e) {
+                    log.error("Failed to close overdue SCHEDULED auction {} after activation: {}", auction.getId(), e.getMessage());
+                }
             }
         }
 
