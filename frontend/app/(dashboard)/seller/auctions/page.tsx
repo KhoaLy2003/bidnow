@@ -10,7 +10,6 @@ import { AuctionFilters }    from '@/components/seller/AuctionFilters'
 import { EmptyAuctions }     from '@/components/seller/EmptyAuctions'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
-import { useAuthStore } from '@/store/authStore'
 import { auctionService } from '@/services/auction.service'
 import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper'
 
@@ -44,7 +43,6 @@ function ErrorState({ onRetry }: { onRetry(): void }) {
 }
 
 export default function SellerAuctionsPage() {
-  const { accessToken } = useAuthStore()
   const [auctions,  setAuctions]  = useState<SellerAuction[]>([])
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState<string | null>(null)
@@ -57,11 +55,10 @@ export default function SellerAuctionsPage() {
   const [deletedIds,   setDeletedIds]   = useState<string[]>([])
 
   const fetchAuctions = useCallback(async () => {
-    if (!accessToken) return
     setLoading(true)
     setError(null)
     try {
-      const res = await auctionService.getMyAuctions({}, accessToken)
+      const res = await auctionService.getMyAuctions({})
       setAuctions((res.data.data || []).map(mapAuctionSummaryToSellerAuction))
     } catch (err) {
       console.error('Failed to fetch auctions:', err)
@@ -69,7 +66,7 @@ export default function SellerAuctionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [accessToken])
+  }, [])
 
   useEffect(() => { fetchAuctions() }, [fetchAuctions])
 

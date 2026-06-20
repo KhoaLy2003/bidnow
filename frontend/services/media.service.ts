@@ -1,10 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
+import { apiFetch } from "@/lib/apiClient";
 import type { MediaUploadResponse, MediaEntityType, PresignedUrlResponse } from '@/types/api/media.api';
 
 export const mediaService = {
   uploadFile: async (
-    accessToken: string,
     file: File,
     entityType?: MediaEntityType,
     entityId?: string,
@@ -14,11 +12,8 @@ export const mediaService = {
     if (entityType) formData.append("entityType", entityType);
     if (entityId) formData.append("entityId", entityId);
 
-    const response = await fetch(`${API_URL}/api/v1/media/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const response = await apiFetch('/api/v1/media/upload', {
+      method: 'POST',
       body: formData,
     });
 
@@ -32,19 +27,12 @@ export const mediaService = {
   },
 
   getPresignedUrl: async (
-    accessToken: string,
     fileName: string,
     contentType: string,
   ): Promise<PresignedUrlResponse> => {
-    const url = new URL(`${API_URL}/api/v1/media/presigned-url`);
-    url.searchParams.append("fileName", fileName);
-    url.searchParams.append("contentType", contentType);
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const params = new URLSearchParams({ fileName, contentType });
+    const response = await apiFetch(`/api/v1/media/presigned-url?${params}`, {
+      method: 'GET',
     });
 
     if (!response.ok) {
@@ -58,10 +46,8 @@ export const mediaService = {
 
   uploadToS3: async (uploadUrl: string, file: File): Promise<void> => {
     const response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type,
-      },
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
       body: file,
     });
 
@@ -70,18 +56,10 @@ export const mediaService = {
     }
   },
 
-  getDownloadUrl: async (
-    accessToken: string,
-    s3Key: string,
-  ): Promise<string> => {
-    const url = new URL(`${API_URL}/api/v1/media/download`);
-    url.searchParams.append("s3Key", s3Key);
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+  getDownloadUrl: async (s3Key: string): Promise<string> => {
+    const params = new URLSearchParams({ s3Key });
+    const response = await apiFetch(`/api/v1/media/download?${params}`, {
+      method: 'GET',
     });
 
     if (!response.ok) {

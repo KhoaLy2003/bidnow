@@ -1,52 +1,28 @@
 import { ApiResponse } from "@/types/api/auth.api";
 import { UpdateUserProfileRequest, UserProfileResponse } from "@/types/api/user-profile.api";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { apiFetch } from "@/lib/apiClient";
 
 export const userService = {
-  /**
-   * Fetches the profile of the currently authenticated user.
-   * The backend resolves the identity from the X-User-Id header injected
-   * by the API Gateway — no userId is passed in the URL.
-   */
-  async getMyProfile(accessToken: string): Promise<ApiResponse<UserProfileResponse>> {
-    const response = await fetch(`${API_URL}/api/v1/users/me`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
+  async getMyProfile(): Promise<ApiResponse<UserProfileResponse>> {
+    const response = await apiFetch('/api/v1/users/me');
     if (!response.ok) {
       const error = await response.json();
       throw error;
     }
-
     return response.json();
   },
 
-  /**
-   * Updates the profile of the currently authenticated user.
-   */
   async updateMyProfile(
-    accessToken: string,
     data: UpdateUserProfileRequest
   ): Promise<ApiResponse<UserProfileResponse>> {
-    const response = await fetch(`${API_URL}/api/v1/users/me`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const response = await apiFetch('/api/v1/users/me', {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
-
     if (!response.ok) {
       const error = await response.json();
       throw error;
     }
-
     return response.json();
   },
 };

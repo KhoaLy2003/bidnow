@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useAuthStore } from "@/store/authStore";
 import { adminService } from "@/services/adminService";
 import {
   type AuditLogResponse,
@@ -69,7 +68,6 @@ function getActionBadge(action: string) {
 }
 
 export default function AuditLogsPage() {
-  const { accessToken } = useAuthStore();
   const [logs, setLogs] = useState<AuditLogResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<AuditLogFilters>({});
@@ -84,12 +82,10 @@ export default function AuditLogsPage() {
   stateRef.current = { filters, calendarFrom, calendarTo };
 
   const fetchLogs = useCallback(async (currentPage = 0, apiFilters?: AuditLogFilters) => {
-    if (!accessToken) return;
     setIsLoading(true);
     try {
       const { filters: f, calendarFrom: from, calendarTo: to } = stateRef.current;
       const response = await adminService.getAuditLogs(
-        accessToken,
         apiFilters ?? {
           ...f,
           fromDate: from ? formatStartOfDay(from) : undefined,
@@ -105,7 +101,7 @@ export default function AuditLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => {
     fetchLogs();

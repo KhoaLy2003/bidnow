@@ -13,12 +13,7 @@ interface UseProfileResult {
   updateProfile: (data: UpdateUserProfileRequest) => Promise<UserProfileResponse>;
 }
 
-/**
- * Fetches the authenticated user's profile from the backend.
- * Relies on the access token stored in authStore — no userId is passed explicitly.
- */
 export function useProfile(): UseProfileResult {
-  const accessToken = useAuthStore((s) => s.accessToken);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
@@ -26,13 +21,13 @@ export function useProfile(): UseProfileResult {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    if (!isAuthenticated || !accessToken) return;
+    if (!isAuthenticated) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await userService.getMyProfile(accessToken);
+      const res = await userService.getMyProfile();
       setProfile(res.data);
     } catch (err: unknown) {
       const message =
@@ -43,17 +38,15 @@ export function useProfile(): UseProfileResult {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, isAuthenticated]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
   const updateProfile = useCallback(
-    async (
-      data: UpdateUserProfileRequest
-    ): Promise<UserProfileResponse> => {
-      if (!isAuthenticated || !accessToken) {
+    async (data: UpdateUserProfileRequest): Promise<UserProfileResponse> => {
+      if (!isAuthenticated) {
         throw new Error("Not authenticated");
       }
 
@@ -61,7 +54,7 @@ export function useProfile(): UseProfileResult {
       setError(null);
 
       try {
-        const res = await userService.updateMyProfile(accessToken, data);
+        const res = await userService.updateMyProfile(data);
         setProfile(res.data);
         return res.data;
       } catch (err: unknown) {
@@ -75,7 +68,7 @@ export function useProfile(): UseProfileResult {
         setIsLoading(false);
       }
     },
-    [accessToken, isAuthenticated]
+    [isAuthenticated]
   );
 
   return { profile, isLoading, error, refetch: fetchProfile, updateProfile };

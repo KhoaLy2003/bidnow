@@ -28,7 +28,6 @@ import { ImageUploadGrid }      from '@/components/seller/ImageUploadGrid'
 import { CurrencyInput }        from '@/components/ui/currency-input'
 import { auctionService }       from '@/services/auction.service'
 import { mediaService }         from '@/services/media.service'
-import { useAuthStore }         from '@/store/authStore'
 
 function mapToSellerAuction(detail: AuctionDetail): SellerAuction {
   let status: SellerAuctionStatus
@@ -104,14 +103,12 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
   const [images,        setImages]        = useState<File[]>([])
   const [submitting,    setSubmitting]    = useState(false)
   const [categories,    setCategories]    = useState<AuctionCategoryResponse[]>([])
-  const { accessToken } = useAuthStore()
 
   useEffect(() => {
-    if (!accessToken) return
     auctionService.getCategories()
       .then(res => setCategories(res.data))
       .catch(err => console.error('Failed to load categories:', err))
-  }, [accessToken])
+  }, [])
 
   const hasTitle       = title.trim().length > 0
   const hasDescription = description.trim().length > 0
@@ -121,16 +118,12 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
   const readyToPublish = hasTitle && hasDescription && hasCategory && hasPricing && hasImages
 
   const submitForm = async (publish: boolean) => {
-    if (!accessToken) {
-      alert('You must be logged in to update an auction.')
-      return
-    }
     setSubmitting(true)
     try {
       const uploadedUrls: string[] = []
       for (const file of images) {
         try {
-          const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
+          const presigned = await mediaService.getPresignedUrl(file.name, file.type)
           await mediaService.uploadToS3(presigned.uploadUrl, file)
           uploadedUrls.push(presigned.s3Key)
         } catch (e) {
@@ -152,7 +145,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
         startTime: now.toISOString(),
         endTime: endsAt.toISOString(),
         imageUrls: uploadedUrls,
-      }, accessToken)
+      })
 
       if (publish) onPublish()
       else onSave()
@@ -277,7 +270,6 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
 // ── Page ────────────────────────────────────────────────────────
 export default function ManageAuctionPage() {
   const { id } = useParams<{ id: string }>()
-  const { accessToken } = useAuthStore()
 
   const [auction,    setAuction]    = useState<SellerAuction | null>(null)
   const [loading,    setLoading]    = useState(true)
@@ -301,10 +293,10 @@ export default function ManageAuctionPage() {
   useEffect(() => { loadAuction() }, [loadAuction])
 
   const handleDelete = async () => {
-    if (!accessToken || !auction) return
+    if (!auction) return
     setDeleting(true)
     try {
-      await auctionService.deleteAuction(auction.id, accessToken)
+      await auctionService.deleteAuction(auction.id)
       setDeleteOpen(false)
       setDeleted(true)
     } catch {

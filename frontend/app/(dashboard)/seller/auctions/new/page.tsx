@@ -27,7 +27,6 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { auctionService } from '@/services/auction.service'
 import { mediaService } from '@/services/media.service'
-import { useAuthStore } from '@/store/authStore'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import { CurrencyInput } from '@/components/ui/currency-input'
 
@@ -107,7 +106,6 @@ function validateStep3(data: CreateAuctionFormData): Errors {
 // ── Main component ──────────────────────────────────────────────
 export default function CreateAuctionPage() {
   const router = useRouter()
-  const { accessToken } = useAuthStore()
   const [step,      setStep]      = useState(1)
   const [data,      setData]      = useState<CreateAuctionFormData>(INITIAL_FORM_DATA)
   const [errors,    setErrors]    = useState<Errors>({})
@@ -124,11 +122,10 @@ export default function CreateAuctionPage() {
 
   // Fetch categories on mount
   useEffect(() => {
-    if (!accessToken) return;
     auctionService.getCategories()
       .then(res => setCategories(res.data))
       .catch(err => console.error("Failed to load categories:", err))
-  }, [accessToken])
+  }, [])
 
   function update<K extends keyof CreateAuctionFormData>(key: K, val: CreateAuctionFormData[K]) {
     setData(prev => ({ ...prev, [key]: val }))
@@ -146,17 +143,12 @@ export default function CreateAuctionPage() {
   }
 
   async function handleSubmit(asDraft: boolean) {
-    if (!accessToken) {
-      toast.error('You must be logged in to create an auction.')
-      return;
-    }
-
     setSubmitting(true)
     try {
       const uploadedUrls = await Promise.all(
         data.images.map(async (file) => {
           try {
-            const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
+            const presigned = await mediaService.getPresignedUrl(file.name, file.type)
             await mediaService.uploadToS3(presigned.uploadUrl, file)
             return presigned.s3Key
           } catch (e) {
@@ -191,7 +183,7 @@ export default function CreateAuctionPage() {
         endTime: endTime.toISOString(),
         imageUrls: uploadedUrls,
         status: auctionStatus
-      }, accessToken)
+      })
       
       router.push('/seller/auctions')
     } catch (error) {
