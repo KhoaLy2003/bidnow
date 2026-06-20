@@ -10,8 +10,6 @@ import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.exception.GlobalExceptionHandler;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.resolver.UserIdArgumentResolver;
-
-import static com.bidnow.common.constant.ErrorCodes.NOT_FOUND;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +21,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 import java.util.UUID;
 
+import static com.bidnow.common.constant.ErrorCodes.NOT_FOUND;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;

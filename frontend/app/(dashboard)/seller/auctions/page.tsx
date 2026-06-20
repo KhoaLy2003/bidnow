@@ -58,8 +58,12 @@ export default function SellerAuctionsPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await auctionService.getMyAuctions({})
-      setAuctions((res.data.data || []).map(mapAuctionSummaryToSellerAuction))
+      const [activeRes, historyRes] = await Promise.all([
+        auctionService.getMyAuctions({ type: 'active', size: 100 }),
+        auctionService.getMyAuctions({ type: 'history', size: 100 }),
+      ])
+      const merged = [...(activeRes.data.data || []), ...(historyRes.data.data || [])]
+      setAuctions(merged.map(mapAuctionSummaryToSellerAuction))
     } catch (err) {
       console.error('Failed to fetch auctions:', err)
       setError('failed')
@@ -74,7 +78,7 @@ export default function SellerAuctionsPage() {
     const active: SellerAuction[] = []
     const historical: SellerAuction[] = []
     auctions.forEach(a => {
-      if ([SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled].includes(a.status)) {
+      if ([SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled, SellerAuctionStatus.Rejected].includes(a.status)) {
         historical.push(a)
       } else {
         active.push(a)

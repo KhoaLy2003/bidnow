@@ -19,6 +19,7 @@ export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): S
   else if (dtoStatus === 'COMPLETED') status = SellerAuctionStatus.Completed;
   else if (dtoStatus === 'FAILED') status = SellerAuctionStatus.Failed;
   else if (dtoStatus === 'CANCELLED') status = SellerAuctionStatus.Cancelled;
+  else if (dtoStatus === 'REJECTED') status = SellerAuctionStatus.Rejected;
 
   return {
     id: dto.id,
@@ -38,14 +39,15 @@ export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): S
 }
 
 // Won/Lost/Outbid are UI-only states derived from current-user context after mapping.
-// The server only returns ACTIVE, SCHEDULED, COMPLETED, CANCELLED, FAILED.
+// The server can return ACTIVE, SCHEDULED, COMPLETED, CANCELLED, FAILED, REJECTED.
 function parseStatus(status: string): AuctionStatus {
   switch (status?.toUpperCase()) {
     case 'ACTIVE':    return AuctionStatus.Active
     case 'SCHEDULED': return AuctionStatus.Scheduled
     case 'COMPLETED':
     case 'CANCELLED':
-    case 'FAILED':    return AuctionStatus.Closed
+    case 'FAILED':
+    case 'REJECTED':  return AuctionStatus.Closed
     default:          return AuctionStatus.Closed
   }
 }

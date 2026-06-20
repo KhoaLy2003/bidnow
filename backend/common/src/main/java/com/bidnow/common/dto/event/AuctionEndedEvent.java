@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,4 +21,7 @@ public class AuctionEndedEvent {
     private UUID winnerId;
     private BigDecimal winningBidAmount;
     private List<UUID> loserIds; // For sending auction lost notification
+    private Integer totalBids;
+    private Instant endedAt;
+    private String closureSource; // SCHEDULER | ADMIN | BUY_NOW
 }
