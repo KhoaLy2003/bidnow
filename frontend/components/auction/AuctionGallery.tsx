@@ -83,7 +83,8 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
             alt={`${title} — image ${activeIndex + 1}`}
             fill
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, 600px"
+            sizes="(max-width: 768px) 100vw, 1200px"
+            quality={90}
             priority
           />
         ) : (

@@ -1,8 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import Link  from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
+import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
+import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge }    from '@/components/auction/StatusBadge'
 import { CountdownTimer } from '@/components/auction/CountdownTimer'
 import { formatCurrency }   from '@/lib/format'
@@ -22,7 +23,8 @@ export function AuctionBrowseCard({ item, className }: AuctionBrowseCardProps) {
     item.status === AuctionStatus.EndingSoon ||
     item.status === AuctionStatus.Critical
   const resolvedImage  = useSecureImage(item.primaryImageUrl)
-  const imageUrl       = resolvedImage ?? '/placeholder-auction.png'
+  const hasImage       = Boolean(item.primaryImageUrl)
+  const imageUrl       = resolvedImage ?? (hasImage ? undefined : '/placeholder-auction.png')
 
   return (
     // w-full fills the grid cell; h-full lets the card stretch to row height
@@ -36,16 +38,19 @@ export function AuctionBrowseCard({ item, className }: AuctionBrowseCardProps) {
       >
         {/* Image — edge-to-edge at top, clipped by Card's overflow-hidden rounded-xl */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          <Image
-            src={imageUrl}
-            alt={item.title}
-            fill
-            className={cn(
-              'object-cover transition-transform duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:scale-[1.02]',
-              isClosed && 'grayscale-[60%]',
-            )}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
+          {imageUrl && (
+            <ImageThumbnail
+              src={imageUrl}
+              alt={item.title}
+              fill
+              className={cn(
+                'object-cover transition-transform duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:scale-[1.02]',
+                isClosed && 'grayscale-[60%]',
+              )}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+          )}
+          {!imageUrl && <Skeleton className="absolute inset-0 size-full rounded-none" />}
           <div className="absolute top-2 left-2">
             <StatusBadge status={item.status} />
           </div>

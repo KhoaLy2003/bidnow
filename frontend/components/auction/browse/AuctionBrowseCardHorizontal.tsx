@@ -1,8 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import Link  from 'next/link'
 import { Card }           from '@/components/ui/card'
+import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
+import { Skeleton }       from '@/components/ui/skeleton'
 import { StatusBadge }    from '@/components/auction/StatusBadge'
 import { CountdownTimer } from '@/components/auction/CountdownTimer'
 import { formatCurrency }   from '@/lib/format'
@@ -19,7 +20,8 @@ interface AuctionBrowseCardHorizontalProps {
 export function AuctionBrowseCardHorizontal({ item, className }: AuctionBrowseCardHorizontalProps) {
   const isClosed      = item.status === AuctionStatus.Closed
   const resolvedImage = useSecureImage(item.primaryImageUrl)
-  const imageUrl      = resolvedImage ?? '/placeholder-auction.png'
+  const hasImage      = Boolean(item.primaryImageUrl)
+  const imageUrl      = resolvedImage ?? (hasImage ? undefined : '/placeholder-auction.png')
 
   return (
     <Link href={`/auctions/${item.id}`} className="group block">
@@ -34,16 +36,20 @@ export function AuctionBrowseCardHorizontal({ item, className }: AuctionBrowseCa
 
           {/* ── Left: image ─────────────────────────────────────── */}
           <div className="relative w-40 aspect-square shrink-0 rounded-lg overflow-hidden bg-muted">
-            <Image
-              src={imageUrl}
-              alt={item.title}
-              fill
-              className={cn(
-                'object-cover transition-transform duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:scale-[1.02]',
-                isClosed && 'grayscale-[60%]',
-              )}
-              sizes="160px"
-            />
+            {imageUrl ? (
+              <ImageThumbnail
+                src={imageUrl}
+                alt={item.title}
+                fill
+                className={cn(
+                  'object-cover transition-transform duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] group-hover:scale-[1.02]',
+                  isClosed && 'grayscale-[60%]',
+                )}
+                sizes="160px"
+              />
+            ) : (
+              <Skeleton className="absolute inset-0 size-full rounded-none" />
+            )}
             <div className="absolute top-2 left-2">
               <StatusBadge status={item.status} />
             </div>
