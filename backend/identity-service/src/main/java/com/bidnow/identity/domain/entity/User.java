@@ -37,6 +37,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
     @MaskPii
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

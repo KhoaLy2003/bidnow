@@ -82,6 +82,7 @@ public class AuctionServiceImpl implements AuctionService {
     private final UserServiceClient userServiceClient;
 
     @Override
+    @Transactional(readOnly = true)
     public AuctionDetailResponse getAuctionById(UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));

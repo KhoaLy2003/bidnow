@@ -52,6 +52,7 @@ public class UserProfileServiceImpl implements UserProfileService {
 
         UserProfile profile = UserProfile.builder()
                 .userId(request.getUserId())
+                .displayName(request.getDisplayName())
                 .build();
         profile = userProfileRepository.save(profile);
         AuditContextHolder.setNewState(profile);

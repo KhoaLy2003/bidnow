@@ -17,7 +17,6 @@ import { mediaService } from "@/services/media.service";
 export default function ProfilePage() {
   const { profile, isLoading, error, updateProfile } = useProfile();
   const authUser = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,7 +68,6 @@ export default function ProfilePage() {
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!accessToken) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -83,7 +81,6 @@ export default function ProfilePage() {
       // 1. Upload to media-service, tagging with the user's own id as entityId
       const userId = authUser?.id;
       const uploadRes = await mediaService.uploadFile(
-        accessToken,
         file,
         "USER_AVATAR",
         userId,

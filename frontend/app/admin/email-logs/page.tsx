@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 
 import { adminService } from '@/services/adminService'
 import { type EmailDeliveryStatus, type EmailLogFilters, type EmailLogResponse } from '@/types/api/admin.api'
-import { useAuthStore } from '@/store/authStore'
 import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +34,6 @@ const PAGE_SIZE = DEFAULT_PAGE_SIZE
 const SKELETON_ROW_KEYS = ['sk-0', 'sk-1', 'sk-2', 'sk-3', 'sk-4'] as const
 
 export default function AdminEmailLogsPage() {
-  const { accessToken } = useAuthStore()
   const [logs, setLogs] = useState<EmailLogResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -47,11 +45,10 @@ export default function AdminEmailLogsPage() {
   })
 
   const fetchLogs = useCallback(async () => {
-    if (!accessToken) return
     setLoading(true)
 
     try {
-      const result = await adminService.getEmailLogs(accessToken, filters, page, PAGE_SIZE)
+      const result = await adminService.getEmailLogs(filters, page, PAGE_SIZE)
       setLogs(result.data)
       setTotalPages(result.pagination.totalPages)
       setTotalElements(result.pagination.total)
@@ -60,7 +57,7 @@ export default function AdminEmailLogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [accessToken, filters, page])
+  }, [filters, page])
 
   useEffect(() => {
     fetchLogs()
