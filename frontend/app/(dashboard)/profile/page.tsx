@@ -86,10 +86,10 @@ export default function ProfilePage() {
         userId,
       );
 
-      const s3Key = uploadRes.s3Key;
+      const publicUrl = uploadRes.publicUrl;
 
       // 2. Persist the new avatarUrl directly to the user-profile in one call
-      await updateProfile({ avatarUrl: s3Key });
+      await updateProfile({ avatarUrl: publicUrl });
       toast.success("Avatar updated successfully!");
     } catch (err: any) {
       toast.error(err?.message || "Failed to upload avatar");

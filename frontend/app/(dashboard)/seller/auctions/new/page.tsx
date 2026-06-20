@@ -150,7 +150,7 @@ export default function CreateAuctionPage() {
           try {
             const presigned = await mediaService.getPresignedUrl(file.name, file.type)
             await mediaService.uploadToS3(presigned.uploadUrl, file)
-            return presigned.s3Key
+            return presigned.publicUrl
           } catch (e) {
             console.error('Failed to upload image:', file.name, e)
             throw new Error(`Image upload failed for "${file.name}".`)

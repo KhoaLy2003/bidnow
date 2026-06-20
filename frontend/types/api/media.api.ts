@@ -4,6 +4,7 @@ export interface MediaUploadResponse {
   id: string;
   originalName: string;
   s3Key: string;
+  publicUrl: string;
   contentType: string;
   fileSize: number;
   width: number;
@@ -14,5 +15,6 @@ export interface MediaUploadResponse {
 export interface PresignedUrlResponse {
   uploadUrl: string;
   s3Key: string;
+  publicUrl: string;
   expiresAt: string;
 }
