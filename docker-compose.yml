@@ -1,37 +1,7 @@
-version: '3.8'
-
 services:
   # --- INFRASTRUCTURE ---
-  db:
-    image: postgres:15-alpine
-    container_name: bidnow-db
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=bidnow
-      - POSTGRES_PASSWORD=bidnow
-      - POSTGRES_DB=bidnow_root
-    volumes:
-      - ./docker/postgres/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bidnow -d bidnow_root"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    container_name: bidnow-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   kafka:
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.7
     container_name: bidnow-kafka
     ports:
       - "9092:9092"
@@ -46,6 +16,15 @@ services:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
       - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
 
   # --- BACKEND SERVICES ---
   discovery-service:
@@ -56,10 +35,12 @@ services:
     ports:
       - "8761:8761"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 40s
+    restart: unless-stopped
 
   api-gateway:
     build:
@@ -70,9 +51,11 @@ services:
       - "8080:8080"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       discovery-service:
         condition: service_healthy
+    restart: unless-stopped
 
   identity-service:
     build:
@@ -81,14 +64,14 @@ services:
     container_name: bidnow-identity
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/identity_db
-      - DB_USERNAME=bidnow
-      - DB_PASSWORD=bidnow
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
-      db:
-        condition: service_healthy
       discovery-service:
         condition: service_healthy
+    restart: unless-stopped
 
   user-service:
     build:
@@ -97,14 +80,13 @@ services:
     container_name: bidnow-user
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/user_db
-      - DB_USERNAME=bidnow
-      - DB_PASSWORD=bidnow
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
-      db:
-        condition: service_healthy
       discovery-service:
         condition: service_healthy
+    restart: unless-stopped
 
   auction-service:
     build:
@@ -113,17 +95,18 @@ services:
     container_name: bidnow-auction
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/auction_db
-      - DB_USERNAME=bidnow
-      - DB_PASSWORD=bidnow
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
     depends_on:
-      db:
-        condition: service_healthy
       discovery-service:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
+    restart: unless-stopped
 
   bidding-service:
     build:
@@ -132,20 +115,19 @@ services:
     container_name: bidnow-bidding
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/bidding_db
-      - DB_USERNAME=bidnow
-      - DB_PASSWORD=bidnow
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_HOST=${REDIS_HOST}
+      - SPRING_REDIS_PORT=${REDIS_PORT}
+      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
-      db:
-        condition: service_healthy
       discovery-service:
         condition: service_healthy
       kafka:
-        condition: service_started
-      redis:
         condition: service_healthy
+    restart: unless-stopped
 
   wallet-service:
     build:
@@ -154,14 +136,13 @@ services:
     container_name: bidnow-wallet
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/wallet_db
-      - DB_USERNAME=bidnow
-      - DB_PASSWORD=bidnow
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
     depends_on:
-      db:
-        condition: service_healthy
       discovery-service:
         condition: service_healthy
+    restart: unless-stopped
 
   media-service:
     build:
@@ -170,51 +151,29 @@ services:
     container_name: bidnow-media
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
-      - DB_URL=jdbc:postgresql://db:5432/media_db
-      - DB_USERNAME=bidnow
-      - DB_PASSWORD=bidnow
+      - DB_URL=${DB_URL}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - MAIL_HOST=mailpit
-      - MAIL_PORT=1025
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+      - AWS_ENDPOINT=${AWS_ENDPOINT}
     depends_on:
-      db:
-        condition: service_healthy
       discovery-service:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
+    restart: unless-stopped
 
-  # --- FRONTEND ---
-  frontend:
-    build:
-      context: ./frontend
-    container_name: bidnow-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://api-gateway:8080
-    depends_on:
-      - api-gateway
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: bidnow-kafka-ui
-    ports:
-      - "8090:8080"
-    environment:
-      - KAFKA_CLUSTERS_0_NAME=bidnow-kafka
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-    depends_on:
-      kafka:
-        condition: service_started
-
-  # --- TOOLS ---
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: bidnow-mailpit
-    ports:
-      - "1025:1025"
-      - "8025:8025"
+volumes:
+  kafka_data:
 
 networks:
   default:

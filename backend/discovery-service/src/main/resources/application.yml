@@ -1,5 +1,9 @@
 server:
   port: 8761
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 5
 
 eureka:
   client:

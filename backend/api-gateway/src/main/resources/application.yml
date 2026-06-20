@@ -71,7 +71,7 @@ eureka:
 management:
   tracing:
     sampling:
-      probability: 1.0  # reduce to 0.1 or lower in production
+      probability: 0.0
   endpoints:
     web:
       exposure:

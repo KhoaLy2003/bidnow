@@ -2,22 +2,21 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy the root pom and common module pom to cache dependencies
 COPY pom.xml .
 COPY common/pom.xml common/
 COPY discovery-service/pom.xml discovery-service/
+COPY common/src common/src
 
-# Install common module and download discovery-service dependencies
 RUN mvn install -pl common -am -DskipTests
 
-# Copy source code and build the service
-COPY common/src common/src
 COPY discovery-service/src discovery-service/src
 RUN mvn package -pl discovery-service -DskipTests
 
 # Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=build /app/discovery-service/target/*.jar app.jar
+USER appuser
 EXPOSE 8761
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xms128m", "-Xmx256m", "-jar", "app.jar"]
