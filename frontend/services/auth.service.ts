@@ -10,13 +10,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export const authService = {
   async register(
+    name: string,
     email: string,
     password: string,
   ): Promise<ApiResponse<RegisterResponse>> {
     const response = await fetch(`${API_URL}/api/v1/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ name, email, password }),
     });
 
     if (!response.ok) {

@@ -17,6 +17,11 @@ import lombok.NoArgsConstructor;
 public class RegisterRequest {
 
     @NotBlank
+    @Size(max = 100, message = "Name must be at most 100 characters")
+    @Schema(description = "Display name", example = "John Doe", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String name;
+
+    @NotBlank
     @Email
     @Schema(description = "User email address", example = "john.doe@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;

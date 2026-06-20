@@ -15,6 +15,7 @@ public class UserMapper {
         return RegisterResponse.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
+                .displayName(user.getDisplayName())
                 .accountStatus(user.getAccountStatus().name())
                 .isEmailVerified(user.getIsEmailVerified())
                 .isActive(user.getIsActive())
