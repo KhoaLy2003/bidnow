@@ -101,6 +101,39 @@ class AuctionStartupRecoveryServiceTest {
     }
 
     @Test
+    void recoverScheduledAuctions_whenActivateFails_skipsCloseAndContinues() {
+        // Two SCHEDULED auctions, both with startTime in the past
+        // endTime is in the past for both (would normally trigger close after activate)
+        OffsetDateTime now = OffsetDateTime.now();
+        AuctionItem auction1 = AuctionItem.builder()
+                .id(UUID.randomUUID())
+                .endTime(now.minusMinutes(30))
+                .build();
+        AuctionItem auction2 = AuctionItem.builder()
+                .id(UUID.randomUUID())
+                .endTime(now.minusMinutes(30))
+                .build();
+
+        when(auctionItemRepository.findByStatusAndStartTimeBeforeAndDeletedAtIsNull(
+                eq(AuctionStatus.SCHEDULED), any(OffsetDateTime.class)))
+                .thenReturn(List.of(auction1, auction2));
+        when(auctionItemRepository.findByStatusAndEndTimeBeforeAndDeletedAtIsNull(
+                eq(AuctionStatus.ACTIVE), any(OffsetDateTime.class)))
+                .thenReturn(List.of());
+
+        // activate throws for auction1, succeeds for auction2
+        doThrow(new RuntimeException("activate failed"))
+                .when(activationService).activate(auction1.getId());
+
+        recoveryService.recoverOverdueAuctions();
+
+        // close must NOT be called for auction1 (activate failed)
+        verify(closureService, never()).close(auction1.getId());
+        // auction2 was activated successfully, so close IS called
+        verify(closureService).close(auction2.getId());
+    }
+
+    @Test
     void recoverOverdueAuctions_closeThrows_continuesNextAuction() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();

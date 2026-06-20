@@ -49,6 +49,8 @@ public class AuctionStartupRecoveryService {
             }
             if (!auction.getEndTime().isAfter(now)) {
                 try {
+                    // activate() already scheduled a closure job via afterCommit; calling close() here is intentional
+                    // and will be a no-op thanks to the idempotency guard in AuctionClosureService.close()
                     closureService.close(auction.getId());
                 } catch (Exception e) {
                     log.error("Failed to close overdue SCHEDULED auction {} after activation: {}", auction.getId(), e.getMessage());
