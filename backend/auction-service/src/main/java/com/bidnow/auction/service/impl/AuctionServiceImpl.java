@@ -25,6 +25,7 @@ import com.bidnow.auction.repository.AuctionCategoryRepository;
 import com.bidnow.auction.repository.AuctionImageRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
+import com.bidnow.auction.service.AuctionClosureService;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
@@ -80,6 +81,7 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionMapper auctionMapper;
     private final AuctionKafkaProducer auctionKafkaProducer;
     private final UserServiceClient userServiceClient;
+    private final AuctionClosureService auctionClosureService;
 
     @Override
     @Transactional(readOnly = true)
@@ -142,6 +144,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .startingPrice(auction.getStartingPrice())
                     .endTime(auction.getEndTime().toInstant())
                     .build());
+            auctionClosureService.scheduleClosureJob(auction.getId(), auction.getEndTime().toInstant());
         } else if (newStatus == AuctionStatus.SCHEDULED) {
             scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
@@ -243,6 +246,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .startingPrice(auction.getStartingPrice())
                     .endTime(auction.getEndTime().toInstant())
                     .build());
+            auctionClosureService.scheduleClosureJob(auction.getId(), auction.getEndTime().toInstant());
         } else if (status == AuctionStatus.SCHEDULED) {
             scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }

@@ -4,6 +4,7 @@ import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.entity.AuctionStatusHistory;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
+import com.bidnow.auction.service.AuctionClosureService;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
@@ -23,6 +24,7 @@ public class AuctionActivationService {
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     private final AuctionKafkaProducer kafkaProducer;
+    private final AuctionClosureService closureService;
 
     @Transactional
     public void activate(UUID auctionId) {
@@ -61,6 +63,7 @@ public class AuctionActivationService {
                 .endTime(auction.getEndTime().toInstant())
                 .build());
 
+        closureService.scheduleClosureJob(auctionId, auction.getEndTime().toInstant());
         log.info("Activated auction {} (SCHEDULED → ACTIVE)", auctionId);
     }
 }
