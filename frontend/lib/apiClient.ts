@@ -9,6 +9,31 @@ export async function apiFetch(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
+  // Proactive refresh: if token is expired or within 60 s of expiry, refresh before sending.
+  // Block-scoped to avoid naming conflicts with the reactive 401 path below.
+  {
+    const { accessToken, accessTokenExpiresAt, refreshToken } = useAuthStore.getState();
+    if (accessToken && accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - 60_000) {
+      if (!refreshToken) {
+        forceLogout();
+        throw new Error("session_expired");
+      }
+      if (!refreshPromise) {
+        refreshPromise = authService
+          .refresh(refreshToken)
+          .then(({ data }) => {
+            useAuthStore.getState().setTokens(data.accessToken, data.refreshToken, data.expiresIn);
+          })
+          .catch(() => {
+            forceLogout();
+            throw new Error("session_expired");
+          })
+          .finally(() => { refreshPromise = null; });
+      }
+      await refreshPromise;
+    }
+  }
+
   const response = await doFetch(url, options);
 
   if (response.status !== 401) return response;
@@ -23,15 +48,13 @@ export async function apiFetch(
     refreshPromise = authService
       .refresh(refreshToken)
       .then(({ data }) => {
-        useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+        useAuthStore.getState().setTokens(data.accessToken, data.refreshToken, data.expiresIn);
       })
       .catch(() => {
         forceLogout();
         throw new Error("session_expired");
       })
-      .finally(() => {
-        refreshPromise = null;
-      });
+      .finally(() => { refreshPromise = null; });
   }
 
   await refreshPromise;
