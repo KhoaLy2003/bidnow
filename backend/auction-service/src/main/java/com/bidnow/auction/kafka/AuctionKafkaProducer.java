@@ -37,7 +37,16 @@ public class AuctionKafkaProducer {
     }
 
     public void publishAuctionEnded(AuctionEndedEvent event) {
-        kafkaTemplate.send(AUCTION_ENDED_TOPIC, event.getAuctionId().toString(), event);
-        log.info("Published AuctionEndedEvent for auction: {} (source={})", event.getAuctionId(), event.getClosureSource());
+        kafkaTemplate.send(AUCTION_ENDED_TOPIC, event.getAuctionId().toString(), event)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("CRITICAL: Failed to publish AuctionEndedEvent for auction {} — "
+                                + "downstream consumers will not be notified; manual republication required",
+                                event.getAuctionId(), ex);
+                    } else {
+                        log.info("Published AuctionEndedEvent for auction: {} (source={})",
+                                event.getAuctionId(), event.getClosureSource());
+                    }
+                });
     }
 }

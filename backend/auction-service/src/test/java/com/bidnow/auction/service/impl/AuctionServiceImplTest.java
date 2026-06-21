@@ -10,6 +10,7 @@ import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
+import com.bidnow.auction.service.AuctionClosureService;
 import com.bidnow.auction.mapper.AuctionMapper;
 import com.bidnow.auction.repository.AuctionCategoryRepository;
 import com.bidnow.auction.repository.AuctionImageRepository;
@@ -64,6 +65,8 @@ class AuctionServiceImplTest {
     private AuctionKafkaProducer auctionKafkaProducer;
     @Mock
     private UserServiceClient userServiceClient;
+    @Mock
+    private AuctionClosureService auctionClosureService;
 
     @InjectMocks
     private AuctionServiceImpl auctionService;
