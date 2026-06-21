@@ -11,6 +11,11 @@ export async function apiFetch(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
+  // Token refresh is browser-only — the auth store lives in localStorage.
+  if (typeof window === "undefined") {
+    return doFetch(url, options);
+  }
+
   // Proactive refresh: if token is expired or within 60 s of expiry, refresh before sending.
   // Block-scoped to avoid naming conflicts with the reactive 401 path below.
   {

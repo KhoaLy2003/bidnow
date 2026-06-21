@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useSecureImage } from '@/hooks/useSecureImage'
+import { resolveImageUrl } from '@/lib/image-utils'
 import type { AuctionImage } from '@/types/ui/auction.ui'
 
 interface AuctionGalleryProps {
@@ -21,7 +21,7 @@ interface ThumbnailProps {
 }
 
 function Thumbnail({ img, isActive, index, title, onClick }: ThumbnailProps) {
-  const src = useSecureImage(img.thumbnailUrl || img.imageUrl)
+  const src = resolveImageUrl(img.thumbnailUrl || img.imageUrl)
   return (
     <button
       type="button"
@@ -54,7 +54,7 @@ export function AuctionGallery({ images, title }: AuctionGalleryProps) {
   const hasImages   = sorted.length > 0
   const activeImage = sorted[activeIndex]
 
-  const resolvedActiveUrl = useSecureImage(activeImage?.imageUrl)
+  const resolvedActiveUrl = resolveImageUrl(activeImage?.imageUrl)
 
   function cancelDrag() { setDragStartX(null) }
 

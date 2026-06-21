@@ -30,9 +30,10 @@ public interface UploadEventStrategy {
     /**
      * Perform post-upload actions (e.g. publish a domain event).
      *
-     * @param ownerId  the user who uploaded the file
-     * @param entityId the entity the file is associated with (may be null)
-     * @param s3Key    the S3 object key of the uploaded file
+     * @param ownerId   the user who uploaded the file
+     * @param entityId  the entity the file is associated with (may be null)
+     * @param s3Key     the S3 object key of the uploaded file
+     * @param publicUrl the permanent public URL to access the uploaded file
      */
-    void handle(UUID ownerId, UUID entityId, String s3Key);
+    void handle(UUID ownerId, UUID entityId, String s3Key, String publicUrl);
 }

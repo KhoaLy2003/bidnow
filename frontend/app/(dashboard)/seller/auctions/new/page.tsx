@@ -23,7 +23,7 @@ import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { cn, getErrorMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 import { auctionService } from '@/services/auction.service'
 import { mediaService } from '@/services/media.service'
@@ -150,7 +150,7 @@ export default function CreateAuctionPage() {
           try {
             const presigned = await mediaService.getPresignedUrl(file.name, file.type)
             await mediaService.uploadToS3(presigned.uploadUrl, file)
-            return presigned.s3Key
+            return presigned.publicUrl
           } catch (e) {
             console.error('Failed to upload image:', file.name, e)
             throw new Error(`Image upload failed for "${file.name}".`)
@@ -188,7 +188,7 @@ export default function CreateAuctionPage() {
       router.push('/seller/auctions')
     } catch (error) {
       console.error('Failed to create auction:', error)
-      toast.error('Failed to create auction. Please try again.')
+      toast.error(getErrorMessage(error, 'Failed to create auction. Please try again.'))
     } finally {
       setSubmitting(false)
     }

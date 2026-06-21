@@ -12,6 +12,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAuthStore } from "@/store/authStore";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import { mediaService } from "@/services/media.service";
 
 export default function ProfilePage() {
@@ -56,7 +57,7 @@ export default function ProfilePage() {
       toast.success("Profile updated successfully!");
       setIsEditing(false);
     } catch (error) {
-      toast.error("Failed to update profile.");
+      toast.error(getErrorMessage(error, "Failed to update profile."));
     } finally {
       setIsSaving(false);
     }
@@ -86,10 +87,10 @@ export default function ProfilePage() {
         userId,
       );
 
-      const s3Key = uploadRes.s3Key;
+      const publicUrl = uploadRes.publicUrl;
 
       // 2. Persist the new avatarUrl directly to the user-profile in one call
-      await updateProfile({ avatarUrl: s3Key });
+      await updateProfile({ avatarUrl: publicUrl });
       toast.success("Avatar updated successfully!");
     } catch (err: any) {
       toast.error(err?.message || "Failed to upload avatar");

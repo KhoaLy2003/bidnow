@@ -24,6 +24,9 @@ public class MediaUploadResponse {
     @Schema(description = "S3 key of the stored file", example = "media/550e8400-e29b-41d4-a716-446655440000/profile.jpg", requiredMode = Schema.RequiredMode.REQUIRED)
     private String s3Key;
 
+    @Schema(description = "Public URL to access the uploaded file directly", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String publicUrl;
+
     @Schema(description = "MIME type of the file", example = "image/jpeg", requiredMode = Schema.RequiredMode.REQUIRED)
     private String contentType;
 

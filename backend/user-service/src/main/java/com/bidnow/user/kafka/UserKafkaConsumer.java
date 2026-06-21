@@ -24,10 +24,10 @@ public class UserKafkaConsumer {
     @Transactional
     @KafkaListener(topics = "avatar-uploaded-topic", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeAvatarUploaded(AvatarUploadedEvent event) {
-        log.info("Received AvatarUploadedEvent for userId={}, s3Key={}", event.getUserId(), event.getS3Key());
+        log.info("Received AvatarUploadedEvent for userId={}", event.getUserId());
 
         UpdateUserProfileRequest request = UpdateUserProfileRequest.builder()
-                .avatarUrl(event.getS3Key())
+                .avatarUrl(event.getPublicUrl())
                 .build();
         userProfileService.updateMyProfile(event.getUserId(), request);
 

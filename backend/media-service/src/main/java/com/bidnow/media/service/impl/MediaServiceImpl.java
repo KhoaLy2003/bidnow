@@ -19,10 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -54,6 +52,14 @@ public class MediaServiceImpl implements MediaService {
 
     @Value("${aws.s3.BUCKET_NAME}")
     private String bucketName;
+
+    @Value("${supabase.public-url}")
+    private String supabasePublicUrl;
+
+    private String buildPublicUrl(String s3Key) {
+        String base = supabasePublicUrl.endsWith("/") ? supabasePublicUrl.substring(0, supabasePublicUrl.length() - 1) : supabasePublicUrl;
+        return base + "/storage/v1/object/public/" + bucketName + "/" + s3Key;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Server-side upload
@@ -95,15 +101,18 @@ public class MediaServiceImpl implements MediaService {
 
             MediaAsset saved = mediaAssetRepository.save(asset);
 
+            String publicUrl = buildPublicUrl(s3Key);
+
             // Dispatch post-upload event via Strategy Pattern — no if-blocks needed
             if (entityType != null && ownerId != null) {
-                uploadEventStrategyFactory.dispatch(entityType, ownerId, entityId, s3Key);
+                uploadEventStrategyFactory.dispatch(entityType, ownerId, entityId, s3Key, publicUrl);
             }
 
             return MediaUploadResponse.builder()
                     .id(saved.getId())
                     .originalName(saved.getOriginalName())
                     .s3Key(saved.getS3Key())
+                    .publicUrl(publicUrl)
                     .contentType(saved.getContentType())
                     .fileSize(saved.getFileSize())
                     .width(saved.getWidth())
@@ -141,25 +150,9 @@ public class MediaServiceImpl implements MediaService {
         return PresignedUrlResponse.builder()
                 .uploadUrl(presignedRequest.url().toString())
                 .s3Key(s3Key)
+                .publicUrl(buildPublicUrl(s3Key))
                 .expiresAt(expiresAt)
                 .build();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Presigned download URL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    @Override
-    public String generateDownloadUrl(String s3Key) {
-        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofHours(1))
-                .getObjectRequest(GetObjectRequest.builder()
-                        .bucket(bucketName)
-                        .key(s3Key)
-                        .build())
-                .build();
-
-        return s3Presigner.presignGetObject(presignRequest).url().toString();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

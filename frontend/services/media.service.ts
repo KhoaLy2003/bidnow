@@ -55,19 +55,4 @@ export const mediaService = {
       throw new Error(`Failed to upload to S3: ${response.statusText}`);
     }
   },
-
-  getDownloadUrl: async (s3Key: string): Promise<string> => {
-    const params = new URLSearchParams({ s3Key });
-    const response = await apiFetch(`/api/v1/media/download?${params}`, {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw error;
-    }
-
-    const json = await response.json();
-    return json.data;
-  },
 };
