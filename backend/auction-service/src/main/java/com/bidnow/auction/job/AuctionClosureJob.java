@@ -15,6 +15,13 @@ public class AuctionClosureJob {
 
     private final AuctionClosureService closureService;
 
+    /**
+     * JobRunr entry point that closes the auction with the given ID. Delegates entirely to
+     * {@link AuctionClosureService#close}, which is idempotent — retries triggered by JobRunr
+     * ({@code retries = 3}) are safe and will no-op if the auction is already closed.
+     *
+     * @param auctionId the ID of the auction to close
+     */
     @Job(name = "Close auction %0", retries = 3)
     public void closeAuction(UUID auctionId) {
         closureService.close(auctionId);

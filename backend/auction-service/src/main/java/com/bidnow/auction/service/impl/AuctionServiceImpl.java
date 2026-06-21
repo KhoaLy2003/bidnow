@@ -71,7 +71,7 @@ import java.util.stream.Collectors;
 public class AuctionServiceImpl implements AuctionService {
 
     private static final Set<AuctionStatus> TERMINAL_STATUSES =
-            Set.of(AuctionStatus.CANCELLED, AuctionStatus.COMPLETED, AuctionStatus.FAILED);
+            Set.of(AuctionStatus.CANCELLED, AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.REJECTED);
 
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionCategoryRepository auctionCategoryRepository;

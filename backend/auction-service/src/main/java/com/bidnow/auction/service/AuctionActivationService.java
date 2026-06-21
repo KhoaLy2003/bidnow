@@ -25,6 +25,18 @@ public class AuctionActivationService {
     private final AuctionKafkaProducer kafkaProducer;
     private final AuctionClosureService closureService;
 
+    /**
+     * Transitions a SCHEDULED auction to ACTIVE once its {@code startTime} has been reached,
+     * records a status-history entry, publishes an {@link com.bidnow.common.dto.event.AuctionCreatedEvent},
+     * and schedules a closure job for the auction's {@code endTime} via
+     * {@link AuctionClosureService#scheduleClosureJob}.
+     * <p>
+     * The method is idempotent: if the auction is not in SCHEDULED status or {@code startTime} has
+     * not yet passed, it logs and returns without changes. This makes it safe to call from startup
+     * recovery in addition to the normal JobRunr activation path.
+     *
+     * @param auctionId the ID of the auction to activate
+     */
     @Transactional
     public void activate(UUID auctionId) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)

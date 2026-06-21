@@ -65,6 +65,7 @@ class AuctionClosureServiceTest {
         verify(kafkaProducer).publishAuctionEnded(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getWinnerId()).isEqualTo(currentWinnerId);
         assertThat(eventCaptor.getValue().getWinningBidAmount()).isEqualByComparingTo(new BigDecimal("300.00"));
+        // TODO: update this assertion when the bidding-service provides loser data (see loserIds TODO in AuctionClosureService)
         assertThat(eventCaptor.getValue().getLoserIds()).isEmpty();
     }
 
@@ -91,6 +92,7 @@ class AuctionClosureServiceTest {
         verify(kafkaProducer).publishAuctionEnded(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getWinnerId()).isNull();
         assertThat(eventCaptor.getValue().getWinningBidAmount()).isNull();
+        // TODO: update this assertion when the bidding-service provides loser data (see loserIds TODO in AuctionClosureService)
         assertThat(eventCaptor.getValue().getLoserIds()).isEmpty();
     }
 
