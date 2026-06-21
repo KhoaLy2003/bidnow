@@ -1,5 +1,5 @@
 import {
-  Radio, Timer, Lock, XCircle, Ban, FileText,
+  Radio, Timer, Lock, XCircle, Ban, FileText, ShieldX,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
@@ -19,6 +19,7 @@ const CONFIG: Record<SellerAuctionStatus, {
   [SellerAuctionStatus.Completed]:  { label: 'Completed',   variant: 'closed',      Icon: Lock },
   [SellerAuctionStatus.Failed]:     { label: 'Failed',      variant: 'closed',      Icon: XCircle },
   [SellerAuctionStatus.Cancelled]:  { label: 'Cancelled',   variant: 'closed',      Icon: Ban },
+  [SellerAuctionStatus.Rejected]:   { label: 'Rejected',     variant: 'lost',        Icon: ShieldX },
 }
 
 interface SellerStatusBadgeProps {

@@ -8,7 +8,6 @@ import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
-import com.bidnow.auction.dto.response.CategoryCountResponse;
 import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.service.AuctionClosureService;
@@ -52,14 +51,22 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuctionServiceImplTest {
 
-    @Mock private AuctionItemRepository auctionItemRepository;
-    @Mock private AuctionCategoryRepository auctionCategoryRepository;
-    @Mock private AuctionImageRepository auctionImageRepository;
-    @Mock private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
-    @Mock private AuctionMapper auctionMapper;
-    @Mock private AuctionKafkaProducer auctionKafkaProducer;
-    @Mock private UserServiceClient userServiceClient;
-    @Mock private AuctionClosureService auctionClosureService;
+    @Mock
+    private AuctionItemRepository auctionItemRepository;
+    @Mock
+    private AuctionCategoryRepository auctionCategoryRepository;
+    @Mock
+    private AuctionImageRepository auctionImageRepository;
+    @Mock
+    private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
+    @Mock
+    private AuctionMapper auctionMapper;
+    @Mock
+    private AuctionKafkaProducer auctionKafkaProducer;
+    @Mock
+    private UserServiceClient userServiceClient;
+    @Mock
+    private AuctionClosureService auctionClosureService;
 
     @InjectMocks
     private AuctionServiceImpl auctionService;

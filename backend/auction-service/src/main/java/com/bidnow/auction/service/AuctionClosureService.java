@@ -70,6 +70,9 @@ public class AuctionClosureService {
                 .winnerId(hasWinner ? auction.getWinnerId() : null)
                 .winningBidAmount(hasWinner ? auction.getCurrentPrice() : null)
                 .loserIds(List.of())
+                .totalBids(auction.getTotalBids())
+                .endedAt(Instant.now())
+                .closureSource("SCHEDULER")
                 .build());
 
         log.info("Closed auction {} (ACTIVE → {})", auctionId, newStatus);

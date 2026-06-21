@@ -13,10 +13,9 @@ import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
-import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
-import com.bidnow.auction.repository.projection.CategoryAuctionCount;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
@@ -82,6 +81,11 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionKafkaProducer auctionKafkaProducer;
     private final UserServiceClient userServiceClient;
     private final AuctionClosureService auctionClosureService;
+
+    private static UUID activationJobId(UUID auctionId) {
+        return UUID.nameUUIDFromBytes(
+                ("auction-activation:" + auctionId).getBytes(StandardCharsets.UTF_8));
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -259,7 +263,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Transactional(readOnly = true)
     public PageResponse<AuctionSummaryResponse> getMyAuctions(UUID sellerId, String type, UUID categoryId, Pageable pageable) {
         List<AuctionStatus> statusFilter = "history".equalsIgnoreCase(type)
-                ? List.of(AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.CANCELLED)
+                ? List.of(AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.CANCELLED, AuctionStatus.REJECTED)
                 : List.of(AuctionStatus.DRAFT, AuctionStatus.SCHEDULED, AuctionStatus.ACTIVE);
 
         Specification<AuctionItem> spec = SpecificationBuilder.<AuctionItem>forEntity()
@@ -446,11 +450,11 @@ public class AuctionServiceImpl implements AuctionService {
 
         AuctionSortBy sortBy = filter.getSortBy() != null ? filter.getSortBy() : AuctionSortBy.END_TIME_ASC;
         Sort sort = switch (sortBy) {
-            case NEWLY_LISTED   -> Sort.by("createdAt").descending();
+            case NEWLY_LISTED -> Sort.by("createdAt").descending();
             case PRICE_LOW_HIGH -> Sort.by("currentPrice").ascending();
             case PRICE_HIGH_LOW -> Sort.by("currentPrice").descending();
-            case MOST_BIDS      -> Sort.by("totalBids").descending();
-            default             -> Sort.by("endTime").ascending();
+            case MOST_BIDS -> Sort.by("totalBids").descending();
+            default -> Sort.by("endTime").ascending();
         };
 
         PageRequest pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
@@ -496,11 +500,6 @@ public class AuctionServiceImpl implements AuctionService {
                 log.info("Scheduled activation job {} for auction {} at {}", jobId, auctionId, activateAt);
             }
         });
-    }
-
-    private static UUID activationJobId(UUID auctionId) {
-        return UUID.nameUUIDFromBytes(
-                ("auction-activation:" + auctionId).getBytes(StandardCharsets.UTF_8));
     }
 
     private AuctionStatus resolveStatus(AuctionStatus requested, OffsetDateTime startTime) {
