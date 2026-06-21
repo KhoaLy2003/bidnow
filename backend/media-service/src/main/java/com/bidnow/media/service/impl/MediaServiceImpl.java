@@ -57,7 +57,8 @@ public class MediaServiceImpl implements MediaService {
     private String supabasePublicUrl;
 
     private String buildPublicUrl(String s3Key) {
-        return supabasePublicUrl + "/storage/v1/object/public/" + bucketName + "/" + s3Key;
+        String base = supabasePublicUrl.endsWith("/") ? supabasePublicUrl.substring(0, supabasePublicUrl.length() - 1) : supabasePublicUrl;
+        return base + "/storage/v1/object/public/" + bucketName + "/" + s3Key;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

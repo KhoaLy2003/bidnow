@@ -8,7 +8,7 @@ import { StatusBadge }    from '@/components/auction/StatusBadge'
 import { CountdownTimer } from '@/components/auction/CountdownTimer'
 import { formatCurrency }   from '@/lib/format'
 import { AuctionStatus }    from '@/lib/design-tokens'
-import { useSecureImage }   from '@/hooks/useSecureImage'
+import { resolveImageUrl }  from '@/lib/image-utils'
 import type { AuctionBrowseItem } from '@/types/ui/auction-browse.ui'
 import { cn } from '@/lib/utils'
 
@@ -22,7 +22,7 @@ export function AuctionBrowseCard({ item, className }: AuctionBrowseCardProps) {
   const isEnding       =
     item.status === AuctionStatus.EndingSoon ||
     item.status === AuctionStatus.Critical
-  const resolvedImage  = useSecureImage(item.primaryImageUrl)
+  const resolvedImage  = resolveImageUrl(item.primaryImageUrl)
   const hasImage       = Boolean(item.primaryImageUrl)
   const imageUrl       = resolvedImage ?? (hasImage ? undefined : '/placeholder-auction.png')
 

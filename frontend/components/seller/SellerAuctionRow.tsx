@@ -14,7 +14,7 @@ import { formatCurrency }     from '@/lib/format'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
 import { cn } from '@/lib/utils'
-import { useSecureImage } from '@/hooks/useSecureImage'
+import { resolveImageUrl } from '@/lib/image-utils'
 import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -48,7 +48,7 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
   const editable  = canEdit(auction)
   const deletable = canDelete(auction)
   const imageUrl  = auction.primaryImageUrl ?? null
-  const resolvedImageUrl = useSecureImage(imageUrl)
+  const resolvedImageUrl = resolveImageUrl(imageUrl)
   const isLoadingImage = Boolean(imageUrl) && !resolvedImageUrl
   const isClosed  = [
     SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled,
@@ -184,7 +184,7 @@ interface HistoricalRowProps {
 
 export function HistoricalAuctionRow({ auction }: HistoricalRowProps) {
   const imageUrl = auction.primaryImageUrl ?? null
-  const resolvedImageUrl = useSecureImage(imageUrl)
+  const resolvedImageUrl = resolveImageUrl(imageUrl)
   const isLoadingImage = Boolean(imageUrl) && !resolvedImageUrl
 
   return (

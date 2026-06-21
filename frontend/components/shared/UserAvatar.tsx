@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { useSecureImage } from '@/hooks/useSecureImage'
+import { resolveImageUrl } from '@/lib/image-utils'
 
 interface UserAvatarProps {
   name: string
@@ -48,7 +48,7 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const initials = getInitials(name)
   const bgColor = hashColor(name)
-  const resolvedUrl = useSecureImage(avatarUrl)
+  const resolvedUrl = resolveImageUrl(avatarUrl)
 
   return (
     <div className={cn('relative inline-flex shrink-0', className)}>
