@@ -133,6 +133,12 @@
   --color-border-focus:   #4F46E5;
   --color-border-error:   #DC2626;
 
+  /* Auction — Draft */
+  --color-auction-draft-bg:     #F8F8FC;
+  --color-auction-draft-text:   #6B6B82;
+  --color-auction-draft-border: #C8C8D8;
+  --color-auction-draft-accent: #9898AE;
+
   /* Auction — Scheduled */
   --color-auction-scheduled-bg:     #EEF2FF;
   --color-auction-scheduled-text:   #4338CA;
@@ -368,6 +374,12 @@
   --color-border-focus:   #6366F1;
   --color-border-error:   #EF4444;
 
+  /* Auction — Draft */
+  --color-auction-draft-bg:     #111115;
+  --color-auction-draft-text:   #6B6B82;
+  --color-auction-draft-border: #27272F;
+  --color-auction-draft-accent: #52525C;
+
   /* Auction — Scheduled */
   --color-auction-scheduled-bg:     #1A1A3E;
   --color-auction-scheduled-text:   #818CF8;
@@ -533,6 +545,10 @@
   --color-border-error:   var(--color-border-error);
 
   /* Auction state tokens */
+  --color-auction-draft-bg:           var(--color-auction-draft-bg);
+  --color-auction-draft-text:         var(--color-auction-draft-text);
+  --color-auction-draft-border:       var(--color-auction-draft-border);
+  --color-auction-draft-accent:       var(--color-auction-draft-accent);
   --color-auction-scheduled-bg:       var(--color-auction-scheduled-bg);
   --color-auction-scheduled-text:     var(--color-auction-scheduled-text);
   --color-auction-scheduled-border:   var(--color-auction-scheduled-border);
