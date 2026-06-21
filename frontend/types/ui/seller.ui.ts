@@ -38,13 +38,17 @@ export interface AuditEvent {
   message:   string
 }
 
+export type ManagedImage =
+  | { kind: 'existing'; id: string; url: string }
+  | { kind: 'new'; file: File; preview: string }
+
 export interface CreateAuctionFormData {
   // Step 1 — Basics
   title:       string
   description: string
   categoryId:  string
   // Step 2 — Images
-  images:      File[]
+  images:      ManagedImage[]
   // Step 3 — Pricing & Duration
   startingPrice: number   // dollars
   bidIncrement:  number   // dollars
@@ -53,14 +57,13 @@ export interface CreateAuctionFormData {
   durationDays:  number
   startType:     'now' | 'scheduled'
   scheduledStartTime: Date | null
-  endsAt?:       Date
 }
 
 export const INITIAL_FORM_DATA: CreateAuctionFormData = {
   title:         '',
   description:   '',
   categoryId:    '',
-  images:        [],
+  images:        [] as ManagedImage[],
   startingPrice: 0,
   bidIncrement:  0,
   buyNowPrice:   0,

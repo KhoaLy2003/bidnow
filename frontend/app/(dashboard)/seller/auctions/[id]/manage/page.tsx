@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams }     from 'next/navigation'
 import Link              from 'next/link'
-import { CheckCircle2, Circle, Trash2, Eye, Pencil, Loader2 } from 'lucide-react'
+import { CheckCircle2, Circle, Trash2, Eye, Pencil, Loader2, CalendarIcon } from 'lucide-react'
+import { format }        from 'date-fns'
+import { Calendar }      from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button }        from '@/components/ui/button'
 import { Input }         from '@/components/ui/input'
 import { Textarea }      from '@/components/ui/textarea'
@@ -16,62 +19,33 @@ import { AuditTrail }           from '@/components/seller/AuditTrail'
 import { EditLockOverlay }      from '@/components/seller/EditLockOverlay'
 import { DeleteAuctionDialog }  from '@/components/seller/DeleteAuctionDialog'
 import { AntiSnipeNotice }      from '@/components/seller/AntiSnipeNotice'
-import { SellerStatusBadge }    from '@/components/seller/SellerStatusBadge'
 import { DepositRangeInput }    from '@/components/seller/DepositRangeInput'
-import { formatCurrency }       from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
 import { AuctionStatus }        from '@/lib/design-tokens'
-import { SellerAuctionStatus }  from '@/types/ui/seller.ui'
-import type { SellerAuction, AuditEvent } from '@/types/ui/seller.ui'
+import { StatusBadge }          from '@/components/auction/StatusBadge'
+import type { AuditEvent }      from '@/types/ui/seller.ui'
 import type { AuctionDetail }   from '@/types/ui/auction.ui'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import { ImageUploadGrid }      from '@/components/seller/ImageUploadGrid'
+import type { ManagedImage }    from '@/types/ui/seller.ui'
 import { CurrencyInput }        from '@/components/ui/currency-input'
 import { auctionService }       from '@/services/auction.service'
 import { mediaService }         from '@/services/media.service'
 import { toast }                from 'sonner'
 import { getErrorMessage }      from '@/lib/utils'
 
-function mapToSellerAuction(detail: AuctionDetail): SellerAuction {
-  let status: SellerAuctionStatus
-  switch (detail.status) {
-    case AuctionStatus.Scheduled:
-      status = SellerAuctionStatus.Scheduled; break
-    case AuctionStatus.Active:
-    case AuctionStatus.EndingSoon:
-    case AuctionStatus.Critical:
-      status = SellerAuctionStatus.Active; break
-    default:
-      status = SellerAuctionStatus.Completed
-  }
-  return {
-    id:              detail.id,
-    title:           detail.title,
-    primaryImageUrl: detail.images.find(img => img.isPrimary)?.imageUrl,
-    categoryId:      detail.categoryId,
-    categoryName:    detail.categoryName,
-    sellerId:        detail.seller?.id ?? '',
-    startingPrice:   detail.startingPrice,
-    currentBid:      detail.currentBid,
-    totalBids:       detail.totalBids,
-    startsAt:        detail.startsAt,
-    endsAt:          detail.endsAt,
-    createdAt:       detail.createdAt,
-    status,
-  }
-}
-
-function canEdit(auction: SellerAuction): boolean {
+function canEdit(auction: AuctionDetail): boolean {
   return (
-    auction.status === SellerAuctionStatus.Draft ||
-    auction.status === SellerAuctionStatus.Scheduled
+    auction.status === AuctionStatus.Draft ||
+    auction.status === AuctionStatus.Scheduled
   )
 }
 
-function canDelete(auction: SellerAuction): boolean {
+function canDelete(auction: AuctionDetail): boolean {
   return (
-    auction.status === SellerAuctionStatus.Draft ||
-    auction.status === SellerAuctionStatus.Scheduled ||
-    auction.status === SellerAuctionStatus.Active
+    auction.status === AuctionStatus.Draft ||
+    auction.status === AuctionStatus.Scheduled ||
+    auction.status === AuctionStatus.Active
   )
 }
 
@@ -87,22 +61,82 @@ function ChecklistItem({ done, label }: { done: boolean; label: string }) {
   )
 }
 
+// ── Reusable date+time picker ───────────────────────────────────
+interface DateTimePickerProps {
+  value:    Date
+  onChange: (d: Date) => void
+  label:    string
+}
+
+function DateTimePicker({ value, onChange, label }: DateTimePickerProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="outline"
+              className="w-full justify-start text-left font-normal"
+            />
+          }
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {format(value, 'PPP p')}
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={d => {
+              if (!d) return
+              const next = new Date(d)
+              next.setHours(value.getHours(), value.getMinutes())
+              onChange(next)
+            }}
+          />
+          <div className="p-3 border-t border-[var(--color-border-default)]">
+            <Label className="text-xs mb-2 block text-muted-foreground">Time</Label>
+            <Input
+              type="time"
+              className="w-full text-sm"
+              value={format(value, 'HH:mm')}
+              onChange={e => {
+                const [h, m] = e.target.value.split(':')
+                const next = new Date(value)
+                next.setHours(Number(h), Number(m))
+                onChange(next)
+              }}
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 // ── Draft edit form ─────────────────────────────────────────────
 interface DraftFormProps {
-  auction:     SellerAuction
+  auction:     AuctionDetail
   onSave():    void
   onPublish(): void
 }
 
 function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
-  const [title,       setTitle]       = useState(auction.title)
-  const [description, setDescription] = useState('')
-  const [categoryId,  setCategoryId]  = useState(auction.categoryId)
+  const [title,         setTitle]         = useState(auction.title)
+  const [description,   setDescription]   = useState(auction.description)
+  const [categoryId,    setCategoryId]    = useState(auction.categoryId)
   const [startingPrice, setStartingPrice] = useState(auction.startingPrice)
-  const [bidIncrement,  setBidIncrement]  = useState(0)
-  const [depositAmount, setDepositAmount] = useState(0)
-  const [durationDays,  setDurationDays]  = useState(7)
-  const [images,        setImages]        = useState<File[]>([])
+  const [bidIncrement,  setBidIncrement]  = useState(auction.bidIncrement)
+  const [depositAmount, setDepositAmount] = useState(auction.depositAmount)
+  const [startTime,     setStartTime]     = useState<Date>(auction.startsAt)
+  const [endTime,       setEndTime]       = useState<Date>(auction.endsAt)
+  const [managedImages, setManagedImages] = useState<ManagedImage[]>(() =>
+    auction.images
+      .slice()
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map(img => ({ kind: 'existing' as const, id: img.id, url: img.imageUrl }))
+  )
   const [submitting,    setSubmitting]    = useState(false)
   const [categories,    setCategories]    = useState<AuctionCategoryResponse[]>([])
 
@@ -116,26 +150,24 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
   const hasDescription = description.trim().length > 0
   const hasCategory    = categoryId.trim().length > 0
   const hasPricing     = startingPrice > 0 && bidIncrement > 0 && depositAmount > 0
-  const hasImages      = images.length > 0 || !!auction.primaryImageUrl
+  const hasImages = managedImages.length > 0
   const readyToPublish = hasTitle && hasDescription && hasCategory && hasPricing && hasImages
 
   const submitForm = async (publish: boolean) => {
     setSubmitting(true)
     try {
-      const uploadedUrls: string[] = []
-      for (const file of images) {
-        try {
-          const presigned = await mediaService.getPresignedUrl(file.name, file.type)
-          await mediaService.uploadToS3(presigned.uploadUrl, file)
-          uploadedUrls.push(presigned.publicUrl)
-        } catch (e) {
-          console.error('Failed to upload image:', file.name, e)
-          throw new Error('Image upload failed.')
-        }
-      }
+      const keptUrls = managedImages
+        .filter((img): img is { kind: 'existing'; id: string; url: string } => img.kind === 'existing')
+        .map(img => img.url)
 
-      const now = new Date()
-      const endsAt = new Date(now.getTime() + durationDays * 86_400_000)
+      const newUrls: string[] = []
+      for (const img of managedImages.filter(
+        (img): img is { kind: 'new'; file: File; preview: string } => img.kind === 'new'
+      )) {
+        const presigned = await mediaService.getPresignedUrl(img.file.name, img.file.type)
+        await mediaService.uploadToS3(presigned.uploadUrl, img.file)
+        newUrls.push(presigned.publicUrl)
+      }
 
       await auctionService.updateAuction(auction.id, {
         title,
@@ -144,13 +176,18 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
         startingPrice,
         bidIncrement,
         depositAmount,
-        startTime: now.toISOString(),
-        endTime: endsAt.toISOString(),
-        imageUrls: uploadedUrls,
+        startTime: startTime.toISOString(),
+        endTime:   endTime.toISOString(),
+        imageUrls: [...keptUrls, ...newUrls],
       })
 
-      if (publish) onPublish()
-      else onSave()
+      if (publish) {
+        await auctionService.publishAuction(auction.id)
+        onPublish()
+      } else {
+        toast.success('Auction saved.')
+        onSave()
+      }
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save auction. Please try again.'))
     } finally {
@@ -184,8 +221,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
 
         <div className="flex flex-col gap-1.5">
           <Label>Images</Label>
-          <p className="text-xs text-muted-foreground mb-1">Upload new images to replace existing ones.</p>
-          <ImageUploadGrid images={images} onChange={setImages} />
+          <ImageUploadGrid images={managedImages} onChange={setManagedImages} />
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -229,37 +265,34 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
           onChange={setDepositAmount}
         />
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="duration">Duration (days)</Label>
-          <Select value={String(durationDays)} onValueChange={v => setDurationDays(Number(v))}>
-            <SelectTrigger id="duration"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {[1, 3, 5, 7, 10, 14].map(d => (
-                <SelectItem key={d} value={String(d)}>{d} day{d !== 1 ? 's' : ''}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <DateTimePicker value={startTime} onChange={setStartTime} label="Start time" />
+          <DateTimePicker value={endTime}   onChange={setEndTime}   label="End time" />
         </div>
 
         <AntiSnipeNotice />
       </div>
 
-      <div className="rounded-xl border border-[var(--color-border-default)] p-4 flex flex-col gap-3 max-w-2xl">
-        <p className="text-sm font-medium">Publish checklist</p>
-        <ChecklistItem done={hasTitle}       label="Title set" />
-        <ChecklistItem done={hasDescription} label="Description written" />
-        <ChecklistItem done={hasCategory}    label="Category selected" />
-        <ChecklistItem done={!!auction.primaryImageUrl} label="At least one image uploaded" />
-        <ChecklistItem done={hasPricing}     label="Pricing complete (starting, increment, deposit)" />
-      </div>
+      {auction.status === AuctionStatus.Draft && (
+        <div className="rounded-xl border border-[var(--color-border-default)] p-4 flex flex-col gap-3 max-w-2xl">
+          <p className="text-sm font-medium">Publish checklist</p>
+          <ChecklistItem done={hasTitle}       label="Title set" />
+          <ChecklistItem done={hasDescription} label="Description written" />
+          <ChecklistItem done={hasCategory}    label="Category selected" />
+          <ChecklistItem done={hasImages}      label="At least one image uploaded" />
+          <ChecklistItem done={hasPricing}     label="Pricing complete (starting, increment, deposit)" />
+        </div>
+      )}
 
       <div className="flex items-center gap-3 max-w-2xl">
         <Button variant="outline" size="lg" disabled={submitting} onClick={() => submitForm(false)}>
-          {submitting ? 'Saving...' : 'Save draft'}
+          {submitting ? 'Saving...' : auction.status === AuctionStatus.Draft ? 'Save draft' : 'Save changes'}
         </Button>
-        <Button variant="brand" size="lg" disabled={!readyToPublish || submitting} onClick={() => submitForm(true)}>
-          Publish auction
-        </Button>
+        {auction.status === AuctionStatus.Draft && (
+          <Button variant="brand" size="lg" disabled={!readyToPublish || submitting} onClick={() => submitForm(true)}>
+            Publish auction
+          </Button>
+        )}
         {!readyToPublish && (
           <p className="text-xs text-muted-foreground">Complete the checklist above to publish.</p>
         )}
@@ -272,24 +305,30 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
 export default function ManageAuctionPage() {
   const { id } = useParams<{ id: string }>()
 
-  const [auction,    setAuction]    = useState<SellerAuction | null>(null)
+  const [auction,    setAuction]    = useState<AuctionDetail | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting,   setDeleting]   = useState(false)
   const [deleted,    setDeleted]    = useState(false)
+  const [published,  setPublished]  = useState(false)
 
-  const loadAuction = useCallback(() => {
+  const loadAuction = useCallback((): Promise<void> => {
     setLoading(true)
     setFetchError(null)
-    auctionService.getAuctionById(id)
+    return auctionService.getAuctionById(id)
       .then(detail => {
         if (!detail) { setFetchError('Auction not found.'); return }
-        setAuction(mapToSellerAuction(detail))
+        setAuction(detail)
       })
       .catch(() => setFetchError('Failed to load auction.'))
       .finally(() => setLoading(false))
   }, [id])
+
+  const handlePublish = useCallback(async () => {
+    await loadAuction()
+    setPublished(true)
+  }, [loadAuction])
 
   useEffect(() => { loadAuction() }, [loadAuction])
 
@@ -340,7 +379,7 @@ export default function ManageAuctionPage() {
 
   const editable  = canEdit(auction)
   const deletable = canDelete(auction)
-  const isLive    = auction.status !== SellerAuctionStatus.Draft
+  const isLive    = auction.status === AuctionStatus.Active
 
   const EMPTY_EVENTS: AuditEvent[] = []
 
@@ -358,7 +397,7 @@ export default function ManageAuctionPage() {
             {auction.title}
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <SellerStatusBadge status={auction.status} />
+            <StatusBadge status={auction.status} />
             <span className="text-xs text-muted-foreground font-mono">{auction.id}</span>
           </div>
         </div>
@@ -408,18 +447,44 @@ export default function ManageAuctionPage() {
           </section>
         )}
 
-        {/* ── Draft mode: edit form (with optional lock overlay) ── */}
+        {/* ── Draft / Scheduled mode ── */}
         {!isLive && (
           <section id="edit-section" className="relative flex flex-col gap-3">
-            <h2 className="font-medium text-sm">Edit auction</h2>
-            {!editable && (
-              <EditLockOverlay reason="This auction is live and has active bids — editing is locked." />
+            {published ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-[var(--color-success-subtle)]">
+                  <CheckCircle2 className="size-6 text-[var(--color-success-text)]" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium">Auction published</p>
+                  <p className="text-sm text-muted-foreground">
+                    {auction.status === AuctionStatus.Scheduled
+                      ? `Scheduled to go live on ${auction.startsAt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}.`
+                      : 'Your auction is now live.'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" render={<Link href={`/auctions/${auction.id}`} />} nativeButton={false}>
+                    View auction
+                  </Button>
+                  <Button variant="outline" size="sm" render={<Link href="/seller/auctions" />} nativeButton={false}>
+                    Back to my auctions
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="font-medium text-sm">Edit auction</h2>
+                {!editable && (
+                  <EditLockOverlay reason="This auction is live and has active bids — editing is locked." />
+                )}
+                <DraftEditForm
+                  auction={auction}
+                  onSave={loadAuction}
+                  onPublish={handlePublish}
+                />
+              </>
             )}
-            <DraftEditForm
-              auction={auction}
-              onSave={loadAuction}
-              onPublish={loadAuction}
-            />
           </section>
         )}
 

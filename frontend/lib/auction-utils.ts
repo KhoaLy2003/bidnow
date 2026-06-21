@@ -15,6 +15,7 @@ export function deriveTimerState(endsAt: Date): TimerState {
 
 export function getAuctionStatus(auction: { status: AuctionStatus; endsAt: Date }): AuctionStatus {
   const terminal: AuctionStatus[] = [
+    AuctionStatus.Draft,
     AuctionStatus.Scheduled,
     AuctionStatus.Closed,
     AuctionStatus.Won,

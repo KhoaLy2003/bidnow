@@ -82,6 +82,15 @@ export const auctionService = {
     return response.json()
   },
 
+  async publishAuction(id: string): Promise<ApiResponse<AuctionResponse>> {
+    const response = await apiFetch(`/api/v1/auctions/${id}/publish`, { method: 'POST' })
+    if (!response.ok) {
+      const error = await response.json()
+      throw error
+    }
+    return response.json()
+  },
+
   async deleteAuction(id: string): Promise<void> {
     const response = await apiFetch(`/api/v1/auctions/${id}`, { method: 'DELETE' })
     if (!response.ok && response.status !== 204) {
