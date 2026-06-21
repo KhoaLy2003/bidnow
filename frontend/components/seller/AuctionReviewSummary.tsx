@@ -13,6 +13,7 @@ const CATEGORIES: Record<string, string> = {
 
 interface AuctionReviewSummaryProps {
   data:          CreateAuctionFormData
+  endsAt:        Date
   onEditStep(n: number): void
 }
 
@@ -23,7 +24,7 @@ interface ReviewRow {
   mono?: boolean
 }
 
-export function AuctionReviewSummary({ data, onEditStep }: AuctionReviewSummaryProps) {
+export function AuctionReviewSummary({ data, endsAt, onEditStep }: AuctionReviewSummaryProps) {
   const rows: ReviewRow[] = [
     { label: 'Title',          value: data.title || '—',                                 step: 1 },
     { label: 'Category',       value: CATEGORIES[data.categoryId] ?? data.categoryId ?? '—', step: 1 },
@@ -33,7 +34,7 @@ export function AuctionReviewSummary({ data, onEditStep }: AuctionReviewSummaryP
     { label: 'Bid increment',  value: data.bidIncrement  > 0 ? formatCurrency(data.bidIncrement)  : '—', step: 3, mono: true },
     { label: 'Buy it now',     value: data.buyNowPrice   > 0 ? formatCurrency(data.buyNowPrice)   : 'Not set', step: 3, mono: true },
     { label: 'Deposit',        value: data.depositAmount > 0 ? `${formatCurrency(data.depositAmount)} (${((data.depositAmount / data.startingPrice) * 100).toFixed(0)}%)` : '—', step: 3, mono: true },
-    { label: 'Duration',       value: `${data.durationDays} day${data.durationDays !== 1 ? 's' : ''}${data.endsAt ? ` · ends ${data.endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ICT` : ''}`, step: 3 },
+    { label: 'Duration',       value: `${data.durationDays} day${data.durationDays !== 1 ? 's' : ''} · ends ${endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ICT`, step: 3 },
     { label: 'Anti-snipe',     value: 'Enabled — +5 min if bid in last 5 min',           step: 3 },
   ]
 

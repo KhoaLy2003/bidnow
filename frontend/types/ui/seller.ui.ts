@@ -53,7 +53,6 @@ export interface CreateAuctionFormData {
   durationDays:  number
   startType:     'now' | 'scheduled'
   scheduledStartTime: Date | null
-  endsAt?:       Date
 }
 
 export const INITIAL_FORM_DATA: CreateAuctionFormData = {

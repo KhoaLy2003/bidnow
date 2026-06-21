@@ -42,6 +42,7 @@ export function mapAuctionSummaryToSellerAuction(dto: AuctionSummaryResponse): S
 // The server can return ACTIVE, SCHEDULED, COMPLETED, CANCELLED, FAILED, REJECTED.
 function parseStatus(status: string): AuctionStatus {
   switch (status?.toUpperCase()) {
+    case 'DRAFT':     return AuctionStatus.Draft
     case 'ACTIVE':    return AuctionStatus.Active
     case 'SCHEDULED': return AuctionStatus.Scheduled
     case 'COMPLETED':

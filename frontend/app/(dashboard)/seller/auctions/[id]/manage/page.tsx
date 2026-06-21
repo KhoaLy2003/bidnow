@@ -16,12 +16,11 @@ import { AuditTrail }           from '@/components/seller/AuditTrail'
 import { EditLockOverlay }      from '@/components/seller/EditLockOverlay'
 import { DeleteAuctionDialog }  from '@/components/seller/DeleteAuctionDialog'
 import { AntiSnipeNotice }      from '@/components/seller/AntiSnipeNotice'
-import { SellerStatusBadge }    from '@/components/seller/SellerStatusBadge'
 import { DepositRangeInput }    from '@/components/seller/DepositRangeInput'
+import { Badge }                from '@/components/ui/badge'
 import { formatCurrency }       from '@/lib/format'
 import { AuctionStatus }        from '@/lib/design-tokens'
-import { SellerAuctionStatus }  from '@/types/ui/seller.ui'
-import type { SellerAuction, AuditEvent } from '@/types/ui/seller.ui'
+import type { AuditEvent }      from '@/types/ui/seller.ui'
 import type { AuctionDetail }   from '@/types/ui/auction.ui'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import { ImageUploadGrid }      from '@/components/seller/ImageUploadGrid'
@@ -31,47 +30,18 @@ import { mediaService }         from '@/services/media.service'
 import { toast }                from 'sonner'
 import { getErrorMessage }      from '@/lib/utils'
 
-function mapToSellerAuction(detail: AuctionDetail): SellerAuction {
-  let status: SellerAuctionStatus
-  switch (detail.status) {
-    case AuctionStatus.Scheduled:
-      status = SellerAuctionStatus.Scheduled; break
-    case AuctionStatus.Active:
-    case AuctionStatus.EndingSoon:
-    case AuctionStatus.Critical:
-      status = SellerAuctionStatus.Active; break
-    default:
-      status = SellerAuctionStatus.Completed
-  }
-  return {
-    id:              detail.id,
-    title:           detail.title,
-    primaryImageUrl: detail.images.find(img => img.isPrimary)?.imageUrl,
-    categoryId:      detail.categoryId,
-    categoryName:    detail.categoryName,
-    sellerId:        detail.seller?.id ?? '',
-    startingPrice:   detail.startingPrice,
-    currentBid:      detail.currentBid,
-    totalBids:       detail.totalBids,
-    startsAt:        detail.startsAt,
-    endsAt:          detail.endsAt,
-    createdAt:       detail.createdAt,
-    status,
-  }
-}
-
-function canEdit(auction: SellerAuction): boolean {
+function canEdit(auction: AuctionDetail): boolean {
   return (
-    auction.status === SellerAuctionStatus.Draft ||
-    auction.status === SellerAuctionStatus.Scheduled
+    auction.status === AuctionStatus.Draft ||
+    auction.status === AuctionStatus.Scheduled
   )
 }
 
-function canDelete(auction: SellerAuction): boolean {
+function canDelete(auction: AuctionDetail): boolean {
   return (
-    auction.status === SellerAuctionStatus.Draft ||
-    auction.status === SellerAuctionStatus.Scheduled ||
-    auction.status === SellerAuctionStatus.Active
+    auction.status === AuctionStatus.Draft ||
+    auction.status === AuctionStatus.Scheduled ||
+    auction.status === AuctionStatus.Active
   )
 }
 
@@ -89,7 +59,7 @@ function ChecklistItem({ done, label }: { done: boolean; label: string }) {
 
 // ── Draft edit form ─────────────────────────────────────────────
 interface DraftFormProps {
-  auction:     SellerAuction
+  auction:     AuctionDetail
   onSave():    void
   onPublish(): void
 }
@@ -116,7 +86,8 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
   const hasDescription = description.trim().length > 0
   const hasCategory    = categoryId.trim().length > 0
   const hasPricing     = startingPrice > 0 && bidIncrement > 0 && depositAmount > 0
-  const hasImages      = images.length > 0 || !!auction.primaryImageUrl
+  const primaryImageUrl = auction.images.find(img => img.isPrimary)?.imageUrl
+  const hasImages      = images.length > 0 || !!primaryImageUrl
   const readyToPublish = hasTitle && hasDescription && hasCategory && hasPricing && hasImages
 
   const submitForm = async (publish: boolean) => {
@@ -249,7 +220,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
         <ChecklistItem done={hasTitle}       label="Title set" />
         <ChecklistItem done={hasDescription} label="Description written" />
         <ChecklistItem done={hasCategory}    label="Category selected" />
-        <ChecklistItem done={!!auction.primaryImageUrl} label="At least one image uploaded" />
+        <ChecklistItem done={!!primaryImageUrl} label="At least one image uploaded" />
         <ChecklistItem done={hasPricing}     label="Pricing complete (starting, increment, deposit)" />
       </div>
 
@@ -272,7 +243,7 @@ function DraftEditForm({ auction, onSave, onPublish }: DraftFormProps) {
 export default function ManageAuctionPage() {
   const { id } = useParams<{ id: string }>()
 
-  const [auction,    setAuction]    = useState<SellerAuction | null>(null)
+  const [auction,    setAuction]    = useState<AuctionDetail | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -285,7 +256,7 @@ export default function ManageAuctionPage() {
     auctionService.getAuctionById(id)
       .then(detail => {
         if (!detail) { setFetchError('Auction not found.'); return }
-        setAuction(mapToSellerAuction(detail))
+        setAuction(detail)
       })
       .catch(() => setFetchError('Failed to load auction.'))
       .finally(() => setLoading(false))
@@ -340,7 +311,7 @@ export default function ManageAuctionPage() {
 
   const editable  = canEdit(auction)
   const deletable = canDelete(auction)
-  const isLive    = auction.status !== SellerAuctionStatus.Draft
+  const isLive    = auction.status === AuctionStatus.Active
 
   const EMPTY_EVENTS: AuditEvent[] = []
 
@@ -358,7 +329,16 @@ export default function ManageAuctionPage() {
             {auction.title}
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <SellerStatusBadge status={auction.status} />
+            <Badge variant={
+              auction.status === AuctionStatus.Draft      ? 'secondary' :
+              auction.status === AuctionStatus.Scheduled  ? 'scheduled' :
+              auction.status === AuctionStatus.Active     ? 'active'    : 'closed'
+            }>
+              {auction.status === AuctionStatus.Active && (
+                <span className="inline-block size-1.5 rounded-full bg-current animate-pulse mr-1" />
+              )}
+              {auction.status.charAt(0).toUpperCase() + auction.status.slice(1)}
+            </Badge>
             <span className="text-xs text-muted-foreground font-mono">{auction.id}</span>
           </div>
         </div>

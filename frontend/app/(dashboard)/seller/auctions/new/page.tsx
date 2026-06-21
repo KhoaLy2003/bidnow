@@ -111,7 +111,15 @@ export default function CreateAuctionPage() {
   const [errors,    setErrors]    = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
   const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [nowMs,      setNowMs]      = useState(() => Date.now())
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (data.images.length === 0) { setPreviewUrl(null); return }
+    const url = URL.createObjectURL(data.images[0])
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [data.images])
 
   // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
   useEffect(() => {
@@ -206,16 +214,13 @@ export default function CreateAuctionPage() {
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
       {/* Page title bar */}
-      <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border-default)] px-6 py-5">
+      <div className="flex items-center gap-4 border-b border-[var(--color-border-default)] px-6 py-5">
         <div className="flex flex-col gap-0.5">
           <p className="text-xs text-muted-foreground">
             <Link href="/seller/auctions" className="hover:text-foreground transition-colors duration-[var(--duration-tesla)]">← My auctions</Link>
           </p>
           <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">Create a new auction</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => handleSubmit(true)} disabled={submitting}>
-          Save as draft
-        </Button>
       </div>
 
       {/* Stepper */}
@@ -341,14 +346,6 @@ export default function CreateAuctionPage() {
                 />
               </FieldWrap>
 
-              <FieldWrap label="Reserve price (optional)" helper="Hidden from bidders">
-                <CurrencyInput
-                  value={0}
-                  onChange={() => {}}
-                  placeholder="0.00"
-                  readOnly
-                />
-              </FieldWrap>
             </div>
 
             {errors.depositAmount && <p className="text-sm text-destructive">{errors.depositAmount}</p>}
@@ -434,26 +431,19 @@ export default function CreateAuctionPage() {
               helper={`Auction will end on ${endsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at ${endsAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} ICT (GMT+7)`}
               error={errors.duration}
             >
-              <div className="flex gap-2">
-                <Select
-                  value={String(data.durationDays)}
-                  onValueChange={v => update('durationDays', Number(v))}
-                >
-                  <SelectTrigger className="w-32 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATION_OPTIONS.map(o => (
-                      <SelectItem key={o.days} value={String(o.days)}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  readOnly
-                  value={endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  className="flex-1 text-sm bg-[var(--color-bg-elevated)] cursor-default"
-                />
-              </div>
+              <Select
+                value={String(data.durationDays)}
+                onValueChange={v => update('durationDays', Number(v))}
+              >
+                <SelectTrigger className="w-32 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DURATION_OPTIONS.map(o => (
+                    <SelectItem key={o.days} value={String(o.days)}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FieldWrap>
 
             <AntiSnipeNotice />
@@ -466,7 +456,8 @@ export default function CreateAuctionPage() {
             <div className="flex flex-col gap-4 flex-1 min-w-0">
               <p className="font-display font-medium text-[length:var(--font-size-md)]">Listing summary</p>
               <AuctionReviewSummary
-                data={{ ...data, endsAt }}
+                data={data}
+                endsAt={endsAt}
                 onEditStep={setStep}
               />
             </div>
@@ -476,9 +467,17 @@ export default function CreateAuctionPage() {
 
               {/* Mini preview card */}
               <div className="rounded-xl border border-[var(--color-border-default)] overflow-hidden">
-                <div className="aspect-[4/3] bg-[var(--color-bg-elevated)]"
-                  style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }}
-                />
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Auction preview"
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                ) : (
+                  <div className="aspect-[4/3]"
+                    style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }}
+                  />
+                )}
                 <div className="flex flex-col gap-1.5 p-4">
                   <p className="font-medium text-sm line-clamp-2">{data.title || 'Untitled auction'}</p>
                   <p className="font-mono font-medium text-[length:var(--font-size-md)]">
@@ -536,14 +535,11 @@ export default function CreateAuctionPage() {
           ← Back
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" size="lg" onClick={() => handleSubmit(true)} disabled={submitting}>
-            Save & exit
-          </Button>
-          {step < 4 ? (
+          {step < 4 && (
             <Button variant="brand" size="lg" onClick={tryAdvance}>
               Next → {STEPS[step]}
             </Button>
-          ) : null}
+          )}
         </div>
       </div>
     </div>
