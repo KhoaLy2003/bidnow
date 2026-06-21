@@ -21,7 +21,7 @@ import { DepositRangeInput }   from '@/components/seller/DepositRangeInput'
 import { AntiSnipeNotice }     from '@/components/seller/AntiSnipeNotice'
 import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
-import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
+import type { CreateAuctionFormData, ManagedImage } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
 import { cn, getErrorMessage } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -116,9 +116,8 @@ export default function CreateAuctionPage() {
 
   useEffect(() => {
     if (data.images.length === 0) { setPreviewUrl(null); return }
-    const url = URL.createObjectURL(data.images[0])
-    setPreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
+    const img = data.images[0]
+    setPreviewUrl(img.kind === 'existing' ? img.url : img.preview)
   }, [data.images])
 
   // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
@@ -154,14 +153,15 @@ export default function CreateAuctionPage() {
     setSubmitting(true)
     try {
       const uploadedUrls = await Promise.all(
-        data.images.map(async (file) => {
+        data.images.map(async (img: ManagedImage) => {
+          if (img.kind === 'existing') return img.url
           try {
-            const presigned = await mediaService.getPresignedUrl(file.name, file.type)
-            await mediaService.uploadToS3(presigned.uploadUrl, file)
+            const presigned = await mediaService.getPresignedUrl(img.file.name, img.file.type)
+            await mediaService.uploadToS3(presigned.uploadUrl, img.file)
             return presigned.publicUrl
           } catch (e) {
-            console.error('Failed to upload image:', file.name, e)
-            throw new Error(`Image upload failed for "${file.name}".`)
+            console.error('Failed to upload image:', img.file.name, e)
+            throw new Error(`Image upload failed for "${img.file.name}".`)
           }
         })
       )

@@ -39,7 +39,10 @@ import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.common.util.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jobrunr.jobs.Job;
 import org.jobrunr.scheduling.BackgroundJob;
+import org.jobrunr.storage.JobNotFoundException;
+import org.jobrunr.storage.StorageProvider;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -81,6 +84,7 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionKafkaProducer auctionKafkaProducer;
     private final UserServiceClient userServiceClient;
     private final AuctionClosureService auctionClosureService;
+    private final StorageProvider jobStorageProvider;
 
     private static UUID activationJobId(UUID auctionId) {
         return UUID.nameUUIDFromBytes(
@@ -313,8 +317,10 @@ public class AuctionServiceImpl implements AuctionService {
                     "Cannot modify a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
         }
 
-        if (auction.getStatus() != AuctionStatus.DRAFT &&
-                !auction.getStartTime().isAfter(OffsetDateTime.now())) {
+        boolean isEditable = auction.getStatus() == AuctionStatus.DRAFT ||
+                (auction.getStatus() == AuctionStatus.SCHEDULED &&
+                 auction.getStartTime().isAfter(OffsetDateTime.now()));
+        if (!isEditable) {
             throw new BadRequestException("Auction cannot be modified after it has started", ErrorCodes.INVALID_INPUT);
         }
 
@@ -366,15 +372,18 @@ public class AuctionServiceImpl implements AuctionService {
                 @Override
                 public void afterCommit() {
                     try {
-                        BackgroundJob.delete(jobId);
-                    } catch (Exception e) {
-                        log.warn("Could not delete old activation job {} (may have already executed): {}",
-                                jobId, e.getMessage());
+                        Job existing = jobStorageProvider.getJobById(jobId);
+                        existing.scheduleAt(newStartInstant, "Start time updated by seller");
+                        jobStorageProvider.save(existing);
+                        log.info("Rescheduled activation job {} for auction {} at {}",
+                                jobId, auctionId, newStartInstant);
+                    } catch (JobNotFoundException e) {
+                        // Job already fired or was never created — create it fresh.
+                        BackgroundJob.<AuctionActivationJob>schedule(
+                                jobId, newStartInstant, job -> job.activateAuction(auctionId));
+                        log.info("Created new activation job {} for auction {} at {} (previous job not found)",
+                                jobId, auctionId, newStartInstant);
                     }
-                    BackgroundJob.<AuctionActivationJob>schedule(
-                            jobId, newStartInstant, job -> job.activateAuction(auctionId));
-                    log.info("Rescheduled activation job {} for auction {} at {}",
-                            jobId, auctionId, newStartInstant);
                 }
             });
         }
