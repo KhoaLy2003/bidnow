@@ -39,7 +39,7 @@ spring:
       observation-enabled: true
 
 wallet:
-  platform-user-id: ${PLATFORM_USER_ID}
+  platform-user-id: 87754524-54c7-4aa4-b6fb-43d359c2121f
 
 eureka:
   instance:
