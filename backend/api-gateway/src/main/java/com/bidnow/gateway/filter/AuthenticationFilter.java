@@ -35,9 +35,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private static final String X_USER_ID_HEADER = "X-User-Id";
     private static final String X_USER_ROLES_HEADER = "X-User-Roles";
     private static final String BEARER_PREFIX = "Bearer ";
-
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
     /**
      * Paths that are service-internal only and must never be reachable from the public internet.
      * Feign clients call these directly via Eureka, not through this gateway.
@@ -45,7 +42,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> INTERNAL_PATHS = List.of(
             "/api/v1/**/internal/**"
     );
-
     /**
      * Paths that do NOT require a valid JWT.
      */
@@ -65,7 +61,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/demo/**",
             "/api/v1/media/download"
     );
-
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final JwtUtil jwtUtil;
 
     @Override

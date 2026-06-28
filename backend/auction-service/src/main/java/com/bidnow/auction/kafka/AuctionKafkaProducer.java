@@ -41,7 +41,7 @@ public class AuctionKafkaProducer {
                 .whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("CRITICAL: Failed to publish AuctionEndedEvent for auction {} — "
-                                + "downstream consumers will not be notified; manual republication required",
+                                        + "downstream consumers will not be notified; manual republication required",
                                 event.getAuctionId(), ex);
                     } else {
                         log.info("Published AuctionEndedEvent for auction: {} (source={})",

@@ -32,6 +32,16 @@ public class AuctionClosureService {
     private final AuctionKafkaProducer kafkaProducer;
 
     /**
+     * Derives a deterministic, name-based UUID for the closure job of a given auction. Using a
+     * stable ID prevents duplicate jobs from accumulating in JobRunr if
+     * {@link #scheduleClosureJob} is called more than once for the same auction (e.g., on restart).
+     */
+    static UUID closureJobId(UUID auctionId) {
+        return UUID.nameUUIDFromBytes(
+                ("auction-closure:" + auctionId).getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
      * Closes an ACTIVE auction by transitioning it to COMPLETED (bids present) or FAILED (no bids),
      * recording a status-history entry, and publishing an {@link AuctionEndedEvent} after the DB
      * transaction commits.
@@ -128,15 +138,5 @@ public class AuctionClosureService {
                 log.info("Scheduled closure job {} for auction {} at {}", jobId, auctionId, closeAt);
             }
         });
-    }
-
-    /**
-     * Derives a deterministic, name-based UUID for the closure job of a given auction. Using a
-     * stable ID prevents duplicate jobs from accumulating in JobRunr if
-     * {@link #scheduleClosureJob} is called more than once for the same auction (e.g., on restart).
-     */
-    static UUID closureJobId(UUID auctionId) {
-        return UUID.nameUUIDFromBytes(
-                ("auction-closure:" + auctionId).getBytes(StandardCharsets.UTF_8));
     }
 }
