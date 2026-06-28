@@ -27,9 +27,12 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuctionClosureServiceTest {
 
-    @Mock private AuctionItemRepository auctionItemRepository;
-    @Mock private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
-    @Mock private AuctionKafkaProducer kafkaProducer;
+    @Mock
+    private AuctionItemRepository auctionItemRepository;
+    @Mock
+    private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
+    @Mock
+    private AuctionKafkaProducer kafkaProducer;
 
     @InjectMocks
     private AuctionClosureService closureService;

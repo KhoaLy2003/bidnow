@@ -14,7 +14,8 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class AuctionClosureJobTest {
 
-    @Mock private AuctionClosureService closureService;
+    @Mock
+    private AuctionClosureService closureService;
 
     @InjectMocks
     private AuctionClosureJob auctionClosureJob;

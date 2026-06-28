@@ -1,0 +1,23 @@
+spring:
+  cloud:
+    discovery:
+      enabled: false
+  jpa:
+    show-sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-bdd.xml
+
+jwt:
+  secret: YmRkLXRlc3Qtc2VjcmV0LWtleS1mb3ItaWRlbnRpdHktYmRkLXRlc3RzLW9ubHk=
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  tracing:
+    enabled: false

@@ -319,7 +319,7 @@ public class AuctionServiceImpl implements AuctionService {
 
         boolean isEditable = auction.getStatus() == AuctionStatus.DRAFT ||
                 (auction.getStatus() == AuctionStatus.SCHEDULED &&
-                 auction.getStartTime().isAfter(OffsetDateTime.now()));
+                        auction.getStartTime().isAfter(OffsetDateTime.now()));
         if (!isEditable) {
             throw new BadRequestException("Auction cannot be modified after it has started", ErrorCodes.INVALID_INPUT);
         }

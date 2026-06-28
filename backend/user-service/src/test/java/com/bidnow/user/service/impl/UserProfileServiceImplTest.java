@@ -27,10 +27,14 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class UserProfileServiceImplTest {
 
-    @Mock private UserProfileRepository userProfileRepository;
-    @Mock private UserRoleRepository userRoleRepository;
-    @Mock private UserPreferencesRepository userPreferencesRepository;
-    @Mock private UserProfileMapper userProfileMapper;
+    @Mock
+    private UserProfileRepository userProfileRepository;
+    @Mock
+    private UserRoleRepository userRoleRepository;
+    @Mock
+    private UserPreferencesRepository userPreferencesRepository;
+    @Mock
+    private UserProfileMapper userProfileMapper;
 
     @InjectMocks
     private UserProfileServiceImpl userProfileService;

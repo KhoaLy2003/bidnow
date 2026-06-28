@@ -26,11 +26,10 @@ import java.util.Optional;
 @Loggable
 public class NotificationServiceImpl implements NotificationService {
 
-    @Value("${app.frontend.base-url:http://localhost:3000}")
-    private String frontendBaseUrl;
-
     private final EmailService emailService;
     private final NotificationTemplateRepository templateRepository;
+    @Value("${app.frontend.base-url:http://localhost:3000}")
+    private String frontendBaseUrl;
 
     // -------------------------------------------------------------------------
     // OTP Verification — triggered by USER_VERIFICATION_REQUESTED event
