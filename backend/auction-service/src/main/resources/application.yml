@@ -63,7 +63,6 @@ org:
     background-job-server:
       enabled: true
     dashboard:
-      enabled: true
-      port: 8090
+      enabled: false
     database:
       skip-create: true
