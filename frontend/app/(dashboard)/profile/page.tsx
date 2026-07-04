@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuthStore } from "@/store/authStore";
@@ -14,6 +14,18 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
 import { mediaService } from "@/services/media.service";
+
+function profileToForm(p: ReturnType<typeof useProfile>["profile"]) {
+  return {
+    displayName: p?.displayName || "",
+    phoneNumber: p?.phoneNumber || "",
+    address: p?.address || "",
+    city: p?.city || "",
+    country: p?.country || "",
+    postalCode: p?.postalCode || "",
+    bio: p?.bio || "",
+  };
+}
 
 export default function ProfilePage() {
   const { profile, isLoading, error, updateProfile } = useProfile();
@@ -23,7 +35,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState({
     displayName: "",
     phoneNumber: "",
@@ -33,18 +45,6 @@ export default function ProfilePage() {
     postalCode: "",
     bio: "",
   });
-
-  function profileToForm(p: typeof profile) {
-    return {
-      displayName: p?.displayName || "",
-      phoneNumber: p?.phoneNumber || "",
-      address: p?.address || "",
-      city: p?.city || "",
-      country: p?.country || "",
-      postalCode: p?.postalCode || "",
-      bio: p?.bio || "",
-    };
-  }
 
   useEffect(() => {
     if (profile) setFormData(profileToForm(profile));
@@ -92,8 +92,8 @@ export default function ProfilePage() {
       // 2. Persist the new avatarUrl directly to the user-profile in one call
       await updateProfile({ avatarUrl: publicUrl });
       toast.success("Avatar updated successfully!");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to upload avatar");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to upload avatar"));
     } finally {
       setIsUploadingAvatar(false);
       if (fileInputRef.current) {

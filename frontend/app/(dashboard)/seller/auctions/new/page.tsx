@@ -20,6 +20,7 @@ import { ImageUploadGrid }     from '@/components/seller/ImageUploadGrid'
 import { DepositRangeInput }   from '@/components/seller/DepositRangeInput'
 import { AntiSnipeNotice }     from '@/components/seller/AntiSnipeNotice'
 import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
+import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData, ManagedImage } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
@@ -468,11 +469,15 @@ export default function CreateAuctionPage() {
               {/* Mini preview card */}
               <div className="rounded-xl border border-[var(--color-border-default)] overflow-hidden">
                 {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="Auction preview"
-                    className="aspect-[4/3] w-full object-cover"
-                  />
+                  <div className="relative aspect-[4/3] w-full">
+                    <ImageThumbnail
+                      src={previewUrl}
+                      alt="Auction preview"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-[4/3]"
                     style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }}

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 
 import { authService } from '@/services/auth.service'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -30,8 +31,8 @@ export default function RegisterPage() {
       await authService.register(name, email, password)
       toast.success('Registration successful! Please check your email for OTP.')
       router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Registration failed. Please try again.'))
     } finally {
       setIsLoading(false)
     }

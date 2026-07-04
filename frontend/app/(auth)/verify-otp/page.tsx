@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { authService } from '@/services/auth.service'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils'
 
 function VerifyOtpContent() {
   const router = useRouter()
@@ -40,8 +41,8 @@ function VerifyOtpContent() {
       await authService.verifyOtp(email, otp)
       toast.success('Account verified successfully! You can now sign in.')
       router.push('/login')
-    } catch (err: any) {
-      setError(err.message || 'Verification failed. Please check your code.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Verification failed. Please check your code.'))
     } finally {
       setIsLoading(false)
     }
@@ -53,8 +54,8 @@ function VerifyOtpContent() {
     try {
       await authService.resendOtp(email)
       toast.success('A new code has been sent to your email.')
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend code.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to resend code.'))
     } finally {
       setIsResending(false)
     }

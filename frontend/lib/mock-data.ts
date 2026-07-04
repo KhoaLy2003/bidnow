@@ -1,4 +1,3 @@
-import { AuctionStatus } from './design-tokens'
 import type { BidHistoryItem } from '@/types/ui/auction.ui'
 
 export const MOCK_CURRENT_USER_ID = 'current-user'
