@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import { CountdownTimer } from './CountdownTimer'
 import { CurrentBidDisplay } from './CurrentBidDisplay'
 import { BidForm } from './BidForm'
@@ -17,12 +16,6 @@ interface BidPanelLiveProps {
 
 export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProps) {
   const walletAvailable = useWalletStore((s) => s.available)
-
-  useEffect(() => {
-    if (useWalletStore.getState().available === 0) {
-      useWalletStore.getState().setBalance({ available: 240_000, held: 0, total: 240_000 })
-    }
-  }, [])
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden flex flex-col">

@@ -3,13 +3,19 @@
 import { Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
 import { WalletPanel } from './WalletPanel'
 import { useWallet } from '@/hooks/useWallet'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export function WalletBadge() {
-  const { available, isLow } = useWallet()
+  const { available, isLow, isLoading, transactions } = useWallet()
+  const showSkeleton = isLoading && transactions.length === 0 && available === 0
+
+  if (showSkeleton) {
+    return <Skeleton className="h-7 w-20 rounded-full" />
+  }
 
   return (
     <Sheet>

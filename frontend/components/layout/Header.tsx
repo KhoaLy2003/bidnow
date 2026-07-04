@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { WalletBadge } from "@/components/wallet/WalletBadge";
 import { NotificationBell } from "@/components/notification/NotificationBell";
 import { cn } from "@/lib/utils";
@@ -88,6 +89,8 @@ export function Header() {
 
         {/* Right controls */}
         <div className="ml-auto flex items-center gap-1 shrink-0">
+          <ThemeToggle />
+
           {isAuthenticated ? (
             <>
               {user?.role !== 'ADMIN' && (
