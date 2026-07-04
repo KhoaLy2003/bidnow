@@ -27,5 +27,4 @@ INSERT INTO identity_users (email, password_hash, display_name,
                             created_at, updated_at)
 VALUES ('alice@bddtest.local',
         crypt('P@ssw0rd1', gen_salt('bf', 4)),
-        'Alice Seed', false, false, 'PENDING_VERIFICATION', 'USER', 0, 0, NOW(), NOW())
-ON CONFLICT (email) DO NOTHING;
+        'Alice Seed', false, false, 'PENDING_VERIFICATION', 'USER', 0, 0, NOW(), NOW()) ON CONFLICT (email) DO NOTHING;
