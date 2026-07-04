@@ -1,6 +1,7 @@
 package com.bidnow.identity.security;
 
 import com.bidnow.common.constant.SecurityConstants;
+import com.bidnow.common.web.RequestLoggingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,7 +40,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new RequestLoggingFilter(), JwtAuthenticationFilter.class);
         return http.build();
     }
 

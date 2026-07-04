@@ -2,6 +2,7 @@ package com.bidnow.wallet.config;
 
 import com.bidnow.common.constant.SecurityConstants;
 import com.bidnow.common.security.RoleHeaderFilter;
+import com.bidnow.common.web.RequestLoggingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -28,7 +29,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(new RoleHeaderFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new RoleHeaderFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new RequestLoggingFilter(), RoleHeaderFilter.class);
         return http.build();
     }
 }
