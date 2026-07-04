@@ -113,19 +113,19 @@ export default function AdminTemplatesPage() {
   const [sendToAllActive, setSendToAllActive] = useState(false)
   const [recipientEmailsStr, setRecipientEmailsStr] = useState('')
 
-  const fetchTemplates = useCallback(async () => {
-    setLoading(true)
-
-    try {
-      const result = await adminService.getTemplates(filters, page, PAGE_SIZE)
-      setTemplates(result.data)
-      setTotalPages(result.pagination.totalPages)
-      setTotalElements(result.pagination.total)
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to load templates'))
-    } finally {
-      setLoading(false)
-    }
+  const fetchTemplates = useCallback(() => {
+    adminService.getTemplates(filters, page, PAGE_SIZE)
+      .then((result) => {
+        setTemplates(result.data)
+        setTotalPages(result.pagination.totalPages)
+        setTotalElements(result.pagination.total)
+      })
+      .catch((error: unknown) => {
+        toast.error(getErrorMessage(error, 'Failed to load templates'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [filters, page])
 
   useEffect(() => {
@@ -192,7 +192,8 @@ export default function AdminTemplatesPage() {
         toast.success('Template created')
       }
       setFormOpen(false)
-      await fetchTemplates()
+      setLoading(true)
+      fetchTemplates()
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to save template'))
     } finally {
@@ -271,6 +272,7 @@ export default function AdminTemplatesPage() {
               <Input
                 value={filters.search ?? ''}
                 onChange={(event) => {
+                  setLoading(true)
                   setPage(0)
                   setFilters((current) => ({ ...current, search: event.target.value }))
                 }}
@@ -282,6 +284,7 @@ export default function AdminTemplatesPage() {
             <Select
               value={filters.type ?? 'ALL'}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({ ...current, type: value as NotificationTemplateType | 'ALL' }))
               }}
@@ -298,6 +301,7 @@ export default function AdminTemplatesPage() {
             <Select
               value={filters.language ?? 'ALL'}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({ ...current, language: value as NotificationTemplateLanguage | 'ALL' }))
               }}
@@ -315,6 +319,7 @@ export default function AdminTemplatesPage() {
             <Select
               value={String(filters.active ?? 'ALL')}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({
                   ...current,
@@ -414,13 +419,29 @@ export default function AdminTemplatesPage() {
             <span className="font-medium text-foreground">{totalElements}</span>
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 0 || loading}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.max(0, current - 1))
+              }}
+            >
               <ChevronLeft className="size-4" />
             </Button>
             <span className="min-w-24 text-center text-sm text-muted-foreground">
               Page {totalPages === 0 ? 0 : page + 1} of {totalPages}
             </span>
-            <Button variant="outline" size="icon" disabled={totalPages === 0 || page >= totalPages - 1 || loading} onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={totalPages === 0 || page >= totalPages - 1 || loading}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.min(totalPages - 1, current + 1))
+              }}
+            >
               <ChevronRight className="size-4" />
             </Button>
           </div>

@@ -56,25 +56,31 @@ export default function SellerAuctionsPage() {
   const [histPage,     setHistPage]     = useState(1)
   const [deletedIds,   setDeletedIds]   = useState<string[]>([])
 
-  const fetchAuctions = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [activeRes, historyRes] = await Promise.all([
-        auctionService.getMyAuctions({ type: 'active', size: 100 }),
-        auctionService.getMyAuctions({ type: 'history', size: 100 }),
-      ])
-      const merged = [...(activeRes.data.data || []), ...(historyRes.data.data || [])]
-      setAuctions(merged.map(mapAuctionSummaryToSellerAuction))
-    } catch (err) {
-      setError('failed')
-      toast.error(getErrorMessage(err, 'Failed to load auctions.'))
-    } finally {
-      setLoading(false)
-    }
+  const fetchAuctions = useCallback(() => {
+    Promise.all([
+      auctionService.getMyAuctions({ type: 'active', size: 100 }),
+      auctionService.getMyAuctions({ type: 'history', size: 100 }),
+    ])
+      .then(([activeRes, historyRes]) => {
+        const merged = [...(activeRes.data.data || []), ...(historyRes.data.data || [])]
+        setAuctions(merged.map(mapAuctionSummaryToSellerAuction))
+        setError(null)
+      })
+      .catch((err) => {
+        setError('failed')
+        toast.error(getErrorMessage(err, 'Failed to load auctions.'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [])
 
   useEffect(() => { fetchAuctions() }, [fetchAuctions])
+
+  const retryFetch = useCallback(() => {
+    setLoading(true)
+    fetchAuctions()
+  }, [fetchAuctions])
 
   const { allActive, allHistorical } = useMemo(() => {
     const active: SellerAuction[] = []
@@ -165,7 +171,7 @@ export default function SellerAuctionsPage() {
           {loading ? (
             <LoadingState />
           ) : error ? (
-            <ErrorState onRetry={fetchAuctions} />
+            <ErrorState onRetry={retryFetch} />
           ) : activeAuctions.length === 0 ? (
             <EmptyAuctions />
           ) : (
@@ -217,7 +223,7 @@ export default function SellerAuctionsPage() {
           {loading ? (
             <LoadingState />
           ) : error ? (
-            <ErrorState onRetry={fetchAuctions} />
+            <ErrorState onRetry={retryFetch} />
           ) : histAuctions.length === 0 ? (
             <div className="py-20 text-center text-sm text-muted-foreground">No completed auctions yet.</div>
           ) : (

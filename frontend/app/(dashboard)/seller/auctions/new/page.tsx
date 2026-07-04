@@ -113,13 +113,10 @@ export default function CreateAuctionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
   const [nowMs,      setNowMs]      = useState(() => Date.now())
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (data.images.length === 0) { setPreviewUrl(null); return }
-    const img = data.images[0]
-    setPreviewUrl(img.kind === 'existing' ? img.url : img.preview)
-  }, [data.images])
+  const previewUrl = data.images.length === 0
+    ? null
+    : data.images[0].kind === 'existing' ? data.images[0].url : data.images[0].preview
 
   // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
   useEffect(() => {

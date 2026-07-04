@@ -20,7 +20,7 @@ export const useWalletStore = create<WalletState>((set) => ({
   total:        0,
   isLow:        false,
   transactions: [],
-  isLoading:    false,
+  isLoading:    true,
   hasFetched:   false,
 
   setBalance: (balance) =>

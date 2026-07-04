@@ -17,27 +17,28 @@ export function useProfile(): UseProfileResult {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(isAuthenticated);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(() => {
     if (!isAuthenticated) return;
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await userService.getMyProfile();
-      setProfile(res.data);
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to load profile";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
+    userService
+      .getMyProfile()
+      .then((res) => {
+        setProfile(res.data);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        const message =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Failed to load profile";
+        setError(message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [isAuthenticated]);
 
   useEffect(() => {

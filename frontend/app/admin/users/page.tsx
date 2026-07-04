@@ -145,19 +145,19 @@ export default function UserManagementPage() {
   const [userDetails, setUserDetails] = useState<AdminUserProfileResponse | null>(null)
   const [profileUser, setProfileUser] = useState<AdminUserResponse | null>(null)
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true)
-
-    try {
-      const result = await adminService.getUsers(page, PAGE_SIZE, sortBy, sortDirection)
-      setUsers(result.data)
-      setTotalPages(result.pagination.totalPages)
-      setTotalElements(result.pagination.total)
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to fetch users'))
-    } finally {
-      setLoading(false)
-    }
+  const fetchUsers = useCallback(() => {
+    adminService.getUsers(page, PAGE_SIZE, sortBy, sortDirection)
+      .then((result) => {
+        setUsers(result.data)
+        setTotalPages(result.pagination.totalPages)
+        setTotalElements(result.pagination.total)
+      })
+      .catch((error: unknown) => {
+        toast.error(getErrorMessage(error, 'Failed to fetch users'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [page, sortBy, sortDirection])
 
   useEffect(() => {
@@ -188,7 +188,8 @@ export default function UserManagementPage() {
       setIsStatusModalOpen(false)
       setSelectedUser(null)
       setStatusReason('')
-      await fetchUsers()
+      setLoading(true)
+      fetchUsers()
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to update status'))
     } finally {
@@ -261,6 +262,7 @@ export default function UserManagementPage() {
           <Select
             value={sortBy}
             onValueChange={(value) => {
+              setLoading(true)
               setPage(0)
               setSortBy((value ?? 'createdAt') as AdminUserSortField)
             }}
@@ -280,6 +282,7 @@ export default function UserManagementPage() {
           <Button
             variant="outline"
             onClick={() => {
+              setLoading(true)
               setPage(0)
               setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
             }}
@@ -440,7 +443,10 @@ export default function UserManagementPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.max(0, current - 1))
+              }}
               disabled={page === 0 || loading}
             >
               <ChevronLeft className="size-4" />
@@ -451,7 +457,10 @@ export default function UserManagementPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.min(totalPages - 1, current + 1))
+              }}
               disabled={totalPages === 0 || page >= totalPages - 1 || loading}
             >
               <ChevronRight className="size-4" />

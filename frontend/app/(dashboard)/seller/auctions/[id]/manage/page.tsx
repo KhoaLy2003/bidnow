@@ -314,18 +314,18 @@ export default function ManageAuctionPage() {
   const [published,  setPublished]  = useState(false)
 
   const loadAuction = useCallback((): Promise<void> => {
-    setLoading(true)
-    setFetchError(null)
     return auctionService.getAuctionById(id)
       .then(detail => {
         if (!detail) { setFetchError('Auction not found.'); return }
         setAuction(detail)
+        setFetchError(null)
       })
       .catch(() => setFetchError('Failed to load auction.'))
       .finally(() => setLoading(false))
   }, [id])
 
   const handlePublish = useCallback(async () => {
+    setLoading(true)
     await loadAuction()
     setPublished(true)
   }, [loadAuction])
@@ -480,7 +480,7 @@ export default function ManageAuctionPage() {
                 )}
                 <DraftEditForm
                   auction={auction}
-                  onSave={loadAuction}
+                  onSave={() => { setLoading(true); loadAuction() }}
                   onPublish={handlePublish}
                 />
               </>

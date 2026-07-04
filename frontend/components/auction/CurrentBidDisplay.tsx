@@ -28,17 +28,22 @@ export function CurrentBidDisplay({
 }: CurrentBidDisplayProps) {
   const [displayedAmount, setDisplayedAmount] = useState(amount)
   const [animating, setAnimating] = useState(false)
+  const [prevAmount, setPrevAmount] = useState(amount)
   const isOutbid = status === AuctionStatus.Outbid
 
-  useEffect(() => {
-    if (amount === displayedAmount) return
+  if (amount !== prevAmount) {
+    setPrevAmount(amount)
     setAnimating(true)
+  }
+
+  useEffect(() => {
+    if (!animating) return
     const t = setTimeout(() => {
       setDisplayedAmount(amount)
       setAnimating(false)
     }, 250)
     return () => clearTimeout(t)
-  }, [amount, displayedAmount])
+  }, [animating, amount])
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
