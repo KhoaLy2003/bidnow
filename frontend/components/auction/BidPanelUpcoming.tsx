@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Bell, BellOff } from 'lucide-react'
 import { CountdownTimer } from './CountdownTimer'
 import { StatusBadge } from './StatusBadge'
@@ -17,17 +17,12 @@ interface BidPanelUpcomingProps {
 
 export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
   const [notifying, setNotifying] = useState(false)
-  const [startDateStr, setStartDateStr] = useState<string | null>(null)
   const { isExpired } = useCountdown(auction.startsAt)
 
-  useEffect(() => {
-    setStartDateStr(
-      auction.startsAt.toLocaleString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric',
-        hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
-      })
-    )
-  }, [auction.startsAt])
+  const startDateStr = auction.startsAt.toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  })
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden flex flex-col">

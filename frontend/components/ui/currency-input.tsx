@@ -18,17 +18,16 @@ export function CurrencyInput({
   ...props
 }: CurrencyInputProps) {
   const [raw, setRaw] = React.useState(value > 0 ? value.toString() : '')
+  const [prevValue, setPrevValue] = React.useState(value)
 
-  React.useEffect(() => {
-    if (value === 0 && raw !== '') {
+  if (value !== prevValue) {
+    setPrevValue(value)
+    if (value === 0) {
       setRaw('')
-      return
-    }
-    const currentDollars = Number.parseFloat(raw)
-    if (value > 0 && value !== currentDollars) {
+    } else if (value !== Number.parseFloat(raw)) {
       setRaw(value.toString())
     }
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRaw(e.target.value)

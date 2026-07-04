@@ -7,12 +7,16 @@ import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -37,6 +41,21 @@ class AuctionClosureServiceTest {
     @InjectMocks
     private AuctionClosureService closureService;
 
+    @BeforeEach
+    void initTransactionSync() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void clearTransactionSync() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private void triggerAfterCommit() {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+    }
+
     @Test
     void close_whenActiveWithBids_completesAuction() {
         UUID auctionId = UUID.randomUUID();
@@ -53,6 +72,7 @@ class AuctionClosureServiceTest {
         when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(auction));
 
         closureService.close(auctionId);
+        triggerAfterCommit();
 
         assertThat(auction.getStatus()).isEqualTo(AuctionStatus.COMPLETED);
         assertThat(auction.getWinnerId()).isEqualTo(currentWinnerId);
@@ -86,6 +106,7 @@ class AuctionClosureServiceTest {
         when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(auction));
 
         closureService.close(auctionId);
+        triggerAfterCommit();
 
         assertThat(auction.getStatus()).isEqualTo(AuctionStatus.FAILED);
         assertThat(auction.getWinnerId()).isNull();

@@ -20,6 +20,7 @@ import { ImageUploadGrid }     from '@/components/seller/ImageUploadGrid'
 import { DepositRangeInput }   from '@/components/seller/DepositRangeInput'
 import { AntiSnipeNotice }     from '@/components/seller/AntiSnipeNotice'
 import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
+import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData, ManagedImage } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
@@ -112,13 +113,10 @@ export default function CreateAuctionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
   const [nowMs,      setNowMs]      = useState(() => Date.now())
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (data.images.length === 0) { setPreviewUrl(null); return }
-    const img = data.images[0]
-    setPreviewUrl(img.kind === 'existing' ? img.url : img.preview)
-  }, [data.images])
+  const previewUrl = data.images.length === 0
+    ? null
+    : data.images[0].kind === 'existing' ? data.images[0].url : data.images[0].preview
 
   // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
   useEffect(() => {
@@ -468,11 +466,15 @@ export default function CreateAuctionPage() {
               {/* Mini preview card */}
               <div className="rounded-xl border border-[var(--color-border-default)] overflow-hidden">
                 {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="Auction preview"
-                    className="aspect-[4/3] w-full object-cover"
-                  />
+                  <div className="relative aspect-[4/3] w-full">
+                    <ImageThumbnail
+                      src={previewUrl}
+                      alt="Auction preview"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <div className="aspect-[4/3]"
                     style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }}

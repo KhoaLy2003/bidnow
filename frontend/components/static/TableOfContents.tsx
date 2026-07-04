@@ -40,7 +40,6 @@ export function TableOfContents({ sections, contact }: TableOfContentsProps) {
     })
 
     return () => observer.disconnect()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionKey])
 
   const email = contact ?? 'support@bidnow.com'

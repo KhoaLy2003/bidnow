@@ -156,24 +156,25 @@ export default function AdminAuctionsPage() {
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const fetchAuctions = useCallback(async () => {
-    setLoading(true)
-    try {
-      const result = await adminService.getAuctions(
-        { status: statusFilter, q: query.trim() || undefined },
-        page,
-        PAGE_SIZE,
-        sortBy,
-        sortDirection
-      )
-      setAuctions(result.data)
-      setTotalPages(result.pagination.totalPages)
-      setTotalElements(result.pagination.total)
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to fetch auctions'))
-    } finally {
-      setLoading(false)
-    }
+  const fetchAuctions = useCallback(() => {
+    adminService.getAuctions(
+      { status: statusFilter, q: query.trim() || undefined },
+      page,
+      PAGE_SIZE,
+      sortBy,
+      sortDirection
+    )
+      .then((result) => {
+        setAuctions(result.data)
+        setTotalPages(result.pagination.totalPages)
+        setTotalElements(result.pagination.total)
+      })
+      .catch((error: unknown) => {
+        toast.error(getErrorMessage(error, 'Failed to fetch auctions'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [page, query, statusFilter, sortBy, sortDirection])
 
   useEffect(() => {
@@ -227,7 +228,8 @@ export default function AdminAuctionsPage() {
       }
       toast.success(`Auction ${actionType === 'force-close' ? 'force-closed' : `${actionType}ed`} successfully`)
       closeActionDialog()
-      await fetchAuctions()
+      setLoading(true)
+      fetchAuctions()
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, `Failed to ${actionType} auction`))
     } finally {
@@ -254,6 +256,7 @@ export default function AdminAuctionsPage() {
             <Input
               value={query}
               onChange={(event) => {
+                setLoading(true)
                 setPage(0)
                 setQuery(event.target.value)
               }}
@@ -265,6 +268,7 @@ export default function AdminAuctionsPage() {
           <Select
             value={statusFilter}
             onValueChange={(value) => {
+              setLoading(true)
               setPage(0)
               setStatusFilter((value ?? 'ALL') as StatusFilter)
             }}
@@ -285,6 +289,7 @@ export default function AdminAuctionsPage() {
           <Select
             value={sortBy}
             onValueChange={(value) => {
+              setLoading(true)
               setPage(0)
               setSortBy(value ?? 'createdAt')
             }}
@@ -304,6 +309,7 @@ export default function AdminAuctionsPage() {
           <Button
             variant="outline"
             onClick={() => {
+              setLoading(true)
               setPage(0)
               setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
             }}
@@ -321,6 +327,7 @@ export default function AdminAuctionsPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
+              setLoading(true)
               setPage(0)
               setQuery('')
               setStatusFilter('ALL')
@@ -457,7 +464,10 @@ export default function AdminAuctionsPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.max(0, current - 1))
+              }}
               disabled={page === 0 || loading}
             >
               <ChevronLeft className="size-4" />
@@ -468,7 +478,10 @@ export default function AdminAuctionsPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.min(totalPages - 1, current + 1))
+              }}
               disabled={totalPages === 0 || page >= totalPages - 1 || loading}
             >
               <ChevronRight className="size-4" />

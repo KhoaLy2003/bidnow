@@ -1,21 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { authService } from '@/services/auth.service'
 import { TOKEN_REFRESH_BUFFER_MS } from '@/lib/apiClient'
+import { useHasMounted } from '@/hooks/useHasMounted'
 import { Loader2 } from 'lucide-react'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { isAuthenticated, accessTokenExpiresAt, refreshToken, setTokens, logout } = useAuthStore()
-  const [isMounted, setIsMounted] = useState(false)
+  const isMounted = useHasMounted()
   const [isValidating, setIsValidating] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!isMounted) return
@@ -34,7 +31,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push('/login?reason=session_expired')
         return
       }
-      setIsValidating(true)
+      startTransition(() => setIsValidating(true))
       authService
         .refresh(refreshToken)
         .then(({ data }) => setTokens(data.accessToken, data.refreshToken, data.expiresIn))
