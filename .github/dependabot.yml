@@ -5,24 +5,48 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
     labels:
       - "dependencies"
       - "backend"
+    groups:
+      maven-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
     labels:
       - "dependencies"
       - "frontend"
+    groups:
+      npm-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
     labels:
       - "dependencies"
       - "ci"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
