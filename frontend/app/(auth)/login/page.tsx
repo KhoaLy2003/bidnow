@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { authService } from '@/services/auth.service'
+import { getErrorMessage } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 
 function LoginForm() {
@@ -48,8 +49,8 @@ function LoginForm() {
       } else {
         router.push('/')
       }
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Invalid email or password'))
     } finally {
       setIsLoading(false)
     }

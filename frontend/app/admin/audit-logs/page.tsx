@@ -79,7 +79,9 @@ export default function AuditLogsPage() {
   const [calendarTo, setCalendarTo] = useState<Date | undefined>(undefined);
 
   const stateRef = useRef({ filters, calendarFrom, calendarTo });
-  stateRef.current = { filters, calendarFrom, calendarTo };
+  useEffect(() => {
+    stateRef.current = { filters, calendarFrom, calendarTo };
+  });
 
   const fetchLogs = useCallback(async (currentPage = 0, apiFilters?: AuditLogFilters) => {
     setIsLoading(true);

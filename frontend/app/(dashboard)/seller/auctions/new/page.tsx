@@ -29,6 +29,7 @@ import { auctionService } from '@/services/auction.service'
 import { mediaService } from '@/services/media.service'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import { CurrencyInput } from '@/components/ui/currency-input'
+import Image from 'next/image'
 
 const STEPS = ['Basics', 'Images', 'Pricing', 'Review']
 const DURATION_OPTIONS = [
@@ -468,7 +469,7 @@ export default function CreateAuctionPage() {
               {/* Mini preview card */}
               <div className="rounded-xl border border-[var(--color-border-default)] overflow-hidden">
                 {previewUrl ? (
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Auction preview"
                     className="aspect-[4/3] w-full object-cover"
