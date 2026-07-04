@@ -80,10 +80,13 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
+                        <configuration combine.self="override">
                             <includes>
                                 <include>**/CucumberTest.java</include>
                             </includes>
+                            <excludes>
+                                <exclude>nothing</exclude>
+                            </excludes>
                             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
                         </configuration>
                     </plugin>
@@ -110,6 +113,15 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/CucumberTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

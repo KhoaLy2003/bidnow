@@ -1,0 +1,31 @@
+# backend/auction-service/src/test/resources/application-bdd.yml
+spring:
+  cloud:
+    discovery:
+      enabled: false
+  jpa:
+    show-sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-bdd.xml
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+  cache:
+    type: redis
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  tracing:
+    enabled: false
+
+org:
+  jobrunr:
+    background-job-server:
+      enabled: false
+    dashboard:
+      enabled: false

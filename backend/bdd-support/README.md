@@ -96,6 +96,7 @@ context with `@SpringBootTest(webEnvironment = RANDOM_PORT)`. The `@DynamicPrope
 and Kafka bootstrap URLs to point at the running containers:
 
 ```java
+
 @DynamicPropertySource
 static void overrideProperties(DynamicPropertyRegistry registry) {
     PostgresContainerSupport.properties().forEach((k, v) -> registry.add(k, () -> v));

@@ -5,7 +5,10 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
 
-    <include file="db/changelog/migrations/01-init-wallets.sql"/>
-    <include file="db/changelog/migrations/02-init-transactions.sql"/>
+    <!-- Production migrations (includes JobRunr tables, schema, and category seeds) -->
+    <include file="db/changelog/db.changelog-master.xml"/>
+
+    <!-- BDD-only seed data with fixed UUIDs -->
+    <include file="db/changelog/test-data.sql"/>
 
 </databaseChangeLog>

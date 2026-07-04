@@ -12,6 +12,7 @@ import java.util.UUID;
 
 public interface WalletService {
     void createWalletIfAbsent(UUID userId);
+
     WalletResponse getMyWallet(UUID userId);
     DepositResponse deposit(UUID userId, DepositRequest request);
     PageResponse<TransactionResponse> getTransactions(UUID userId, TransactionType type,
