@@ -123,8 +123,8 @@ export type AuditAction =
 
 export interface AuditLogDelta {
   [key: string]: {
-    old: any;
-    new: any;
+    old: unknown;
+    new: unknown;
   };
 }
 

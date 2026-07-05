@@ -24,7 +24,6 @@ import {
   type NotificationTemplateType,
   type TemplateFilters,
 } from '@/types/api/admin.api'
-import { useAuthStore } from '@/store/authStore'
 import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -87,7 +86,6 @@ function textToVariables(value: string) {
 }
 
 export default function AdminTemplatesPage() {
-  const { accessToken } = useAuthStore()
   const [templates, setTemplates] = useState<NotificationTemplateResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -115,21 +113,20 @@ export default function AdminTemplatesPage() {
   const [sendToAllActive, setSendToAllActive] = useState(false)
   const [recipientEmailsStr, setRecipientEmailsStr] = useState('')
 
-  const fetchTemplates = useCallback(async () => {
-    if (!accessToken) return
-    setLoading(true)
-
-    try {
-      const result = await adminService.getTemplates(accessToken, filters, page, PAGE_SIZE)
-      setTemplates(result.data)
-      setTotalPages(result.pagination.totalPages)
-      setTotalElements(result.pagination.total)
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to load templates'))
-    } finally {
-      setLoading(false)
-    }
-  }, [accessToken, filters, page])
+  const fetchTemplates = useCallback(() => {
+    adminService.getTemplates(filters, page, PAGE_SIZE)
+      .then((result) => {
+        setTemplates(result.data)
+        setTotalPages(result.pagination.totalPages)
+        setTotalElements(result.pagination.total)
+      })
+      .catch((error: unknown) => {
+        toast.error(getErrorMessage(error, 'Failed to load templates'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [filters, page])
 
   useEffect(() => {
     fetchTemplates()
@@ -143,12 +140,11 @@ export default function AdminTemplatesPage() {
   )
 
   const openDetails = async (template: NotificationTemplateResponse) => {
-    if (!accessToken) return
     setDetailsOpen(true)
     if (selectedTemplate?.id === template.id) return
 
     try {
-      const details = await adminService.getTemplate(accessToken, template.id)
+      const details = await adminService.getTemplate(template.id)
       setSelectedTemplate(details)
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to load template details'))
@@ -180,7 +176,6 @@ export default function AdminTemplatesPage() {
   }
 
   const handleSubmit = async () => {
-    if (!accessToken) return
     setSaving(true)
 
     const request: NotificationTemplateRequest = {
@@ -190,14 +185,15 @@ export default function AdminTemplatesPage() {
 
     try {
       if (editingTemplate) {
-        await adminService.updateTemplate(accessToken, editingTemplate.id, request)
+        await adminService.updateTemplate(editingTemplate.id, request)
         toast.success('Template updated')
       } else {
-        await adminService.createTemplate(accessToken, request)
+        await adminService.createTemplate(request)
         toast.success('Template created')
       }
       setFormOpen(false)
-      await fetchTemplates()
+      setLoading(true)
+      fetchTemplates()
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, 'Failed to save template'))
     } finally {
@@ -216,14 +212,14 @@ export default function AdminTemplatesPage() {
   }
 
   const handleSendEmail = async () => {
-    if (!accessToken || !selectedTemplate) return
+    if (!selectedTemplate) return
     setTesting(true)
 
     try {
       const variables = JSON.parse(testVariables || '{}') as Record<string, unknown>
-      
+
       if (sendType === 'TEST') {
-        const message = await adminService.testTemplate(accessToken, selectedTemplate.id, {
+        const message = await adminService.testTemplate(selectedTemplate.id, {
           recipientEmail: testEmail,
           variables,
         })
@@ -233,7 +229,7 @@ export default function AdminTemplatesPage() {
           ? recipientEmailsStr.split(',').map((e) => e.trim()).filter(Boolean)
           : undefined
 
-        const message = await adminService.sendTemplateToGroup(accessToken, selectedTemplate.id, {
+        const message = await adminService.sendTemplateToGroup(selectedTemplate.id, {
           sendToAllActive,
           recipientEmails,
           variables,
@@ -276,6 +272,7 @@ export default function AdminTemplatesPage() {
               <Input
                 value={filters.search ?? ''}
                 onChange={(event) => {
+                  setLoading(true)
                   setPage(0)
                   setFilters((current) => ({ ...current, search: event.target.value }))
                 }}
@@ -287,6 +284,7 @@ export default function AdminTemplatesPage() {
             <Select
               value={filters.type ?? 'ALL'}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({ ...current, type: value as NotificationTemplateType | 'ALL' }))
               }}
@@ -303,6 +301,7 @@ export default function AdminTemplatesPage() {
             <Select
               value={filters.language ?? 'ALL'}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({ ...current, language: value as NotificationTemplateLanguage | 'ALL' }))
               }}
@@ -320,6 +319,7 @@ export default function AdminTemplatesPage() {
             <Select
               value={String(filters.active ?? 'ALL')}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({
                   ...current,
@@ -419,13 +419,29 @@ export default function AdminTemplatesPage() {
             <span className="font-medium text-foreground">{totalElements}</span>
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 0 || loading}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.max(0, current - 1))
+              }}
+            >
               <ChevronLeft className="size-4" />
             </Button>
             <span className="min-w-24 text-center text-sm text-muted-foreground">
               Page {totalPages === 0 ? 0 : page + 1} of {totalPages}
             </span>
-            <Button variant="outline" size="icon" disabled={totalPages === 0 || page >= totalPages - 1 || loading} onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={totalPages === 0 || page >= totalPages - 1 || loading}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.min(totalPages - 1, current + 1))
+              }}
+            >
               <ChevronRight className="size-4" />
             </Button>
           </div>

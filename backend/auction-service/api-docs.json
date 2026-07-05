@@ -21,8 +21,12 @@
   ],
   "tags": [
     {
+      "name": "Categories",
+      "description": "Categories of auctions"
+    },
+    {
       "name": "Auctions",
-      "description": "Auction listing management"
+      "description": "Auction management endpoints to browse and manage auction listings"
     }
   ],
   "paths": {
@@ -60,7 +64,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -70,7 +74,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -80,7 +84,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -90,7 +94,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -256,7 +260,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -266,7 +270,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -276,7 +280,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseAuctionResponse"
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
                 }
               }
             }
@@ -284,7 +288,237 @@
         }
       }
     },
-    "/api/v1/auctions/my-auctions": {
+    "/api/v1/auctions/{id}/publish": {
+      "post": {
+        "tags": [
+          "Auctions"
+        ],
+        "summary": "Publish a DRAFT auction (transitions to SCHEDULED or ACTIVE)",
+        "operationId": "publishAuction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auction published successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Auction not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not in DRAFT status or end time is in the past",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the auction owner",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseSellerAuctionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auctions/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Auctions"
+        ],
+        "summary": "Cancel an auction (DRAFT/SCHEDULED/ACTIVE → CANCELLED)",
+        "operationId": "cancelAuction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelAuctionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Auction cancelled successfully"
+          },
+          "404": {
+            "description": "Auction not found"
+          },
+          "400": {
+            "description": "Auction is in a terminal state"
+          },
+          "403": {
+            "description": "Not the auction owner"
+          }
+        }
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "Get all active auction categories",
+        "operationId": "getCategories",
+        "responses": {
+          "200": {
+            "description": "Category list returned",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListAuctionCategoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auctions/public": {
+      "get": {
+        "tags": [
+          "Auctions"
+        ],
+        "summary": "Browse active auctions with filtering and sorting (public)",
+        "operationId": "browseAuctions",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PublicAuctionFilterRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auction list returned",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePageResponseAuctionBrowseItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter parameters",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponsePageResponseAuctionBrowseItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auctions/public/{id}": {
+      "get": {
+        "tags": [
+          "Auctions"
+        ],
+        "summary": "Get auction details by ID (public)",
+        "operationId": "getAuctionById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auction retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseAuctionDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Auction not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseAuctionDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auctions/public/category-counts": {
+      "get": {
+        "tags": [
+          "Auctions"
+        ],
+        "summary": "Get active auction count per category (public, cached)",
+        "operationId": "getCategoryAuctionCounts",
+        "responses": {
+          "200": {
+            "description": "Category counts returned",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListCategoryCountResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auctions/me": {
       "get": {
         "tags": [
           "Auctions"
@@ -367,7 +601,7 @@
             "format": "uuid"
           },
           "startingPrice": {
-            "minimum": 0,
+            "minimum": 0.01,
             "exclusiveMinimum": false,
             "type": "number",
             "description": "Initial bidding price",
@@ -470,7 +704,33 @@
         },
         "description": "Auction image details"
       },
-      "AuctionResponse": {
+      "BaseResponseSellerAuctionResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SellerAuctionResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "SellerAuctionResponse": {
         "type": "object",
         "properties": {
           "id": {
@@ -584,33 +844,7 @@
             "format": "date-time"
           }
         },
-        "description": "Full auction details"
-      },
-      "BaseResponseAuctionResponse": {
-        "type": "object",
-        "properties": {
-          "timestamp": {
-            "type": "string",
-            "description": "Timestamp of the response",
-            "format": "date-time",
-            "example": "2024-03-20T10:00:00Z"
-          },
-          "status": {
-            "type": "integer",
-            "description": "HTTP status code",
-            "format": "int32",
-            "example": 200
-          },
-          "message": {
-            "type": "string",
-            "description": "Response message",
-            "example": "Success"
-          },
-          "data": {
-            "$ref": "#/components/schemas/AuctionResponse"
-          }
-        },
-        "description": "Generic API response wrapper"
+        "description": "Full auction details returned to the authenticated seller after write operations"
       },
       "BaseResponseString": {
         "type": "object",
@@ -670,7 +904,7 @@
             "format": "uuid"
           },
           "startingPrice": {
-            "minimum": 0,
+            "minimum": 0.01,
             "exclusiveMinimum": false,
             "type": "number",
             "description": "Initial bidding price",
@@ -735,6 +969,453 @@
         },
         "description": "Request to create a new auction listing"
       },
+      "CancelAuctionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          }
+        }
+      },
+      "BaseResponseListAuctionCategoryResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "type": "array",
+            "description": "Response data",
+            "items": {
+              "$ref": "#/components/schemas/AuctionCategoryResponse"
+            }
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "PublicAuctionFilterRequest": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "description": "Filter by category UUID (takes precedence over categorySlug)",
+            "format": "uuid"
+          },
+          "categorySlug": {
+            "type": "string",
+            "description": "Filter by category slug (ignored when categoryId is also provided)"
+          },
+          "minPrice": {
+            "type": "number",
+            "description": "Minimum current price (inclusive)",
+            "example": 100
+          },
+          "maxPrice": {
+            "type": "number",
+            "description": "Maximum current price (inclusive)",
+            "example": 500
+          },
+          "endingSoon": {
+            "type": "boolean",
+            "description": "When true, only return auctions ending within the next 24 hours"
+          },
+          "keyword": {
+            "type": "string",
+            "description": "Case-insensitive keyword match on auction title"
+          },
+          "buyNowAvailable": {
+            "type": "boolean",
+            "description": "When true, only return auctions that have a buy-now price set"
+          },
+          "sortBy": {
+            "type": "string",
+            "description": "Sort order",
+            "default": "END_TIME_ASC",
+            "enum": [
+              "END_TIME_ASC",
+              "NEWLY_LISTED",
+              "PRICE_LOW_HIGH",
+              "PRICE_HIGH_LOW",
+              "MOST_BIDS"
+            ]
+          },
+          "page": {
+            "minimum": 0,
+            "type": "integer",
+            "description": "Zero-based page number",
+            "format": "int32",
+            "default": 0
+          },
+          "size": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer",
+            "description": "Page size (max 50)",
+            "format": "int32",
+            "default": 20
+          }
+        },
+        "description": "Filter and sort parameters for the public auction browse endpoint"
+      },
+      "AuctionBrowseItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Auction UUID",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Auction title"
+          },
+          "primaryImageUrl": {
+            "type": "string",
+            "description": "Primary image URL"
+          },
+          "currentPrice": {
+            "type": "number",
+            "description": "Current highest bid amount"
+          },
+          "totalBids": {
+            "type": "integer",
+            "description": "Total number of bids placed",
+            "format": "int32"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "Auction end datetime",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "Auction status",
+            "enum": [
+              "DRAFT",
+              "SCHEDULED",
+              "ACTIVE",
+              "COMPLETED",
+              "FAILED",
+              "CANCELLED"
+            ]
+          },
+          "buyNowPrice": {
+            "type": "number",
+            "description": "Instant purchase price (null if not available)"
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "Category name"
+          }
+        },
+        "description": "Minimal auction item for public browse listing"
+      },
+      "BaseResponsePageResponseAuctionBrowseItem": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResponseAuctionBrowseItem"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "PageResponseAuctionBrowseItem": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "List of data items",
+            "items": {
+              "$ref": "#/components/schemas/AuctionBrowseItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "description": "Paginated response wrapper"
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Current page number (zero-based)",
+            "format": "int32",
+            "example": 0
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "format": "int32",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "format": "int64",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "format": "int32",
+            "example": 10
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": false
+          }
+        },
+        "description": "Metadata for paginated results"
+      },
+      "AuctionDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Auction UUID",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Auction title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Item description"
+          },
+          "category": {
+            "$ref": "#/components/schemas/AuctionCategoryResponse"
+          },
+          "startingPrice": {
+            "type": "number",
+            "description": "Initial bidding price"
+          },
+          "bidIncrement": {
+            "type": "number",
+            "description": "Minimum bid increase amount"
+          },
+          "buyNowPrice": {
+            "type": "number",
+            "description": "Optional instant purchase price"
+          },
+          "depositAmount": {
+            "type": "number",
+            "description": "Required deposit to participate"
+          },
+          "currentPrice": {
+            "type": "number",
+            "description": "Current highest bid amount"
+          },
+          "currentWinnerId": {
+            "type": "string",
+            "description": "User ID of current highest bidder",
+            "format": "uuid"
+          },
+          "totalBids": {
+            "type": "integer",
+            "description": "Total number of bids placed",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "description": "Auction status",
+            "enum": [
+              "DRAFT",
+              "SCHEDULED",
+              "ACTIVE",
+              "COMPLETED",
+              "FAILED",
+              "CANCELLED"
+            ]
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Auction start datetime",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "Auction end datetime (may be extended)",
+            "format": "date-time"
+          },
+          "originalEndTime": {
+            "type": "string",
+            "description": "Original planned end time",
+            "format": "date-time"
+          },
+          "extensionCount": {
+            "type": "integer",
+            "description": "Number of anti-sniping extensions",
+            "format": "int32"
+          },
+          "completedAt": {
+            "type": "string",
+            "description": "Actual completion timestamp",
+            "format": "date-time"
+          },
+          "winnerId": {
+            "type": "string",
+            "description": "Final winner user ID",
+            "format": "uuid"
+          },
+          "images": {
+            "type": "array",
+            "description": "Auction images",
+            "items": {
+              "$ref": "#/components/schemas/AuctionImageResponse"
+            }
+          },
+          "seller": {
+            "$ref": "#/components/schemas/UserSummaryResponse"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Record creation timestamp",
+            "format": "date-time"
+          }
+        },
+        "description": "Full auction details for the public detail page"
+      },
+      "BaseResponseAuctionDetailResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AuctionDetailResponse"
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "UserSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "User UUID",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "description": "Avatar image URL"
+          }
+        },
+        "description": "Minimal user summary for cross-service consumption"
+      },
+      "BaseResponseListCategoryCountResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the response",
+            "format": "date-time",
+            "example": "2024-03-20T10:00:00Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Success"
+          },
+          "data": {
+            "type": "array",
+            "description": "Response data",
+            "items": {
+              "$ref": "#/components/schemas/CategoryCountResponse"
+            }
+          }
+        },
+        "description": "Generic API response wrapper"
+      },
+      "CategoryCountResponse": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "description": "Category UUID",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "Category name"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Category URL slug"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of active auctions in this category",
+            "format": "int64"
+          }
+        },
+        "description": "Active auction count per category"
+      },
       "AuctionSummaryResponse": {
         "type": "object",
         "properties": {
@@ -768,6 +1449,10 @@
           "currentPrice": {
             "type": "number",
             "description": "Current highest bid amount"
+          },
+          "buyNowPrice": {
+            "type": "number",
+            "description": "Instant purchase price (null if not available)"
           },
           "status": {
             "type": "string",
@@ -854,46 +1539,6 @@
           }
         },
         "description": "Paginated response wrapper"
-      },
-      "PaginationMeta": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "description": "Current page number (zero-based)",
-            "format": "int32",
-            "example": 0
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Number of items per page",
-            "format": "int32",
-            "example": 10
-          },
-          "total": {
-            "type": "integer",
-            "description": "Total number of items across all pages",
-            "format": "int64",
-            "example": 100
-          },
-          "totalPages": {
-            "type": "integer",
-            "description": "Total number of pages",
-            "format": "int32",
-            "example": 10
-          },
-          "hasNext": {
-            "type": "boolean",
-            "description": "Whether there is a next page",
-            "example": true
-          },
-          "hasPrev": {
-            "type": "boolean",
-            "description": "Whether there is a previous page",
-            "example": false
-          }
-        },
-        "description": "Metadata for paginated results"
       }
     },
     "securitySchemes": {

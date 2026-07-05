@@ -42,10 +42,10 @@ public class UploadEventStrategyFactory {
      * Dispatch a post-upload action for the given entity type.
      * If no strategy is registered for the type, the call is a no-op with a warning.
      */
-    public void dispatch(MediaEntityType entityType, UUID ownerId, UUID entityId, String s3Key) {
+    public void dispatch(MediaEntityType entityType, UUID ownerId, UUID entityId, String s3Key, String publicUrl) {
         Optional.ofNullable(strategies.get(entityType))
                 .ifPresentOrElse(
-                        strategy -> strategy.handle(ownerId, entityId, s3Key),
+                        strategy -> strategy.handle(ownerId, entityId, s3Key, publicUrl),
                         () -> log.warn("No upload event strategy registered for entityType={}", entityType)
                 );
     }

@@ -35,9 +35,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private static final String X_USER_ID_HEADER = "X-User-Id";
     private static final String X_USER_ROLES_HEADER = "X-User-Roles";
     private static final String BEARER_PREFIX = "Bearer ";
-
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
+    /**
+     * Paths that are service-internal only and must never be reachable from the public internet.
+     * Feign clients call these directly via Eureka, not through this gateway.
+     */
+    private static final List<String> INTERNAL_PATHS = List.of(
+            "/api/v1/**/internal/**"
+    );
     /**
      * Paths that do NOT require a valid JWT.
      */
@@ -54,14 +58,22 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/actuator",
             "/**/v3/api-docs/**",
             "/**/swagger-ui/**",
-            "/demo/**"
+            "/demo/**",
+            "/api/v1/media/download"
     );
-
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final JwtUtil jwtUtil;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
+
+        // Block service-internal paths — these are only reachable service-to-service via Eureka
+        if (isInternalPath(path)) {
+            log.warn("Blocked public access to internal path: {}", path);
+            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+            return exchange.getResponse().setComplete();
+        }
 
         // Let public paths through without any token check
         if (isPublicPath(path)) {
@@ -108,6 +120,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     public int getOrder() {
         // Run before route filters
         return Ordered.HIGHEST_PRECEDENCE;
+    }
+
+    private boolean isInternalPath(String path) {
+        return INTERNAL_PATHS.stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 
     private boolean isPublicPath(String path) {

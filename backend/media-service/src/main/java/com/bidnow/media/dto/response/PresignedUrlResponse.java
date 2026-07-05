@@ -20,6 +20,9 @@ public class PresignedUrlResponse {
     @Schema(description = "S3 key for the uploaded file", example = "uploads/uuid/image.jpg", requiredMode = Schema.RequiredMode.REQUIRED)
     private String s3Key;
 
+    @Schema(description = "Public URL to access the file after the presigned upload completes", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String publicUrl;
+
     @Schema(description = "Timestamp when the presigned URL expires", example = "2023-10-27T10:15:00Z", requiredMode = Schema.RequiredMode.REQUIRED)
     private Instant expiresAt;
 }

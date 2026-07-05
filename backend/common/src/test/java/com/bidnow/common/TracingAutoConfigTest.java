@@ -29,20 +29,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 )
 class TracingAutoConfigTest {
 
-    @Configuration
-    @EnableAutoConfiguration(exclude = {
-            DataSourceAutoConfiguration.class,
-            HibernateJpaAutoConfiguration.class,
-            JpaRepositoriesAutoConfiguration.class,
-            LiquibaseAutoConfiguration.class,
-            SecurityAutoConfiguration.class,
-            SecurityFilterAutoConfiguration.class,
-            org.springframework.cloud.netflix.eureka.EurekaClientAutoConfiguration.class,
-            org.springframework.cloud.client.serviceregistry.AutoServiceRegistrationAutoConfiguration.class
-    })
-    static class MinimalConfig {
-    }
-
     @Autowired
     private Tracer tracer;
 
@@ -64,5 +50,19 @@ class TracingAutoConfigTest {
         } finally {
             assertThatCode(span::end).doesNotThrowAnyException();
         }
+    }
+
+    @Configuration
+    @EnableAutoConfiguration(exclude = {
+            DataSourceAutoConfiguration.class,
+            HibernateJpaAutoConfiguration.class,
+            JpaRepositoriesAutoConfiguration.class,
+            LiquibaseAutoConfiguration.class,
+            SecurityAutoConfiguration.class,
+            SecurityFilterAutoConfiguration.class,
+            org.springframework.cloud.netflix.eureka.EurekaClientAutoConfiguration.class,
+            org.springframework.cloud.client.serviceregistry.AutoServiceRegistrationAutoConfiguration.class
+    })
+    static class MinimalConfig {
     }
 }

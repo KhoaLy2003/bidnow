@@ -2,6 +2,7 @@ package com.bidnow.auction.config;
 
 import com.bidnow.common.constant.SecurityConstants;
 import com.bidnow.common.security.RoleHeaderFilter;
+import com.bidnow.common.web.RequestLoggingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -37,7 +38,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(new RoleHeaderFilter(), UsernamePasswordAuthenticationFilter.class);
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(401, "Unauthorized"))
+                )
+                .addFilterBefore(new RoleHeaderFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new RequestLoggingFilter(), RoleHeaderFilter.class);
         return http.build();
     }
 }

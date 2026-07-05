@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useAuthStore } from "@/store/authStore";
 import { adminService } from "@/services/adminService";
 import {
   type AuditLogResponse,
@@ -69,7 +68,6 @@ function getActionBadge(action: string) {
 }
 
 export default function AuditLogsPage() {
-  const { accessToken } = useAuthStore();
   const [logs, setLogs] = useState<AuditLogResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<AuditLogFilters>({});
@@ -81,31 +79,33 @@ export default function AuditLogsPage() {
   const [calendarTo, setCalendarTo] = useState<Date | undefined>(undefined);
 
   const stateRef = useRef({ filters, calendarFrom, calendarTo });
-  stateRef.current = { filters, calendarFrom, calendarTo };
+  useEffect(() => {
+    stateRef.current = { filters, calendarFrom, calendarTo };
+  });
 
-  const fetchLogs = useCallback(async (currentPage = 0, apiFilters?: AuditLogFilters) => {
-    if (!accessToken) return;
-    setIsLoading(true);
-    try {
-      const { filters: f, calendarFrom: from, calendarTo: to } = stateRef.current;
-      const response = await adminService.getAuditLogs(
-        accessToken,
+  const fetchLogs = useCallback((currentPage = 0, apiFilters?: AuditLogFilters) => {
+    const { filters: f, calendarFrom: from, calendarTo: to } = stateRef.current;
+    adminService
+      .getAuditLogs(
         apiFilters ?? {
           ...f,
           fromDate: from ? formatStartOfDay(from) : undefined,
           toDate: to ? formatEndOfDay(to) : undefined,
         },
         currentPage,
-      );
-      setLogs(response.data);
-      setTotalPages(response.pagination.totalPages);
-      setPage(currentPage);
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to load audit logs"));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken]);
+      )
+      .then((response) => {
+        setLogs(response.data);
+        setTotalPages(response.pagination.totalPages);
+        setPage(currentPage);
+      })
+      .catch((error) => {
+        toast.error(getErrorMessage(error, "Failed to load audit logs"));
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     fetchLogs();
@@ -114,6 +114,7 @@ export default function AuditLogsPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const { filters: f, calendarFrom: from, calendarTo: to } = stateRef.current;
+    setIsLoading(true);
     fetchLogs(0, {
       ...f,
       fromDate: from ? formatStartOfDay(from) : undefined,
@@ -126,6 +127,7 @@ export default function AuditLogsPage() {
     setCalendarFrom(undefined);
     setCalendarTo(undefined);
     setPage(0);
+    setIsLoading(true);
     fetchLogs(0, {});
   };
 
@@ -303,7 +305,10 @@ export default function AuditLogsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchLogs(page - 1)}
+              onClick={() => {
+                setIsLoading(true);
+                fetchLogs(page - 1);
+              }}
               disabled={page === 0 || isLoading}
             >
               Previous
@@ -314,7 +319,10 @@ export default function AuditLogsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchLogs(page + 1)}
+              onClick={() => {
+                setIsLoading(true);
+                fetchLogs(page + 1);
+              }}
               disabled={page + 1 >= totalPages || isLoading}
             >
               Next

@@ -1,11 +1,12 @@
 'use client'
 
-import { AuctionStatus } from '@/lib/design-tokens'
-import { MOCK_CURRENT_USER_ID } from '@/lib/mock-data'
+import { AuctionStatus }    from '@/lib/design-tokens'
+import { useAuthStore }     from '@/store/authStore'
 import { BidPanelUpcoming } from './BidPanelUpcoming'
 import { BidPanelLive }     from './BidPanelLive'
 import { BidPanelEnded }    from './BidPanelEnded'
-import type { Auction } from '@/types/ui/auction.ui'
+import { SellerOwnedPanel } from './SellerOwnedPanel'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 const LIVE_STATUSES = new Set<AuctionStatus>([
   AuctionStatus.Active,
@@ -21,12 +22,17 @@ const ENDED_STATUSES = new Set<AuctionStatus>([
 ])
 
 interface BidPanelProps {
-  auction: Auction
+  auction: AuctionDetail
 }
 
 export function BidPanel({ auction }: BidPanelProps) {
-  const isCurrentUserWinning = auction.winnerId === MOCK_CURRENT_USER_ID
+  const user = useAuthStore(s => s.user)
+  const isOwner = !!user && !!auction.seller && user.id === auction.seller.id
+  const isCurrentUserWinning = user?.id === auction.currentWinnerId
 
+  if (isOwner) {
+    return <SellerOwnedPanel auctionId={auction.id} />
+  }
   if (auction.status === AuctionStatus.Scheduled) {
     return <BidPanelUpcoming auction={auction} />
   }
@@ -36,6 +42,5 @@ export function BidPanel({ auction }: BidPanelProps) {
   if (ENDED_STATUSES.has(auction.status)) {
     return <BidPanelEnded auction={auction} />
   }
-  // Fallback — treat unknown status as live
   return <BidPanelLive auction={auction} isCurrentUserWinning={isCurrentUserWinning} />
 }

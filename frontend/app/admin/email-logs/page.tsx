@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 
 import { adminService } from '@/services/adminService'
 import { type EmailDeliveryStatus, type EmailLogFilters, type EmailLogResponse } from '@/types/api/admin.api'
-import { useAuthStore } from '@/store/authStore'
 import { formatDate, getErrorMessage, DEFAULT_PAGE_SIZE, getPaginationRange } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +34,6 @@ const PAGE_SIZE = DEFAULT_PAGE_SIZE
 const SKELETON_ROW_KEYS = ['sk-0', 'sk-1', 'sk-2', 'sk-3', 'sk-4'] as const
 
 export default function AdminEmailLogsPage() {
-  const { accessToken } = useAuthStore()
   const [logs, setLogs] = useState<EmailLogResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
@@ -46,21 +44,20 @@ export default function AdminEmailLogsPage() {
     search: '',
   })
 
-  const fetchLogs = useCallback(async () => {
-    if (!accessToken) return
-    setLoading(true)
-
-    try {
-      const result = await adminService.getEmailLogs(accessToken, filters, page, PAGE_SIZE)
-      setLogs(result.data)
-      setTotalPages(result.pagination.totalPages)
-      setTotalElements(result.pagination.total)
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to load email logs'))
-    } finally {
-      setLoading(false)
-    }
-  }, [accessToken, filters, page])
+  const fetchLogs = useCallback(() => {
+    adminService.getEmailLogs(filters, page, PAGE_SIZE)
+      .then((result) => {
+        setLogs(result.data)
+        setTotalPages(result.pagination.totalPages)
+        setTotalElements(result.pagination.total)
+      })
+      .catch((error: unknown) => {
+        toast.error(getErrorMessage(error, 'Failed to load email logs'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [filters, page])
 
   useEffect(() => {
     fetchLogs()
@@ -84,7 +81,14 @@ export default function AdminEmailLogsPage() {
               <CardTitle>Delivery Logs</CardTitle>
               <CardDescription>{totalElements} email delivery records.</CardDescription>
             </div>
-            <Button variant="outline" onClick={fetchLogs} disabled={loading}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLoading(true)
+                fetchLogs()
+              }}
+              disabled={loading}
+            >
               <RotateCcw className="size-4" />
               Refresh
             </Button>
@@ -97,6 +101,7 @@ export default function AdminEmailLogsPage() {
               <Input
                 value={filters.search ?? ''}
                 onChange={(event) => {
+                  setLoading(true)
                   setPage(0)
                   setFilters((current) => ({ ...current, search: event.target.value }))
                 }}
@@ -108,6 +113,7 @@ export default function AdminEmailLogsPage() {
             <Select
               value={filters.status ?? 'ALL'}
               onValueChange={(value) => {
+                setLoading(true)
                 setPage(0)
                 setFilters((current) => ({ ...current, status: value as EmailDeliveryStatus | 'ALL' }))
               }}
@@ -184,13 +190,29 @@ export default function AdminEmailLogsPage() {
             <span className="font-medium text-foreground">{totalElements}</span>
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 0 || loading}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.max(0, current - 1))
+              }}
+            >
               <ChevronLeft className="size-4" />
             </Button>
             <span className="min-w-24 text-center text-sm text-muted-foreground">
               Page {totalPages === 0 ? 0 : page + 1} of {totalPages}
             </span>
-            <Button variant="outline" size="icon" disabled={totalPages === 0 || page >= totalPages - 1 || loading} onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={totalPages === 0 || page >= totalPages - 1 || loading}
+              onClick={() => {
+                setLoading(true)
+                setPage((current) => Math.min(totalPages - 1, current + 1))
+              }}
+            >
               <ChevronRight className="size-4" />
             </Button>
           </div>

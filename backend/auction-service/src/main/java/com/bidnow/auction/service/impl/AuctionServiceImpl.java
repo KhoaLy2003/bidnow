@@ -1,15 +1,22 @@
 package com.bidnow.auction.service.impl;
 
+import com.bidnow.auction.config.CacheConfig;
 import com.bidnow.auction.domain.entity.AuctionCategory;
 import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.entity.AuctionStatusHistory;
+import com.bidnow.auction.domain.enums.AuctionSortBy;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
+import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
-import com.bidnow.auction.dto.response.AuctionResponse;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
+import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.job.AuctionActivationJob;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.mapper.AuctionMapper;
@@ -17,9 +24,11 @@ import com.bidnow.auction.repository.AuctionCategoryRepository;
 import com.bidnow.auction.repository.AuctionImageRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
+import com.bidnow.auction.service.AuctionClosureService;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
+import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.exception.BadRequestException;
@@ -30,14 +39,22 @@ import com.bidnow.common.specification.SpecificationBuilder;
 import com.bidnow.common.util.PaginationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jobrunr.jobs.Job;
 import org.jobrunr.scheduling.BackgroundJob;
+import org.jobrunr.storage.JobNotFoundException;
+import org.jobrunr.storage.StorageProvider;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -46,6 +63,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,7 +74,7 @@ import java.util.stream.Collectors;
 public class AuctionServiceImpl implements AuctionService {
 
     private static final Set<AuctionStatus> TERMINAL_STATUSES =
-            Set.of(AuctionStatus.CANCELLED, AuctionStatus.COMPLETED, AuctionStatus.FAILED);
+            Set.of(AuctionStatus.CANCELLED, AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.REJECTED);
 
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionCategoryRepository auctionCategoryRepository;
@@ -64,19 +82,37 @@ public class AuctionServiceImpl implements AuctionService {
     private final AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     private final AuctionMapper auctionMapper;
     private final AuctionKafkaProducer auctionKafkaProducer;
+    private final UserServiceClient userServiceClient;
+    private final AuctionClosureService auctionClosureService;
+    private final StorageProvider jobStorageProvider;
+
+    private static UUID activationJobId(UUID auctionId) {
+        return UUID.nameUUIDFromBytes(
+                ("auction-activation:" + auctionId).getBytes(StandardCharsets.UTF_8));
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public AuctionResponse getAuctionById(UUID id) {
+    public AuctionDetailResponse getAuctionById(UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
         List<AuctionImage> images = auctionImageRepository.findByAuctionOrderByDisplayOrderAsc(auction);
-        return auctionMapper.toResponse(auction, images);
+        UserSummaryResponse seller = fetchSellerSummary(auction.getSellerId());
+        return auctionMapper.toDetailResponse(auction, images, seller);
+    }
+
+    private UserSummaryResponse fetchSellerSummary(UUID sellerId) {
+        try {
+            return userServiceClient.getUserSummary(sellerId).getData();
+        } catch (Exception e) {
+            log.warn("Could not fetch seller summary for sellerId={}: {}", sellerId, e.getMessage());
+            return null;
+        }
     }
 
     @Override
     @Transactional
-    public AuctionResponse publishAuction(UUID sellerId, UUID id) {
+    public SellerAuctionResponse publishAuction(UUID sellerId, UUID id) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
 
@@ -116,6 +152,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .startingPrice(auction.getStartingPrice())
                     .endTime(auction.getEndTime().toInstant())
                     .build());
+            auctionClosureService.scheduleClosureJob(auction.getId(), auction.getEndTime().toInstant());
         } else if (newStatus == AuctionStatus.SCHEDULED) {
             scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
@@ -171,7 +208,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional
-    public AuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request) {
+    public SellerAuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request) {
         if (!request.getEndTime().isAfter(request.getStartTime())) {
             throw new BadRequestException("End time must be after start time", ErrorCodes.INVALID_INPUT);
         }
@@ -217,6 +254,7 @@ public class AuctionServiceImpl implements AuctionService {
                     .startingPrice(auction.getStartingPrice())
                     .endTime(auction.getEndTime().toInstant())
                     .build());
+            auctionClosureService.scheduleClosureJob(auction.getId(), auction.getEndTime().toInstant());
         } else if (status == AuctionStatus.SCHEDULED) {
             scheduleActivationJob(auction.getId(), auction.getStartTime().toInstant());
         }
@@ -229,7 +267,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Transactional(readOnly = true)
     public PageResponse<AuctionSummaryResponse> getMyAuctions(UUID sellerId, String type, UUID categoryId, Pageable pageable) {
         List<AuctionStatus> statusFilter = "history".equalsIgnoreCase(type)
-                ? List.of(AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.CANCELLED)
+                ? List.of(AuctionStatus.COMPLETED, AuctionStatus.FAILED, AuctionStatus.CANCELLED, AuctionStatus.REJECTED)
                 : List.of(AuctionStatus.DRAFT, AuctionStatus.SCHEDULED, AuctionStatus.ACTIVE);
 
         Specification<AuctionItem> spec = SpecificationBuilder.<AuctionItem>forEntity()
@@ -266,7 +304,7 @@ public class AuctionServiceImpl implements AuctionService {
 
     @Override
     @Transactional
-    public AuctionResponse updateAuction(UUID sellerId, UUID auctionId, UpdateAuctionRequest request) {
+    public SellerAuctionResponse updateAuction(UUID sellerId, UUID auctionId, UpdateAuctionRequest request) {
         AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
 
@@ -279,8 +317,10 @@ public class AuctionServiceImpl implements AuctionService {
                     "Cannot modify a " + auction.getStatus() + " auction", ErrorCodes.INVALID_INPUT);
         }
 
-        if (auction.getStatus() != AuctionStatus.DRAFT &&
-                !auction.getStartTime().isAfter(OffsetDateTime.now())) {
+        boolean isEditable = auction.getStatus() == AuctionStatus.DRAFT ||
+                (auction.getStatus() == AuctionStatus.SCHEDULED &&
+                        auction.getStartTime().isAfter(OffsetDateTime.now()));
+        if (!isEditable) {
             throw new BadRequestException("Auction cannot be modified after it has started", ErrorCodes.INVALID_INPUT);
         }
 
@@ -332,15 +372,18 @@ public class AuctionServiceImpl implements AuctionService {
                 @Override
                 public void afterCommit() {
                     try {
-                        BackgroundJob.delete(jobId);
-                    } catch (Exception e) {
-                        log.warn("Could not delete old activation job {} (may have already executed): {}",
-                                jobId, e.getMessage());
+                        Job existing = jobStorageProvider.getJobById(jobId);
+                        existing.scheduleAt(newStartInstant, "Start time updated by seller");
+                        jobStorageProvider.save(existing);
+                        log.info("Rescheduled activation job {} for auction {} at {}",
+                                jobId, auctionId, newStartInstant);
+                    } catch (JobNotFoundException e) {
+                        // Job already fired or was never created — create it fresh.
+                        BackgroundJob.<AuctionActivationJob>schedule(
+                                jobId, newStartInstant, job -> job.activateAuction(auctionId));
+                        log.info("Created new activation job {} for auction {} at {} (previous job not found)",
+                                jobId, auctionId, newStartInstant);
                     }
-                    BackgroundJob.<AuctionActivationJob>schedule(
-                            jobId, newStartInstant, job -> job.activateAuction(auctionId));
-                    log.info("Rescheduled activation job {} for auction {} at {}",
-                            jobId, auctionId, newStartInstant);
                 }
             });
         }
@@ -376,6 +419,87 @@ public class AuctionServiceImpl implements AuctionService {
         log.info("Soft-deleted auction {} by seller {}", auctionId, sellerId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<AuctionBrowseItem> browseAuctions(PublicAuctionFilterRequest filter) {
+        if (filter.getMinPrice() != null && filter.getMaxPrice() != null
+                && filter.getMinPrice().compareTo(filter.getMaxPrice()) > 0) {
+            throw new BadRequestException("minPrice must not be greater than maxPrice", ErrorCodes.INVALID_INPUT);
+        }
+
+        // categoryId takes precedence; fall back to slug lookup
+        UUID resolvedCategoryId = filter.getCategoryId();
+        if (resolvedCategoryId == null && StringUtils.hasText(filter.getCategorySlug())) {
+            Optional<AuctionCategory> cat =
+                    auctionCategoryRepository.findBySlugAndIsActiveTrue(filter.getCategorySlug());
+            if (cat.isEmpty()) {
+                PageRequest emptyPageable = PageRequest.of(filter.getPage(), filter.getSize());
+                return PaginationUtils.toPageResponse(new PageImpl<>(List.of(), emptyPageable, 0), List.of());
+            }
+            resolvedCategoryId = cat.get().getId();
+        }
+
+        OffsetDateTime endingSoonFrom = null;
+        OffsetDateTime endingSoonTo = null;
+        if (Boolean.TRUE.equals(filter.getEndingSoon())) {
+            endingSoonFrom = OffsetDateTime.now();
+            endingSoonTo = endingSoonFrom.plusHours(24);
+        }
+
+        Specification<AuctionItem> spec = SpecificationBuilder.<AuctionItem>forEntity()
+                .with("status", SearchOperator.EQUAL, AuctionStatus.ACTIVE)
+                .withIsNull("deletedAt")
+                .withIfPresent("category.id", SearchOperator.EQUAL, resolvedCategoryId)
+                .withIfPresent("currentPrice", SearchOperator.GREATER_THAN_OR_EQUAL, filter.getMinPrice())
+                .withIfPresent("currentPrice", SearchOperator.LESS_THAN_OR_EQUAL, filter.getMaxPrice())
+                .withLikeIfPresent("title", filter.getKeyword())
+                .withBetweenIfPresent("endTime", endingSoonFrom, endingSoonTo)
+                .withIsNotNullIf("buyNowPrice", Boolean.TRUE.equals(filter.getBuyNowAvailable()))
+                .build();
+
+        AuctionSortBy sortBy = filter.getSortBy() != null ? filter.getSortBy() : AuctionSortBy.END_TIME_ASC;
+        Sort sort = switch (sortBy) {
+            case NEWLY_LISTED -> Sort.by("createdAt").descending();
+            case PRICE_LOW_HIGH -> Sort.by("currentPrice").ascending();
+            case PRICE_HIGH_LOW -> Sort.by("currentPrice").descending();
+            case MOST_BIDS -> Sort.by("totalBids").descending();
+            default -> Sort.by("endTime").ascending();
+        };
+
+        PageRequest pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+        Page<AuctionItem> page = auctionItemRepository.findAll(spec, pageable);
+
+        if (page.isEmpty()) {
+            return PaginationUtils.toPageResponse(page, List.of());
+        }
+
+        List<UUID> auctionIds = page.getContent().stream().map(AuctionItem::getId).toList();
+        Map<UUID, List<AuctionImage>> imagesByAuction = auctionImageRepository
+                .findByAuctionIdInOrderByDisplayOrderAsc(auctionIds)
+                .stream()
+                .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
+
+        List<AuctionBrowseItem> items = page.getContent().stream()
+                .map(auction -> {
+                    List<AuctionImage> images = imagesByAuction.getOrDefault(auction.getId(), List.of());
+                    AuctionImage primary = images.isEmpty() ? null : images.get(0);
+                    return auctionMapper.toBrowseItem(auction, primary);
+                })
+                .toList();
+
+        return PaginationUtils.toPageResponse(page, items);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_CATEGORY_COUNTS, key = "'active'")
+    public List<CategoryCountResponse> getCategoryAuctionCounts() {
+        return auctionItemRepository.countByStatusGroupByCategory(AuctionStatus.ACTIVE)
+                .stream()
+                .map(p -> new CategoryCountResponse(p.getCategoryId(), p.getCategoryName(), p.getSlug(), p.getCount()))
+                .toList();
+    }
+
     private void scheduleActivationJob(UUID auctionId, Instant activateAt) {
         UUID jobId = activationJobId(auctionId);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -385,11 +509,6 @@ public class AuctionServiceImpl implements AuctionService {
                 log.info("Scheduled activation job {} for auction {} at {}", jobId, auctionId, activateAt);
             }
         });
-    }
-
-    private static UUID activationJobId(UUID auctionId) {
-        return UUID.nameUUIDFromBytes(
-                ("auction-activation:" + auctionId).getBytes(StandardCharsets.UTF_8));
     }
 
     private AuctionStatus resolveStatus(AuctionStatus requested, OffsetDateTime startTime) {

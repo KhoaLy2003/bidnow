@@ -5,6 +5,7 @@ export enum SellerAuctionStatus {
   Completed  = 'completed',
   Failed     = 'failed',
   Cancelled  = 'cancelled',
+  Rejected   = 'rejected',
 }
 
 export interface SellerAuction {
@@ -14,8 +15,8 @@ export interface SellerAuction {
   categoryId:    string
   categoryName?: string
   sellerId:      string
-  startingPrice: number   // cents
-  currentBid:    number   // cents
+  startingPrice: number   // dollars
+  currentBid:    number   // dollars
   totalBids:     number
   startsAt:      Date
   endsAt:        Date
@@ -26,7 +27,7 @@ export interface SellerAuction {
 export interface SellerBidItem {
   id:         string
   bidderName: string
-  amount:     number   // cents
+  amount:     number   // dollars
   placedAt:   Date
   isAutoBid:  boolean
   isWinning:  boolean
@@ -37,29 +38,32 @@ export interface AuditEvent {
   message:   string
 }
 
+export type ManagedImage =
+  | { kind: 'existing'; id: string; url: string }
+  | { kind: 'new'; file: File; preview: string }
+
 export interface CreateAuctionFormData {
   // Step 1 — Basics
   title:       string
   description: string
   categoryId:  string
   // Step 2 — Images
-  images:      File[]
+  images:      ManagedImage[]
   // Step 3 — Pricing & Duration
-  startingPrice: number   // cents
-  bidIncrement:  number   // cents
-  buyNowPrice:   number   // cents (0 = not set)
-  depositAmount: number   // cents
+  startingPrice: number   // dollars
+  bidIncrement:  number   // dollars
+  buyNowPrice:   number   // dollars (0 = not set)
+  depositAmount: number   // dollars
   durationDays:  number
   startType:     'now' | 'scheduled'
   scheduledStartTime: Date | null
-  endsAt?:       Date
 }
 
 export const INITIAL_FORM_DATA: CreateAuctionFormData = {
   title:         '',
   description:   '',
   categoryId:    '',
-  images:        [],
+  images:        [] as ManagedImage[],
   startingPrice: 0,
   bidIncrement:  0,
   buyNowPrice:   0,

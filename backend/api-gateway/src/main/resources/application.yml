@@ -24,7 +24,7 @@ spring:
         - id: auction-service
           uri: lb://auction-service
           predicates:
-            - Path=/api/v1/auctions/**, /api/v1/categories/**
+            - Path=/api/v1/auctions/**, /api/v1/categories/**, /api/v1/admin/auctions/**
         - id: user-service
           uri: lb://user-service
           predicates:

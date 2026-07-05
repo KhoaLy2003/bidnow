@@ -1,5 +1,5 @@
 import {
-  Radio, Timer, Lock, XCircle, Ban, FileText,
+  Radio, CalendarClock, CheckCircle2, AlertCircle, X, FileText, ShieldX,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
@@ -13,12 +13,13 @@ const CONFIG: Record<SellerAuctionStatus, {
   Icon:    React.ComponentType<{ className?: string }>
   pulse?:  boolean
 }> = {
-  [SellerAuctionStatus.Draft]:      { label: 'Draft',       variant: 'secondary',   Icon: FileText },
-  [SellerAuctionStatus.Scheduled]:  { label: 'Scheduled',   variant: 'scheduled',   Icon: Timer },
-  [SellerAuctionStatus.Active]:     { label: 'Active',      variant: 'active',      Icon: Radio,          pulse: true },
-  [SellerAuctionStatus.Completed]:  { label: 'Completed',   variant: 'closed',      Icon: Lock },
-  [SellerAuctionStatus.Failed]:     { label: 'Failed',      variant: 'closed',      Icon: XCircle },
-  [SellerAuctionStatus.Cancelled]:  { label: 'Cancelled',   variant: 'closed',      Icon: Ban },
+  [SellerAuctionStatus.Draft]:      { label: 'Draft',     variant: 'secondary', Icon: FileText },
+  [SellerAuctionStatus.Scheduled]:  { label: 'Scheduled', variant: 'scheduled', Icon: CalendarClock },
+  [SellerAuctionStatus.Active]:     { label: 'Active',    variant: 'active',    Icon: Radio,         pulse: true },
+  [SellerAuctionStatus.Completed]:  { label: 'Sold',      variant: 'won',       Icon: CheckCircle2 },
+  [SellerAuctionStatus.Failed]:     { label: 'No Sale',   variant: 'closed',    Icon: AlertCircle },
+  [SellerAuctionStatus.Cancelled]:  { label: 'Cancelled', variant: 'closed',    Icon: X },
+  [SellerAuctionStatus.Rejected]:   { label: 'Rejected',  variant: 'lost',      Icon: ShieldX },
 }
 
 interface SellerStatusBadgeProps {

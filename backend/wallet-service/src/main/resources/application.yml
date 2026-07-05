@@ -16,12 +16,34 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    template:
+      observation-enabled: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: wallet-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        reconnect.backoff.ms: 5000
+        reconnect.backoff.max.ms: 30000
+    listener:
+      observation-enabled: true
+
+wallet:
+  platform-user-id: 87754524-54c7-4aa4-b6fb-43d359c2121f
 
 eureka:
+  instance:
+    prefer-ip-address: true
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
@@ -29,7 +51,7 @@ eureka:
 management:
   tracing:
     sampling:
-      probability: 1.0  # reduce to 0.1 or lower in production
+      probability: 1.0
   endpoints:
     web:
       exposure:

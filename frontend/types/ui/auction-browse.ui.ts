@@ -1,0 +1,20 @@
+import type { AuctionStatus } from '@/lib/design-tokens'
+
+export interface AuctionBrowseItem {
+  id:              string
+  title:           string
+  primaryImageUrl: string | null
+  currentPrice:    number        // dollars
+  totalBids:       number
+  endTime:         Date
+  status:          AuctionStatus
+  buyNowPrice:     number | null // dollars, null if not available
+  categoryName:    string
+}
+
+export interface CategoryCount {
+  categoryId:    string
+  categoryName: string
+  slug:         string
+  count:        number
+}

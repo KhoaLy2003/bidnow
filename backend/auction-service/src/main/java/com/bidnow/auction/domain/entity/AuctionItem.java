@@ -110,6 +110,15 @@ public class AuctionItem extends BaseEntity {
     @Column(name = "cancelled_at")
     private OffsetDateTime cancelledAt;
 
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "rejected_by")
+    private UUID rejectedBy;
+
+    @Column(name = "rejected_at")
+    private OffsetDateTime rejectedAt;
+
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 }

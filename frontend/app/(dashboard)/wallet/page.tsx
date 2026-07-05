@@ -1,6 +1,5 @@
 'use client'
 
-import type { Metadata } from 'next'
 import { CircleDollarSign } from 'lucide-react'
 import { WalletPanel } from '@/components/wallet/WalletPanel'
 

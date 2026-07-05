@@ -2,9 +2,13 @@ package com.bidnow.auction.controller;
 
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
+import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
-import com.bidnow.auction.dto.response.AuctionResponse;
+import com.bidnow.auction.dto.response.AuctionBrowseItem;
+import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
@@ -21,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -41,10 +47,49 @@ public class AuctionController {
 
     /**
      * =============================================================
-     * Get auction details by ID (public — no auth required).
+     * Browse active auctions with optional filtering and sorting (public — no auth required).
+     *
+     * @param filter PublicAuctionFilterRequest bound from query parameters (category, price range,
+     *               keyword, endingSoon, buyNowAvailable, sortBy, page, size)
+     * @return ResponseEntity containing a BaseResponse with a PageResponse of AuctionBrowseItem.
+     * HTTP 200 on success, 400 on invalid filter parameters.
+     * =============================================================
+     */
+    @Operation(summary = "Browse active auctions with filtering and sorting (public)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Auction list returned"),
+            @ApiResponse(responseCode = "400", description = "Invalid filter parameters")
+    })
+    @GetMapping("/public")
+    public ResponseEntity<BaseResponse<PageResponse<AuctionBrowseItem>>> browseAuctions(
+            @Valid @ModelAttribute PublicAuctionFilterRequest filter) {
+        PageResponse<AuctionBrowseItem> response = auctionService.browseAuctions(filter);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * =============================================================
+     * Get active auction count per category (public — no auth required).
+     * Result is cached in Redis (TTL 60 s); degrades gracefully when Redis is unavailable.
+     *
+     * @return ResponseEntity containing a BaseResponse with a list of CategoryCountResponse.
+     * HTTP 200 on success.
+     * =============================================================
+     */
+    @Operation(summary = "Get active auction count per category (public, cached)")
+    @ApiResponse(responseCode = "200", description = "Category counts returned")
+    @GetMapping("/public/category-counts")
+    public ResponseEntity<BaseResponse<List<CategoryCountResponse>>> getCategoryAuctionCounts() {
+        List<CategoryCountResponse> response = auctionService.getCategoryAuctionCounts();
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * =============================================================
+     * Get full auction details by ID (public — no auth required).
      *
      * @param id UUID of the auction
-     * @return ResponseEntity containing a BaseResponse with the AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with AuctionDetailResponse (includes seller summary).
      * HTTP 200 on success, 404 if not found or soft-deleted.
      * =============================================================
      */
@@ -54,8 +99,8 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction not found")
     })
     @GetMapping("/public/{id}")
-    public ResponseEntity<BaseResponse<AuctionResponse>> getAuctionById(@PathVariable UUID id) {
-        AuctionResponse response = auctionService.getAuctionById(id);
+    public ResponseEntity<BaseResponse<AuctionDetailResponse>> getAuctionById(@PathVariable UUID id) {
+        AuctionDetailResponse response = auctionService.getAuctionById(id);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 
@@ -94,7 +139,7 @@ public class AuctionController {
      *
      * @param sellerId UUID of the authenticated seller (resolved from security/context)
      * @param request  CreateAuctionRequest validated request body containing auction details
-     * @return ResponseEntity containing a BaseResponse with the created AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the created SellerAuctionResponse.
      * HTTP 201 on success. Possible responses: 201, 400 (validation/business), 404 (category not found).
      * =============================================================
      */
@@ -105,12 +150,12 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Category not found")
     })
     @PostMapping
-    public ResponseEntity<BaseResponse<AuctionResponse>> createAuction(
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> createAuction(
             @AuthenticatedUserId UUID sellerId,
             @Valid @RequestBody CreateAuctionRequest request) {
-        AuctionResponse response = auctionService.createAuction(sellerId, request);
+        SellerAuctionResponse response = auctionService.createAuction(sellerId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(BaseResponse.<AuctionResponse>builder()
+                .body(BaseResponse.<SellerAuctionResponse>builder()
                         .status(HttpStatus.CREATED.value())
                         .message("Auction created successfully")
                         .data(response)
@@ -124,7 +169,7 @@ public class AuctionController {
      * @param sellerId UUID of the authenticated seller
      * @param id       UUID of the auction to update (path variable)
      * @param request  UpdateAuctionRequest validated request body with update fields
-     * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the updated SellerAuctionResponse.
      * HTTP 200 on success. Possible responses: 200, 400 (cannot modify), 403 (not owner), 404 (not found).
      * =============================================================
      */
@@ -136,11 +181,11 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction or category not found")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<AuctionResponse>> updateAuction(
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> updateAuction(
             @AuthenticatedUserId UUID sellerId,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateAuctionRequest request) {
-        AuctionResponse response = auctionService.updateAuction(sellerId, id, request);
+        SellerAuctionResponse response = auctionService.updateAuction(sellerId, id, request);
         return ResponseEntity.ok(BaseResponse.success("Auction updated successfully", response));
     }
 
@@ -152,7 +197,7 @@ public class AuctionController {
      * @param id       UUID of the auction to delete (path variable)
      * @return ResponseEntity with no content (HTTP 204) on successful deletion.
      * Possible responses: 204, 400 (cannot delete), 403 (not owner), 404 (not found).
-     * ------------------------------------------------------------
+     * =============================================================
      */
     @Operation(summary = "Delete (soft) an auction (only allowed before it starts)")
     @ApiResponses({
@@ -175,7 +220,7 @@ public class AuctionController {
      *
      * @param sellerId UUID of the authenticated seller
      * @param id       UUID of the auction to publish (path variable)
-     * @return ResponseEntity containing a BaseResponse with the updated AuctionResponse.
+     * @return ResponseEntity containing a BaseResponse with the updated SellerAuctionResponse.
      * HTTP 200 on success.
      * =============================================================
      */
@@ -187,10 +232,10 @@ public class AuctionController {
             @ApiResponse(responseCode = "404", description = "Auction not found")
     })
     @PostMapping("/{id}/publish")
-    public ResponseEntity<BaseResponse<AuctionResponse>> publishAuction(
+    public ResponseEntity<BaseResponse<SellerAuctionResponse>> publishAuction(
             @AuthenticatedUserId UUID sellerId,
             @PathVariable UUID id) {
-        AuctionResponse response = auctionService.publishAuction(sellerId, id);
+        SellerAuctionResponse response = auctionService.publishAuction(sellerId, id);
         return ResponseEntity.ok(BaseResponse.success("Auction published successfully", response));
     }
 

@@ -21,7 +21,7 @@ import {
 import { Header }        from '@/components/layout/Header'
 import { Footer }        from '@/components/layout/Footer'
 import { BottomNav }     from '@/components/layout/BottomNav'
-import { AuctionGrid }   from '@/components/auction/AuctionGrid'
+import { AuctionBrowseGrid } from '@/components/auction/browse'
 import { Button }        from '@/components/ui/button'
 import { CTASection }    from '@/components/home/CTASection'
 import { FAQAccordion }  from '@/components/home/FAQAccordion'
@@ -62,9 +62,11 @@ const TRUST_CARDS = [
 ] as const
 
 export default async function HomePage() {
-  const featuredPicks = await auctionService.getAuctions({ featured: true })
-  const allAuctions   = await auctionService.getAuctions()
-  const hotAuctions   = allAuctions.filter(
+  const [{ items: featuredPicks }, { items: allAuctions }] = await Promise.all([
+    auctionService.getBrowseAuctions({ sortBy: 'END_TIME_ASC', size: 8 }),
+    auctionService.getBrowseAuctions({ size: 20 }),
+  ])
+  const hotAuctions = allAuctions.filter(
     (a) => a.status === AuctionStatus.Critical || a.status === AuctionStatus.EndingSoon,
   )
 
@@ -123,7 +125,7 @@ export default async function HomePage() {
                 View all <ArrowRight className="size-3.5" />
               </Link>
             </div>
-            <AuctionGrid auctions={hotAuctions} />
+            <AuctionBrowseGrid items={hotAuctions} />
           </section>
         )}
 
@@ -134,11 +136,11 @@ export default async function HomePage() {
               <Star className="size-5 text-[var(--color-warning-text)]" />
               Featured Picks
             </h2>
-            <Link href="/auctions?featured=true" className="text-sm text-[var(--color-text-link)] hover:underline flex items-center gap-1">
+            <Link href="/auctions?sort=END_TIME_ASC" className="text-sm text-[var(--color-text-link)] hover:underline flex items-center gap-1">
               View all <ArrowRight className="size-3.5" />
             </Link>
           </div>
-          <AuctionGrid auctions={featuredPicks} />
+          <AuctionBrowseGrid items={featuredPicks} />
         </section>
 
         {/* Category Browse */}

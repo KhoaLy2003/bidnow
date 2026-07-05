@@ -33,11 +33,4 @@ public interface MediaService {
      */
     PresignedUrlResponse generatePresignedUrl(String fileName, String contentType);
 
-    /**
-     * Returns a pre-signed URL to download/view a file from S3.
-     *
-     * @param s3Key the S3 object key
-     * @return the presigned download URL
-     */
-    String generateDownloadUrl(String s3Key);
 }

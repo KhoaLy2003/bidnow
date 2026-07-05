@@ -1,79 +1,58 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Upload, X, Star } from 'lucide-react'
-import { cn }     from '@/lib/utils'
-
-interface ImageFile {
-  id:       string
-  file:     File
-  preview:  string
-  progress: number   // 0–100; 100 = done
-  error?:   string
-}
+import { cn } from '@/lib/utils'
+import type { ManagedImage } from '@/types/ui/seller.ui'
 
 interface ImageUploadGridProps {
-  readonly images:    File[]
-  readonly onChange:  (files: File[]) => void
+  images:   ManagedImage[]
+  onChange: (images: ManagedImage[]) => void
 }
 
-const MAX_FILES   = 10
-const MAX_BYTES   = 5 * 1024 * 1024   // 5 MB
-const ACCEPT      = ['image/jpeg', 'image/png']
+const MAX_FILES = 10
+const MAX_BYTES = 5 * 1024 * 1024
+const ACCEPT    = ['image/jpeg', 'image/png']
 
 export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [items, setItems] = useState<ImageFile[]>(() =>
-    images.map(f => ({ id: crypto.randomUUID(), file: f, preview: URL.createObjectURL(f), progress: 100 }))
-  )
+  const inputRef   = useRef<HTMLInputElement>(null)
+  const createdRef = useRef<string[]>([])
   const [dragging, setDragging] = useState(false)
 
-  function addFiles(files: FileList | File[]) {
-    const arr = Array.from(files)
-    const next: ImageFile[] = []
+  useEffect(() => {
+    return () => { createdRef.current.forEach(url => URL.revokeObjectURL(url)) }
+  }, [])
 
-    for (const f of arr) {
-      if (items.length + next.length >= MAX_FILES) break
-      let error: string | undefined
-      if (!ACCEPT.includes(f.type)) {
-        error = 'Only JPEG or PNG files are accepted.'
-      } else if (f.size > MAX_BYTES) {
-        error = `File too large. Max 5 MB (this file is ${(f.size / 1024 / 1024).toFixed(1)} MB).`
-      }
-      next.push({ id: crypto.randomUUID(), file: f, preview: error ? '' : URL.createObjectURL(f), progress: error ? 100 : 0, error })
+  function handleFiles(files: FileList | File[]) {
+    const remaining = MAX_FILES - images.length
+    const next: ManagedImage[] = Array.from(files)
+      .slice(0, remaining)
+      .filter(f => ACCEPT.includes(f.type) && f.size <= MAX_BYTES)
+      .map(file => {
+        const preview = URL.createObjectURL(file)
+        createdRef.current.push(preview)
+        return { kind: 'new' as const, file, preview }
+      })
+    onChange([...images, ...next])
+  }
+
+  function remove(index: number) {
+    const img = images[index]
+    if (img.kind === 'new') {
+      URL.revokeObjectURL(img.preview)
+      createdRef.current = createdRef.current.filter(u => u !== img.preview)
     }
-
-    const updated = [...items, ...next]
-    setItems(updated)
-
-    // Simulate upload progress for valid files
-    next.filter(i => !i.error).forEach(item => {
-      let p = 0
-      const tick = setInterval(() => {
-        p += Math.random() * 30 + 10
-        if (p >= 100) { p = 100; clearInterval(tick) }
-        setItems(prev => prev.map(i => i.file === item.file ? { ...i, progress: Math.min(100, p) } : i))
-      }, 120)
-    })
-
-    onChange(updated.filter(i => !i.error).map(i => i.file))
+    onChange(images.filter((_, i) => i !== index))
   }
 
-  function remove(id: string) {
-    const updated = items.filter(item => item.id !== id)
-    setItems(updated)
-    onChange(updated.filter(item => !item.error).map(item => item.file))
-  }
-
-  const onDrop = useCallback((e: React.DragEvent) => {
+  function onDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragging(false)
-    addFiles(e.dataTransfer.files)
-  }, [items])   // eslint-disable-line react-hooks/exhaustive-deps
+    handleFiles(e.dataTransfer.files)
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Drop zone */}
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
@@ -100,68 +79,42 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
         multiple
         accept={ACCEPT.join(',')}
         className="hidden"
-        onChange={e => e.target.files && addFiles(e.target.files)}
+        onChange={e => e.target.files && handleFiles(e.target.files)}
       />
 
-      {/* Preview grid */}
-      {items.length > 0 && (
+      {images.length > 0 && (
         <div className="grid grid-cols-5 gap-2">
-          {items.map((item, idx) => (
-            <div
-              key={item.id}
-              className={cn(
-                'relative aspect-[4/3] overflow-hidden rounded-md border',
-                item.error
-                  ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-subtle)]'
-                  : 'border-[var(--color-border-default)] bg-[var(--color-bg-elevated)]',
-              )}
-            >
-              {/* Image or error */}
-              {item.error ? (
-                <div className="flex h-full flex-col gap-1 p-2">
-                  <p className="text-[10px] font-medium text-[var(--color-danger-text)]">⚠ {item.error}</p>
-                  <p className="text-[10px] text-[var(--color-danger-text)] truncate">{item.file.name}</p>
-                </div>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={item.preview}
-                  alt={item.file.name}
-                  className="size-full object-cover"
-                />
-              )}
-
-              {/* Primary badge */}
-              {idx === 0 && !item.error && (
-                <div className="absolute top-1 left-1 flex items-center gap-0.5 rounded-sm bg-foreground px-1 py-0.5 text-[8px] font-medium text-background">
-                  <Star className="size-2" />
-                  PRIMARY
-                </div>
-              )}
-
-              {/* Upload progress bar */}
-              {!item.error && item.progress < 100 && (
-                <div className="absolute inset-x-1 bottom-1 h-1 overflow-hidden rounded-full bg-white/60">
-                  <div
-                    className="h-full bg-primary transition-[width] duration-100"
-                    style={{ width: `${item.progress}%` }}
-                  />
-                </div>
-              )}
-
-              {/* Remove button */}
-              <button
-                type="button"
-                onClick={() => remove(item.id)}
-                className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors duration-[var(--duration-tesla)]"
+          {images.map((img, i) => {
+            const src = img.kind === 'existing' ? img.url : img.preview
+            return (
+              <div
+                key={img.kind === 'existing' ? img.id : img.preview}
+                className="relative aspect-[4/3] overflow-hidden rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-elevated)]"
               >
-                <X className="size-3" />
-              </button>
-            </div>
-          ))}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="size-full object-cover" />
+                {i === 0 && (
+                  <div className="absolute top-1 left-1 flex items-center gap-0.5 rounded-sm bg-foreground px-1 py-0.5 text-[8px] font-medium text-background">
+                    <Star className="size-2" />
+                    PRIMARY
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className={cn(
+                    'absolute top-1 right-1 flex size-5 items-center justify-center rounded-full',
+                    'bg-foreground/80 text-background hover:bg-foreground',
+                    'transition-colors duration-[var(--duration-tesla)]',
+                  )}
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            )
+          })}
 
-          {/* Add more slot */}
-          {items.length < MAX_FILES && (
+          {images.length < MAX_FILES && (
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -175,7 +128,7 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
       )}
 
       <p className="text-xs text-muted-foreground">
-        {items.filter(i => !i.error).length} / {MAX_FILES} images · drag to reorder · first image is the primary thumbnail
+        {images.length} / {MAX_FILES} images · first image is the primary thumbnail
       </p>
     </div>
   )

@@ -22,6 +22,7 @@ export interface LoginResponse {
 export interface RegisterResponse {
   userId: string;
   email: string;
+  displayName: string;
   accountStatus: string;
   isEmailVerified: boolean;
   isActive: boolean;

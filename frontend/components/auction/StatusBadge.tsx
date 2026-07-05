@@ -1,6 +1,6 @@
 import * as React from 'react'
 import {
-  Radio, Timer, AlertTriangle, Lock, Trophy, XCircle, ArrowDown, CalendarClock,
+  Radio, Timer, AlertTriangle, Lock, Trophy, XCircle, ArrowDown, CalendarClock, FileText,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { AuctionStatus } from '@/lib/design-tokens'
@@ -19,10 +19,11 @@ const CONFIG: Record<
   AuctionStatus,
   { label: string; Icon: React.ComponentType<{ className?: string }> }
 > = {
-  [AuctionStatus.Scheduled]:  { label: 'Upcoming',    Icon: CalendarClock },
+  [AuctionStatus.Draft]:      { label: 'Draft',       Icon: FileText },
+  [AuctionStatus.Scheduled]:  { label: 'Scheduled',   Icon: CalendarClock },
   [AuctionStatus.Active]:     { label: 'Active',      Icon: Radio },
   [AuctionStatus.EndingSoon]: { label: 'Ending Soon', Icon: Timer },
-  [AuctionStatus.Critical]:   { label: 'Ending Soon', Icon: AlertTriangle },
+  [AuctionStatus.Critical]:   { label: 'Ending Now',  Icon: AlertTriangle },
   [AuctionStatus.Closed]:     { label: 'Closed',      Icon: Lock },
   [AuctionStatus.Won]:        { label: 'Won',         Icon: Trophy },
   [AuctionStatus.Lost]:       { label: 'Lost',        Icon: XCircle },

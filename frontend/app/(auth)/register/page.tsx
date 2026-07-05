@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 
 import { authService } from '@/services/auth.service'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -22,15 +23,16 @@ export default function RegisterPage() {
     setError(null)
 
     const formData = new FormData(e.currentTarget)
+    const name = formData.get('name') as string
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
     try {
-      await authService.register(email, password)
+      await authService.register(name, email, password)
       toast.success('Registration successful! Please check your email for OTP.')
       router.push(`/verify-otp?email=${encodeURIComponent(email)}`)
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Registration failed. Please try again.'))
     } finally {
       setIsLoading(false)
     }
@@ -51,6 +53,10 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="name">Display name</Label>
+            <Input id="name" name="name" type="text" placeholder="Your name" required maxLength={100} />
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" type="email" placeholder="you@example.com" required />

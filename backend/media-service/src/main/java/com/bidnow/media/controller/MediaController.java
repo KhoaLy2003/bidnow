@@ -105,28 +105,4 @@ public class MediaController {
         return ResponseEntity.ok(BaseResponse.success("Presigned URL generated", response));
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // GET /api/v1/media/download
-    // Generate a presigned GET URL for the given S3 key
-    // ─────────────────────────────────────────────────────────────────────────
-
-    @Operation(
-            summary = "Get a presigned download URL",
-            description = "Returns a presigned S3 GET URL (valid 1 hour) for the given S3 key. " +
-                    "Use the s3Key returned from the upload endpoint."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Download URL generated"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @GetMapping("/download")
-    public ResponseEntity<BaseResponse<String>> getDownloadUrl(
-            @Parameter(description = "S3 object key returned from upload", required = true)
-            @RequestParam String s3Key
-    ) {
-        log.info("Generating presigned download URL for s3Key={}", s3Key);
-
-        String downloadUrl = mediaService.generateDownloadUrl(s3Key);
-        return ResponseEntity.ok(BaseResponse.success("Download URL generated", downloadUrl));
-    }
 }

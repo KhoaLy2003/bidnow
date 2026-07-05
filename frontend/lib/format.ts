@@ -13,15 +13,14 @@ export function formatEndOfDay(date: Date): string {
 }
 
 /**
- * Format an amount in cents as a locale currency string.
- * e.g. formatCurrency(150000) → "$1,500"
+ * Format a dollar amount as a locale currency string.
+ * e.g. formatCurrency(1500) → "$1,500"
  */
 export function formatCurrency(
-  cents: number,
+  dollars: number,
   locale = 'en-US',
   currency = 'USD',
 ): string {
-  const dollars = cents / 100
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
@@ -76,4 +75,12 @@ export function formatCountdown(seconds: number): string {
   }
 
   return `${m}:${ss}`
+}
+
+export function toDatetimeLocal(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  )
 }

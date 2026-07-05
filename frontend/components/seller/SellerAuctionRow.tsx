@@ -1,7 +1,6 @@
 'use client'
 
 import { useState }     from 'react'
-import Image             from 'next/image'
 import Link              from 'next/link'
 import { Eye, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
 import { Button }        from '@/components/ui/button'
@@ -15,7 +14,11 @@ import { formatCurrency }     from '@/lib/format'
 import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
 import { cn } from '@/lib/utils'
-import { useSecureImage } from '@/hooks/useSecureImage'
+import { resolveImageUrl } from '@/lib/image-utils'
+import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const NO_IMAGE_BG = 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)'
 
 function canEdit(auction: SellerAuction): boolean {
   return (
@@ -45,7 +48,8 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
   const editable  = canEdit(auction)
   const deletable = canDelete(auction)
   const imageUrl  = auction.primaryImageUrl ?? null
-  const resolvedImageUrl = useSecureImage(imageUrl)
+  const resolvedImageUrl = resolveImageUrl(imageUrl)
+  const isLoadingImage = Boolean(imageUrl) && !resolvedImageUrl
   const isClosed  = [
     SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled,
   ].includes(auction.status)
@@ -59,10 +63,13 @@ export function ActiveAuctionRow({ auction, onDeleted }: ActiveRowProps) {
             'size-12 shrink-0 overflow-hidden rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-elevated)]',
             isClosed && 'grayscale-[60%]',
           )}>
-            {resolvedImageUrl
-              ? <Image src={resolvedImageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
-              : <div className="size-full" style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }} />
-            }
+            {resolvedImageUrl ? (
+              <ImageThumbnail src={resolvedImageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
+            ) : isLoadingImage ? (
+              <Skeleton className="size-full rounded-none" />
+            ) : (
+              <div className="size-full" style={{ background: NO_IMAGE_BG }} />
+            )}
           </div>
         </td>
 
@@ -177,17 +184,21 @@ interface HistoricalRowProps {
 
 export function HistoricalAuctionRow({ auction }: HistoricalRowProps) {
   const imageUrl = auction.primaryImageUrl ?? null
-  const resolvedImageUrl = useSecureImage(imageUrl)
-  
+  const resolvedImageUrl = resolveImageUrl(imageUrl)
+  const isLoadingImage = Boolean(imageUrl) && !resolvedImageUrl
+
   return (
     <tr className="group border-b border-[var(--color-border-default)] transition-colors duration-[var(--duration-tesla)] hover:bg-[var(--color-bg-elevated)]">
       {/* Thumbnail */}
       <td className="w-14 py-3 pl-6 pr-2">
         <div className="size-12 shrink-0 overflow-hidden rounded-md border border-[var(--color-border-default)] bg-[var(--color-bg-elevated)] grayscale-[60%]">
-          {resolvedImageUrl
-            ? <Image src={resolvedImageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
-            : <div className="size-full" style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }} />
-          }
+          {resolvedImageUrl ? (
+            <ImageThumbnail src={resolvedImageUrl} alt={auction.title} width={48} height={48} className="size-full object-cover" />
+          ) : isLoadingImage ? (
+            <Skeleton className="size-full rounded-none" />
+          ) : (
+            <div className="size-full" style={{ background: NO_IMAGE_BG }} />
+          )}
         </div>
       </td>
 

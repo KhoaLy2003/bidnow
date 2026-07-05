@@ -20,7 +20,11 @@ public class AvatarUploadedEvent {
      */
     private UUID userId;
     /**
-     * The S3 key of the uploaded image. Stored as avatar_url in user_profiles.
+     * The S3 object key of the uploaded image.
      */
     private String s3Key;
+    /**
+     * Supabase public URL for the image. Stored as avatar_url in user_profiles.
+     */
+    private String publicUrl;
 }

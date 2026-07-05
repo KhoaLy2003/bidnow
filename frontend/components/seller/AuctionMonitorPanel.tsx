@@ -1,10 +1,11 @@
 import { CountdownTimer }    from '@/components/auction/CountdownTimer'
 import { CurrentBidDisplay } from '@/components/auction/CurrentBidDisplay'
 import { formatCurrency }    from '@/lib/format'
-import type { SellerAuction, SellerBidItem } from '@/types/ui/seller.ui'
+import type { SellerBidItem } from '@/types/ui/seller.ui'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface AuctionMonitorPanelProps {
-  readonly auction: SellerAuction
+  readonly auction: AuctionDetail
   readonly bids:    SellerBidItem[]
 }
 

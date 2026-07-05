@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SearchBar } from "@/components/shared/SearchBar";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { WalletBadge } from "@/components/wallet/WalletBadge";
 import { NotificationBell } from "@/components/notification/NotificationBell";
 import { cn } from "@/lib/utils";
@@ -53,12 +54,6 @@ export function Header() {
 
   return (
     <>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:rounded-md focus:bg-[var(--color-brand-700)] focus:text-white focus:text-sm focus:font-medium focus:outline-none"
-      >
-        Skip to main content
-      </a>
     <header
       className={cn(
         "sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]",
@@ -94,6 +89,8 @@ export function Header() {
 
         {/* Right controls */}
         <div className="ml-auto flex items-center gap-1 shrink-0">
+          <ThemeToggle />
+
           {isAuthenticated ? (
             <>
               {user?.role !== 'ADMIN' && (
@@ -116,7 +113,7 @@ export function Header() {
                     }
                   >
                     <UserAvatar
-                      name={user?.email || "User"}
+                      name={profile?.displayName || user?.email || "User"}
                       avatarUrl={profile?.avatarUrl ?? undefined}
                       size="sm"
                     />
@@ -133,13 +130,13 @@ export function Header() {
                         <div className="flex flex-col gap-3">
                           <div className="flex items-center gap-3">
                             <UserAvatar
-                              name={user?.email || "User"}
+                              name={profile?.displayName || user?.email || "User"}
                               avatarUrl={profile?.avatarUrl ?? undefined}
                               size="lg"
                             />
                             <div className="flex flex-col min-w-0">
                               <p className="font-medium text-sm truncate">
-                                {user?.email?.split("@")[0]}
+                                {profile?.displayName || user?.email?.split("@")[0]}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
                                 {user?.email}

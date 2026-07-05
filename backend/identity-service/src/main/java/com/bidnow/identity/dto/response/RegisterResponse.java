@@ -22,6 +22,9 @@ public class RegisterResponse {
     @Schema(description = "User email address", example = "john.doe@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
 
+    @Schema(description = "Display name stored for the user", example = "John Doe")
+    private String displayName;
+
     @Schema(description = "Current status of the account", example = "PENDING_VERIFICATION", requiredMode = Schema.RequiredMode.REQUIRED)
     private String accountStatus;
 

@@ -87,6 +87,7 @@ public class AuthServiceImpl implements AuthService {
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .displayName(request.getName())
                 .isEmailVerified(false)
                 .isActive(false)
                 .accountStatus(AccountStatus.PENDING_VERIFICATION)
@@ -176,6 +177,7 @@ public class AuthServiceImpl implements AuthService {
         userServiceClient.createUserProfile(CreateUserProfileRequest.builder()
                 .userId(user.getId())
                 .email(user.getEmail())
+                .displayName(user.getDisplayName())
                 .build());
 
         // Emit USER_REGISTERED event (triggers Welcome Email in Media Service)

@@ -5,19 +5,21 @@ export type TransactionType =
   | 'bid_release'
   | 'won_payment'
   | 'refund'
+  | 'fee'
+  | 'forfeit'
 
 export interface Transaction {
   id:          string
-  userId:      string
+  userId?:     string
   type:        TransactionType
-  amount:      number        // cents — positive = credit, negative = debit
+  amount:      number        // dollars — positive = credit, negative = debit
   description: string
   createdAt:   Date
   auctionId?:  string
 }
 
 export interface WalletBalance {
-  available: number          // cents — spendable
-  held:      number          // cents — reserved for active bids
-  total:     number          // cents — available + held
+  available: number          // dollars — spendable
+  held:      number          // dollars — reserved for active bids
+  total:     number          // dollars — available + held
 }

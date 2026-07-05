@@ -30,12 +30,13 @@ public class AvatarUploadEventStrategy implements UploadEventStrategy {
     }
 
     @Override
-    public void handle(UUID ownerId, UUID entityId, String s3Key) {
+    public void handle(UUID ownerId, UUID entityId, String s3Key, String publicUrl) {
         log.info("Handling USER_AVATAR upload for ownerId={}, s3Key={}", ownerId, s3Key);
         mediaKafkaProducer.publishAvatarUploaded(
                 AvatarUploadedEvent.builder()
                         .userId(ownerId)
                         .s3Key(s3Key)
+                        .publicUrl(publicUrl)
                         .build()
         );
     }

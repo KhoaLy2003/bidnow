@@ -1,39 +1,34 @@
 'use client'
 
-import { useMemo } from 'react'
 import { CurrencyInput } from '@/components/ui/currency-input'
-import { Label }   from '@/components/ui/label'
-import { cn }      from '@/lib/utils'
+import { Label }         from '@/components/ui/label'
+import { cn }            from '@/lib/utils'
 import { formatCurrency } from '@/lib/format'
 
 interface DepositRangeInputProps {
-  readonly depositCents:       number
-  readonly startingPriceCents: number
-  onChange(cents: number): void
+  readonly deposit:       number
+  readonly startingPrice: number
+  onChange(dollars: number): void
 }
 
 export function DepositRangeInput({
-  depositCents, startingPriceCents, onChange,
+  deposit, startingPrice, onChange,
 }: DepositRangeInputProps) {
-  const minCents = Math.ceil(startingPriceCents * 0.05)
-  const maxCents = Math.floor(startingPriceCents * 0.20)
+  const min = Math.ceil(startingPrice * 0.05)
+  const max = Math.floor(startingPrice * 0.20)
 
-  const pct = startingPriceCents > 0
-    ? ((depositCents / startingPriceCents) * 100).toFixed(1)
+  const pct = startingPrice > 0
+    ? ((deposit / startingPrice) * 100).toFixed(1)
     : '0.0'
 
-  const inRange = startingPriceCents > 0
-    ? depositCents >= minCents && depositCents <= maxCents
+  const inRange = startingPrice > 0
+    ? deposit >= min && deposit <= max
     : true
 
-  const { thumbLeft } = useMemo(() => {
-    if (startingPriceCents === 0) return { thumbLeft: '0%' }
-    const range = maxCents - minCents
-    const clamped = Math.max(minCents, Math.min(maxCents, depositCents))
-    return { thumbLeft: range > 0 ? `${((clamped - minCents) / range) * 100}%` : '0%' }
-  }, [depositCents, minCents, maxCents, startingPriceCents])
-
-
+  const clamped   = Math.max(min, Math.min(max, deposit > 0 ? deposit : min))
+  const sliderPct = startingPrice > 0 && max > min
+    ? ((clamped - min) / (max - min)) * 100
+    : 0
 
   return (
     <div className="flex flex-col gap-3 rounded-md border border-primary/50 bg-primary/[0.06] p-4">
@@ -48,40 +43,51 @@ export function DepositRangeInput({
         <div className="flex flex-col gap-1.5 w-40">
           <Label className="text-xs font-medium text-muted-foreground">Amount</Label>
           <CurrencyInput
-            valueCents={depositCents}
-            onChangeCents={onChange}
+            value={deposit}
+            onChange={onChange}
             placeholder="0.00"
-            hasError={!inRange && startingPriceCents > 0}
+            hasError={!inRange && startingPrice > 0}
           />
           <p className={cn(
             'text-xs',
-            !inRange && startingPriceCents > 0 ? 'text-destructive' : 'text-muted-foreground',
+            !inRange && startingPrice > 0 ? 'text-destructive' : 'text-muted-foreground',
           )}>
-            {startingPriceCents > 0
-              ? `${pct}% of ${formatCurrency(startingPriceCents)} · must be 5–20%`
+            {startingPrice > 0
+              ? `${pct}% of ${formatCurrency(startingPrice)} · must be 5–20%`
               : 'Set starting price first'}
           </p>
         </div>
 
-        {startingPriceCents > 0 && (
+        {startingPrice > 0 && max > min && (
           <div className="flex flex-1 flex-col gap-1 pb-5">
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">5%</span>
-              <div className="relative flex-1 h-1 bg-border rounded-full">
-                <div
-                  className="absolute left-0 top-0 h-full bg-primary rounded-full"
-                  style={{ width: thumbLeft }}
-                />
-                <div
-                  className="absolute top-1/2 size-3 -translate-y-1/2 -translate-x-1/2 rounded-full border-2 border-primary bg-background"
-                  style={{ left: thumbLeft }}
-                />
-              </div>
+              <input
+                type="range"
+                min={min}
+                max={max}
+                step={1}
+                value={clamped}
+                onChange={e => onChange(Number(e.target.value))}
+                className={cn(
+                  'flex-1 h-1 appearance-none rounded-full cursor-pointer',
+                  '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-3',
+                  '[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2',
+                  '[&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-background',
+                  '[&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb:active]:cursor-grabbing',
+                  '[&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full',
+                  '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary',
+                  '[&::-moz-range-thumb]:bg-background [&::-moz-range-thumb]:border-solid',
+                )}
+                style={{
+                  background: `linear-gradient(to right, var(--primary) ${sliderPct}%, var(--border) ${sliderPct}%)`,
+                }}
+              />
               <span className="text-xs text-muted-foreground">20%</span>
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground px-4">
-              <span>{formatCurrency(minCents)}</span>
-              <span>{formatCurrency(maxCents)}</span>
+              <span>{formatCurrency(min)}</span>
+              <span>{formatCurrency(max)}</span>
             </div>
           </div>
         )}

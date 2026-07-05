@@ -20,14 +20,14 @@ import { ImageUploadGrid }     from '@/components/seller/ImageUploadGrid'
 import { DepositRangeInput }   from '@/components/seller/DepositRangeInput'
 import { AntiSnipeNotice }     from '@/components/seller/AntiSnipeNotice'
 import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
+import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
-import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
+import type { CreateAuctionFormData, ManagedImage } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
-import { cn } from '@/lib/utils'
+import { cn, getErrorMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 import { auctionService } from '@/services/auction.service'
 import { mediaService } from '@/services/media.service'
-import { useAuthStore } from '@/store/authStore'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import { CurrencyInput } from '@/components/ui/currency-input'
 
@@ -107,13 +107,16 @@ function validateStep3(data: CreateAuctionFormData): Errors {
 // ── Main component ──────────────────────────────────────────────
 export default function CreateAuctionPage() {
   const router = useRouter()
-  const { accessToken } = useAuthStore()
   const [step,      setStep]      = useState(1)
   const [data,      setData]      = useState<CreateAuctionFormData>(INITIAL_FORM_DATA)
   const [errors,    setErrors]    = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
   const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
-  const [nowMs, setNowMs] = useState(() => Date.now())
+  const [nowMs,      setNowMs]      = useState(() => Date.now())
+
+  const previewUrl = data.images.length === 0
+    ? null
+    : data.images[0].kind === 'existing' ? data.images[0].url : data.images[0].preview
 
   // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
   useEffect(() => {
@@ -124,11 +127,10 @@ export default function CreateAuctionPage() {
 
   // Fetch categories on mount
   useEffect(() => {
-    if (!accessToken) return;
     auctionService.getCategories()
       .then(res => setCategories(res.data))
       .catch(err => console.error("Failed to load categories:", err))
-  }, [accessToken])
+  }, [])
 
   function update<K extends keyof CreateAuctionFormData>(key: K, val: CreateAuctionFormData[K]) {
     setData(prev => ({ ...prev, [key]: val }))
@@ -146,22 +148,18 @@ export default function CreateAuctionPage() {
   }
 
   async function handleSubmit(asDraft: boolean) {
-    if (!accessToken) {
-      toast.error('You must be logged in to create an auction.')
-      return;
-    }
-
     setSubmitting(true)
     try {
       const uploadedUrls = await Promise.all(
-        data.images.map(async (file) => {
+        data.images.map(async (img: ManagedImage) => {
+          if (img.kind === 'existing') return img.url
           try {
-            const presigned = await mediaService.getPresignedUrl(accessToken, file.name, file.type)
-            await mediaService.uploadToS3(presigned.uploadUrl, file)
-            return presigned.s3Key
+            const presigned = await mediaService.getPresignedUrl(img.file.name, img.file.type)
+            await mediaService.uploadToS3(presigned.uploadUrl, img.file)
+            return presigned.publicUrl
           } catch (e) {
-            console.error('Failed to upload image:', file.name, e)
-            throw new Error(`Image upload failed for "${file.name}".`)
+            console.error('Failed to upload image:', img.file.name, e)
+            throw new Error(`Image upload failed for "${img.file.name}".`)
           }
         })
       )
@@ -191,12 +189,12 @@ export default function CreateAuctionPage() {
         endTime: endTime.toISOString(),
         imageUrls: uploadedUrls,
         status: auctionStatus
-      }, accessToken)
+      })
       
       router.push('/seller/auctions')
     } catch (error) {
       console.error('Failed to create auction:', error)
-      toast.error('Failed to create auction. Please try again.')
+      toast.error(getErrorMessage(error, 'Failed to create auction. Please try again.'))
     } finally {
       setSubmitting(false)
     }
@@ -214,16 +212,13 @@ export default function CreateAuctionPage() {
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
       {/* Page title bar */}
-      <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border-default)] px-6 py-5">
+      <div className="flex items-center gap-4 border-b border-[var(--color-border-default)] px-6 py-5">
         <div className="flex flex-col gap-0.5">
           <p className="text-xs text-muted-foreground">
             <Link href="/seller/auctions" className="hover:text-foreground transition-colors duration-[var(--duration-tesla)]">← My auctions</Link>
           </p>
           <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">Create a new auction</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => handleSubmit(true)} disabled={submitting}>
-          Save as draft
-        </Button>
       </div>
 
       {/* Stepper */}
@@ -318,8 +313,8 @@ export default function CreateAuctionPage() {
                 error={errors.startingPrice}
               >
                 <CurrencyInput
-                  valueCents={data.startingPrice}
-                  onChangeCents={cents => update('startingPrice', cents)}
+                  value={data.startingPrice}
+                  onChange={v => update('startingPrice', v)}
                   placeholder="0.00"
                   hasError={!!errors.startingPrice}
                 />
@@ -330,8 +325,8 @@ export default function CreateAuctionPage() {
                 error={errors.bidIncrement}
               >
                 <CurrencyInput
-                  valueCents={data.bidIncrement}
-                  onChangeCents={cents => update('bidIncrement', cents)}
+                  value={data.bidIncrement}
+                  onChange={v => update('bidIncrement', v)}
                   placeholder="0.00"
                   hasError={!!errors.bidIncrement}
                 />
@@ -342,28 +337,20 @@ export default function CreateAuctionPage() {
                 error={errors.buyNowPrice}
               >
                 <CurrencyInput
-                  valueCents={data.buyNowPrice}
-                  onChangeCents={cents => update('buyNowPrice', cents)}
+                  value={data.buyNowPrice}
+                  onChange={v => update('buyNowPrice', v)}
                   placeholder="0.00"
                   hasError={!!errors.buyNowPrice}
                 />
               </FieldWrap>
 
-              <FieldWrap label="Reserve price (optional)" helper="Hidden from bidders">
-                <CurrencyInput
-                  valueCents={0}
-                  onChangeCents={() => {}}
-                  placeholder="0.00"
-                  readOnly
-                />
-              </FieldWrap>
             </div>
 
             {errors.depositAmount && <p className="text-sm text-destructive">{errors.depositAmount}</p>}
             <DepositRangeInput
-              depositCents={data.depositAmount}
-              startingPriceCents={data.startingPrice}
-              onChange={cents => update('depositAmount', cents)}
+              deposit={data.depositAmount}
+              startingPrice={data.startingPrice}
+              onChange={v => update('depositAmount', v)}
             />
 
             <FieldWrap label="Start time" required error={errors.startTime}>
@@ -442,26 +429,19 @@ export default function CreateAuctionPage() {
               helper={`Auction will end on ${endsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at ${endsAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} ICT (GMT+7)`}
               error={errors.duration}
             >
-              <div className="flex gap-2">
-                <Select
-                  value={String(data.durationDays)}
-                  onValueChange={v => update('durationDays', Number(v))}
-                >
-                  <SelectTrigger className="w-32 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATION_OPTIONS.map(o => (
-                      <SelectItem key={o.days} value={String(o.days)}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  readOnly
-                  value={endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  className="flex-1 text-sm bg-[var(--color-bg-elevated)] cursor-default"
-                />
-              </div>
+              <Select
+                value={String(data.durationDays)}
+                onValueChange={v => update('durationDays', Number(v))}
+              >
+                <SelectTrigger className="w-32 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DURATION_OPTIONS.map(o => (
+                    <SelectItem key={o.days} value={String(o.days)}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FieldWrap>
 
             <AntiSnipeNotice />
@@ -474,7 +454,8 @@ export default function CreateAuctionPage() {
             <div className="flex flex-col gap-4 flex-1 min-w-0">
               <p className="font-display font-medium text-[length:var(--font-size-md)]">Listing summary</p>
               <AuctionReviewSummary
-                data={{ ...data, endsAt }}
+                data={data}
+                endsAt={endsAt}
                 onEditStep={setStep}
               />
             </div>
@@ -484,9 +465,21 @@ export default function CreateAuctionPage() {
 
               {/* Mini preview card */}
               <div className="rounded-xl border border-[var(--color-border-default)] overflow-hidden">
-                <div className="aspect-[4/3] bg-[var(--color-bg-elevated)]"
-                  style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }}
-                />
+                {previewUrl ? (
+                  <div className="relative aspect-[4/3] w-full">
+                    <ImageThumbnail
+                      src={previewUrl}
+                      alt="Auction preview"
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-[4/3]"
+                    style={{ background: 'repeating-linear-gradient(135deg, #ECEDF2 0 1px, transparent 1px 8px), linear-gradient(180deg, #F4F4F8 0%, #ECEDF2 100%)' }}
+                  />
+                )}
                 <div className="flex flex-col gap-1.5 p-4">
                   <p className="font-medium text-sm line-clamp-2">{data.title || 'Untitled auction'}</p>
                   <p className="font-mono font-medium text-[length:var(--font-size-md)]">
@@ -544,14 +537,11 @@ export default function CreateAuctionPage() {
           ← Back
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" size="lg" onClick={() => handleSubmit(true)} disabled={submitting}>
-            Save & exit
-          </Button>
-          {step < 4 ? (
+          {step < 4 && (
             <Button variant="brand" size="lg" onClick={tryAdvance}>
               Next → {STEPS[step]}
             </Button>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

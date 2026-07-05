@@ -1,34 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Bell, BellOff } from 'lucide-react'
 import { CountdownTimer } from './CountdownTimer'
 import { StatusBadge } from './StatusBadge'
-import { WatchingFooter } from './WatchingFooter'
 import { useCountdown } from '@/hooks/useCountdown'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
-import type { Auction } from '@/types/ui/auction.ui'
+import { PanelFooter } from './PanelFooter'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelUpcomingProps {
-  auction: Auction
+  auction: AuctionDetail
 }
 
 export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
   const [notifying, setNotifying] = useState(false)
-  const [startDateStr, setStartDateStr] = useState<string | null>(null)
   const { isExpired } = useCountdown(auction.startsAt)
 
-  // Format start date client-side only to avoid SSR timezone hydration mismatch
-  useEffect(() => {
-    setStartDateStr(
-      auction.startsAt.toLocaleString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric',
-        hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
-      })
-    )
-  }, [auction.startsAt])
+  const startDateStr = auction.startsAt.toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  })
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden flex flex-col">
@@ -100,7 +94,7 @@ export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
         </button>
       </div>
 
-      <WatchingFooter n={auction.watchers} />
+      <PanelFooter />
     </div>
   )
 }
