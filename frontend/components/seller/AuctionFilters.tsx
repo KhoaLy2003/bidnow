@@ -6,30 +6,21 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 
 interface AuctionFiltersProps {
-  tab:         'active' | 'historical'
-  search:      string
-  category:    string
-  statusFilter: string
+  search:     string
+  category:   string
+  categories: AuctionCategoryResponse[]
   onSearch(v: string): void
   onCategory(v: string): void
-  onStatusFilter(v: string): void
-  total?:      number
-  shown?:      number
+  total?:     number
+  shown?:     number
 }
 
-const CATEGORIES = [
-  'All categories', 'Watches & Jewelry', 'Electronics', 'Art & Collectibles',
-  'Home & Furniture', 'Fashion', 'Vehicles', 'Music & Instruments',
-]
-
-const ACTIVE_STATUSES   = ['All statuses', 'Active', 'Ending Soon', 'Critical', 'Draft']
-const HIST_OUTCOMES     = ['All outcomes', 'Sold', 'No Sale', 'Cancelled']
-
 export function AuctionFilters({
-  tab, search, category, statusFilter,
-  onSearch, onCategory, onStatusFilter,
+  search, category, categories,
+  onSearch, onCategory,
   total, shown,
 }: AuctionFiltersProps) {
   return (
@@ -47,22 +38,14 @@ export function AuctionFilters({
 
         <Select value={category} onValueChange={(v) => { if (v !== null) onCategory(v) }}>
           <SelectTrigger className="h-8 w-40 text-sm">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder="Category">
+              {category ? categories.find(c => c.id === category)?.name : 'All categories'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {CATEGORIES.map(c => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={statusFilter} onValueChange={(v) => { if (v !== null) onStatusFilter(v) }}>
-          <SelectTrigger className="h-8 w-36 text-sm">
-            <SelectValue placeholder={tab === 'active' ? 'Status' : 'Outcome'} />
-          </SelectTrigger>
-          <SelectContent>
-            {(tab === 'active' ? ACTIVE_STATUSES : HIST_OUTCOMES).map(s => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+            <SelectItem value="">All categories</SelectItem>
+            {categories.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
