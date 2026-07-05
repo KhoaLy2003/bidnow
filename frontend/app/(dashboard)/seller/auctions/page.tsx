@@ -14,6 +14,7 @@ import { auctionService } from '@/services/auction.service'
 import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/utils'
+import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 
 const ITEMS_PER_PAGE = 20
 
@@ -50,16 +51,22 @@ export default function SellerAuctionsPage() {
   const [error,     setError]     = useState<string | null>(null)
 
   const [search,       setSearch]       = useState('')
-  const [category,     setCategory]     = useState('All categories')
-  const [statusFilter, setStatusFilter] = useState('All statuses')
+  const [category,     setCategory]     = useState('') // selected category id, '' = All categories
+  const [categories,   setCategories]   = useState<AuctionCategoryResponse[]>([])
   const [activePage,   setActivePage]   = useState(1)
   const [histPage,     setHistPage]     = useState(1)
   const [deletedIds,   setDeletedIds]   = useState<string[]>([])
 
+  useEffect(() => {
+    auctionService.getCategories()
+      .then(res => setCategories(res.data))
+      .catch(err => console.error('Failed to load categories:', err))
+  }, [])
+
   const fetchAuctions = useCallback(() => {
     Promise.all([
-      auctionService.getMyAuctions({ type: 'active', size: 100 }),
-      auctionService.getMyAuctions({ type: 'history', size: 100 }),
+      auctionService.getMyAuctions({ type: 'active', categoryId: category || undefined, size: 100 }),
+      auctionService.getMyAuctions({ type: 'history', categoryId: category || undefined, size: 100 }),
     ])
       .then(([activeRes, historyRes]) => {
         const merged = [...(activeRes.data.data || []), ...(historyRes.data.data || [])]
@@ -73,7 +80,7 @@ export default function SellerAuctionsPage() {
       .finally(() => {
         setLoading(false)
       })
-  }, [])
+  }, [category])
 
   useEffect(() => { fetchAuctions() }, [fetchAuctions])
 
@@ -81,6 +88,13 @@ export default function SellerAuctionsPage() {
     setLoading(true)
     fetchAuctions()
   }, [fetchAuctions])
+
+  const handleCategoryChange = useCallback((v: string) => {
+    setLoading(true)
+    setCategory(v)
+    setActivePage(1)
+    setHistPage(1)
+  }, [])
 
   const { allActive, allHistorical } = useMemo(() => {
     const active: SellerAuction[] = []
@@ -98,20 +112,16 @@ export default function SellerAuctionsPage() {
   const activeAuctions = useMemo(() => {
     return allActive.filter(a => !deletedIds.includes(a.id)).filter(a => {
       if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false
-      if (category !== 'All categories' && a.categoryName !== category) return false
-      if (statusFilter !== 'All statuses' && a.status !== statusFilter) return false
       return true
     })
-  }, [allActive, search, category, statusFilter, deletedIds])
+  }, [allActive, search, deletedIds])
 
   const histAuctions = useMemo(() => {
     return allHistorical.filter(a => {
       if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false
-      if (category !== 'All categories' && a.categoryName !== category) return false
-      if (statusFilter !== 'All statuses' && a.status !== statusFilter) return false
       return true
     })
-  }, [allHistorical, search, category, statusFilter])
+  }, [allHistorical, search])
 
   const activePage_items = activeAuctions.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE)
   const histPage_items   = histAuctions.slice((histPage - 1)  * ITEMS_PER_PAGE, histPage  * ITEMS_PER_PAGE)
@@ -157,13 +167,11 @@ export default function SellerAuctionsPage() {
         {/* ── Active tab ── */}
         <TabsContent value="active" className="mt-0">
           <AuctionFilters
-            tab="active"
             search={search}
             category={category}
-            statusFilter={statusFilter}
+            categories={categories}
             onSearch={setSearch}
-            onCategory={setCategory}
-            onStatusFilter={setStatusFilter}
+            onCategory={handleCategoryChange}
             total={activeAuctions.length}
             shown={activePage_items.length}
           />
@@ -209,13 +217,11 @@ export default function SellerAuctionsPage() {
         {/* ── Historical tab ── */}
         <TabsContent value="historical" className="mt-0">
           <AuctionFilters
-            tab="historical"
             search={search}
             category={category}
-            statusFilter={statusFilter}
+            categories={categories}
             onSearch={setSearch}
-            onCategory={setCategory}
-            onStatusFilter={setStatusFilter}
+            onCategory={handleCategoryChange}
             total={histAuctions.length}
             shown={histPage_items.length}
           />
