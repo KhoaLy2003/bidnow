@@ -128,30 +128,27 @@ The Wallet Service acts as the **escrow and financial hub** that:
 - [ ] Errors: `404 PAYMENT_HOLD_NOT_FOUND`, `400 PAYMENT_DEADLINE_EXPIRED`, `409 PAYMENT_NOT_PENDING`, `400 INSUFFICIENT_BALANCE`, `409 DEPOSIT_LOCK_CLOSED`, `404 SELLER_WALLET_NOT_FOUND`
 - [ ] `PaymentEvent` on `payment-event-topic`: `REQUIRED` on hold creation, `COMPLETED` on confirm
 - [ ] On `auction-cancelled-topic`, a `PENDING_PAYMENT` hold is voided (held funds returned, HOLD_CANCEL ledger row, status CANCELLED)
-- [ ] Follow-ups: auction-service consumes `PaymentEvent` to set `payment_deadline` / `winner_paid_at`; WALLET-306 forfeit must lock the `payment_holds` row before wallets
+- [ ] Follow-ups: auction-service consumes `PaymentEvent` (`REQUIRED` → `payment_deadline`, `COMPLETED` → `winner_paid_at`, `FAILED` → mark the sale failed)
 
 **Known gaps (follow-up tickets, outside WALLET-304):**
 
 - Auction-service publishes `AuctionCancelledEvent` (admin and seller cancel) and the admin force-close `AuctionEndedEvent` *before* its DB transaction commits; a rollback after the send would refund deposits on a still-ACTIVE auction. Only `AuctionClosureService` publishes after commit.
 - `AuctionItem` has no optimistic lock and close/cancel don't lock the auction row, so an auction can emit both ended and cancelled events. WALLET-305 handles either order: a cancel voids any pending hold and records an `auction_cancellations` marker; a later end event creates no hold when the marker exists or the winner's deposit was already released. A cancel after the payment was COMPLETED is logged at ERROR for manual reconciliation. Residual: if both events are processed at the same instant on different consumer threads, a hold can still be created (needs a per-auction lock or auction-service serialization).
 - A deposit lock created after the refund sweep (or after the auction closed) stays LOCKED: wallet does not know auction state. Needs a closed-auction guard in `lockDeposit` or a reconciliation job.
-- WALLET-306 (forfeit) must ship with WALLET-305: until then, expired PENDING_PAYMENT holds keep funds locked. WALLET-306 must lock the `payment_holds` row before wallets and order wallet locks with Java `UUID.compareTo` (same comparator as confirm).
+- Lock ordering rule for any future flow touching payment holds: lock the `payment_holds` row before wallets, and order wallet locks with Java `UUID.compareTo` (as confirm, cancel and forfeit do). Forfeited deposits go entirely to the platform wallet; a seller share is an open question.
 
 **Winner Payment Flow:** see **Winner Payment — WALLET-305** above (supersedes the original draft: no `AUCTION_ENDED_WITH_WINNER` event, no PENDING_PAYMENT transaction, no platform fee in Phase 1).
 
-**Forfeit Logic (Non-Payment):**
+**Forfeit Logic (Non-Payment) — WALLET-306:**
 
-- [ ] Scheduled job runs every 1-5 minutes, checks for expired PENDING_PAYMENT records
-- [ ] For each expired payment (deadline < now):
-  - Find the original deposit_lock for this auction
-  - Deduct deposit_amount from winner's available_balance
-  - Create FORFEIT transaction
-  - Transfer forfeited amount to [platform account OR seller account - see Open Questions]
-  - Update deposit_locks status = FORFEITED
-  - Update auction status = FAILED
-  - Emit PAYMENT_FAILED event
-  - Notification to winner: "Payment deadline missed. Deposit forfeited."
-  - Notification to seller: "Auction failed. Winner did not pay."
+- [ ] `ForfeitScheduler` runs every `wallet.payment.forfeit-interval-ms` (5 min), reads up to `forfeit-batch-size` (100) `payment_holds` in `PENDING_PAYMENT` with `deadline < now`
+- [ ] Each hold forfeited in its own transaction: hold row `FOR UPDATE SKIP LOCKED` (safe on several instances), re-check still pending and past deadline, then winner + platform wallets locked in ascending id order
+- [ ] Held remainder returned to the winner (HOLD_CANCEL ledger row)
+- [ ] Whole LOCKED deposit moved to the platform wallet (`wallet.platform-user-id`): FORFEIT rows on both wallets; `deposit_locks.status = FORFEITED`
+- [ ] No LOCKED deposit → nothing forfeited, hold still FORFEITED
+- [ ] `payment_holds.status = FORFEITED`; after commit `PaymentEvent{paymentType=FAILED, depositAmount=forfeited}` on `payment-event-topic`
+- [ ] Failures logged per hold and retried on the next run
+- [ ] Notifications (winner: deposit forfeited; seller: auction failed) — media-service, later story
 
 **Platform Fee Calculation & Tracking:**
 

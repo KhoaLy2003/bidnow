@@ -54,6 +54,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${wallet.payment.deadline-hours:48}")
     private long deadlineHours = 48;
 
+    @Value("${wallet.platform-user-id}")
+    private String platformUserId;
+
     @Override
     @Transactional
     public void createPaymentHold(UUID auctionId, UUID winnerUserId, UUID sellerUserId, BigDecimal totalAmount) {
@@ -279,6 +282,120 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void forfeitExpiredHold(UUID auctionId) {
+        // Lock order: hold row (skipped if another instance holds it), then wallets in ascending id order.
+        Optional<PaymentHold> maybeHold = paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId);
+        if (maybeHold.isEmpty()) {
+            return;
+        }
+        PaymentHold hold = maybeHold.get();
+        LocalDateTime now = LocalDateTime.now();
+        if (hold.getStatus() != PaymentHoldStatus.PENDING_PAYMENT || !now.isAfter(hold.getDeadline())) {
+            return;
+        }
+
+        UUID platformWalletId = walletRepository.findIdByUserId(UUID.fromString(platformUserId))
+                .orElseThrow(() -> new NotFoundException("Platform wallet not found for userId: " + platformUserId,
+                        WalletErrorCodes.WALLET_NOT_FOUND));
+        Wallet winner;
+        Wallet platform;
+        if (hold.getWinnerWalletId().compareTo(platformWalletId) < 0) {
+            winner = lockWallet(hold.getWinnerWalletId());
+            platform = lockWallet(platformWalletId);
+        } else {
+            platform = lockWallet(platformWalletId);
+            winner = lockWallet(hold.getWinnerWalletId());
+        }
+
+        boolean winnerChanged = false;
+        BigDecimal remaining = hold.getRemainingAmount();
+        if (hold.isFundsHeld() && remaining.signum() > 0) {
+            BigDecimal balanceBefore = winner.getAvailableBalance();
+            BigDecimal balanceAfter = balanceBefore.add(remaining);
+            winner.setAvailableBalance(balanceAfter);
+            winner.setLockedBalance(winner.getLockedBalance().subtract(remaining));
+            transactionRepository.save(Transaction.builder()
+                    .walletId(winner.getId())
+                    .type(TransactionType.HOLD_CANCEL)
+                    .amount(remaining)
+                    .availableBalanceBefore(balanceBefore)
+                    .availableBalanceAfter(balanceAfter)
+                    .referenceId(auctionId)
+                    .status(TransactionStatus.COMPLETED)
+                    .description("Payment hold released on forfeit for auction " + auctionId)
+                    .build());
+            winnerChanged = true;
+        }
+
+        BigDecimal forfeited = BigDecimal.ZERO;
+        if (hold.getDepositLockId() != null) {
+            Optional<DepositLock> maybeLock = depositLockRepository.findById(hold.getDepositLockId())
+                    .filter(l -> l.getStatus() == DepositLockStatus.LOCKED);
+            if (maybeLock.isPresent()) {
+                DepositLock lock = maybeLock.get();
+                if (!winner.getId().equals(lock.getWalletId())) {
+                    throw new IllegalStateException("Deposit lock " + lock.getId() + " belongs to wallet "
+                            + lock.getWalletId() + ", not winner wallet " + winner.getId());
+                }
+                forfeited = lock.getAmount();
+                if (forfeited.signum() > 0) {
+                    winner.setLockedBalance(winner.getLockedBalance().subtract(forfeited));
+                    winner.setTotalBalance(winner.getTotalBalance().subtract(forfeited));
+                    transactionRepository.save(Transaction.builder()
+                            .walletId(winner.getId())
+                            .type(TransactionType.FORFEIT)
+                            .amount(forfeited)
+                            .availableBalanceBefore(winner.getAvailableBalance())
+                            .availableBalanceAfter(winner.getAvailableBalance())
+                            .referenceId(auctionId)
+                            .status(TransactionStatus.COMPLETED)
+                            .description("Deposit forfeited for auction " + auctionId)
+                            .build());
+                    BigDecimal platformBefore = platform.getAvailableBalance();
+                    platform.setAvailableBalance(platformBefore.add(forfeited));
+                    platform.setTotalBalance(platform.getTotalBalance().add(forfeited));
+                    walletRepository.save(platform);
+                    transactionRepository.save(Transaction.builder()
+                            .walletId(platform.getId())
+                            .type(TransactionType.FORFEIT)
+                            .amount(forfeited)
+                            .availableBalanceBefore(platformBefore)
+                            .availableBalanceAfter(platform.getAvailableBalance())
+                            .referenceId(auctionId)
+                            .status(TransactionStatus.COMPLETED)
+                            .description("Forfeited deposit from auction " + auctionId)
+                            .build());
+                    winnerChanged = true;
+                }
+                lock.setStatus(DepositLockStatus.FORFEITED);
+                lock.setReleasedAt(now);
+                depositLockRepository.save(lock);
+            }
+        }
+        if (winnerChanged) {
+            walletRepository.save(winner);
+        }
+
+        hold.setStatus(PaymentHoldStatus.FORFEITED);
+        hold.setCompletedAt(now);
+        paymentHoldRepository.save(hold);
+
+        eventPublisher.publishEvent(new PaymentApplicationEvent(this, PaymentEvent.builder()
+                .auctionId(auctionId)
+                .userId(hold.getWinnerUserId())
+                .sellerId(hold.getSellerUserId())
+                .amount(hold.getTotalAmount())
+                .depositAmount(forfeited)
+                .remaining(remaining)
+                .paymentType("FAILED")
+                .build()));
+
+        log.info("Payment hold forfeited for auctionId={}, winner={}, forfeited={}",
+                auctionId, hold.getWinnerUserId(), forfeited);
+    }
+
     private Wallet lockWallet(UUID walletId) {
         return walletRepository.findByIdForUpdate(walletId)
                 .orElseThrow(() -> new NotFoundException("Wallet not found: " + walletId,
@@ -302,6 +419,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
         if (maybeHold.get().getStatus() == PaymentHoldStatus.COMPLETED) {
             log.error("Auction {} cancelled after its payment was COMPLETED; manual reconciliation required", auctionId);
+            return;
+        }
+        if (maybeHold.get().getStatus() == PaymentHoldStatus.FORFEITED) {
+            log.warn("Auction {} cancelled after its payment hold was FORFEITED; deposit stays with the platform", auctionId);
             return;
         }
         if (maybeHold.get().getStatus() != PaymentHoldStatus.PENDING_PAYMENT) {

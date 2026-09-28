@@ -16,4 +16,6 @@ public interface PaymentService {
     List<PendingPaymentResponse> getPendingPayments(UUID userId);
 
     ConfirmPaymentResponse confirmPayment(UUID callerUserId, UUID auctionId);
+
+    void forfeitExpiredHold(UUID auctionId);
 }

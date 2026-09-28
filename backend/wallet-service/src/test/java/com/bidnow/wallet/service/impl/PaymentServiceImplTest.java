@@ -32,6 +32,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -664,5 +665,320 @@ class PaymentServiceImplTest {
         order.verify(paymentHoldRepository).findByAuctionIdForUpdate(auctionId);
         order.verify(walletRepository).findByIdForUpdate(winnerWalletId);
         order.verify(walletRepository).findByIdForUpdate(sellerWalletId);
+    }
+
+    // ── forfeitExpiredHold ────────────────────────────────────────────────────
+
+    private final UUID platformUserId = UUID.randomUUID();
+    private UUID platformWalletId = UUID.randomUUID();
+
+    private void usePlatform() {
+        ReflectionTestUtils.setField(paymentService, "platformUserId", platformUserId.toString());
+        when(walletRepository.findIdByUserId(platformUserId)).thenReturn(Optional.of(platformWalletId));
+    }
+
+    private void stubForfeit(PaymentHold h, Wallet winner, Wallet platform) {
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.of(h));
+        usePlatform();
+        when(walletRepository.findByIdForUpdate(winnerWalletId)).thenReturn(Optional.of(winner));
+        when(walletRepository.findByIdForUpdate(platformWalletId)).thenReturn(Optional.of(platform));
+    }
+
+    private List<Transaction> savedTransactions(int count) {
+        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository, times(count)).save(captor.capture());
+        return captor.getAllValues();
+    }
+
+    @Test
+    void forfeitExpiredHold_fundsHeldWithDeposit_returnsRemainingAndMovesDepositToPlatform() {
+        DepositLock lock = depositLock("50.00", DepositLockStatus.LOCKED);
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, lock.getId(),
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "650.00", "150.00", "500.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "1000.00", "1000.00", "0.00");
+        stubForfeit(h, winner, platform);
+        when(depositLockRepository.findById(lock.getId())).thenReturn(Optional.of(lock));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(winner.getAvailableBalance()).isEqualByComparingTo("600.00");
+        assertThat(winner.getLockedBalance()).isEqualByComparingTo("0.00");
+        assertThat(winner.getTotalBalance()).isEqualByComparingTo("600.00");
+        assertThat(platform.getAvailableBalance()).isEqualByComparingTo("1050.00");
+        assertThat(platform.getTotalBalance()).isEqualByComparingTo("1050.00");
+        verify(walletRepository).save(winner);
+        verify(walletRepository).save(platform);
+
+        List<Transaction> txs = savedTransactions(3);
+        assertThat(txs.get(0).getType()).isEqualTo(TransactionType.HOLD_CANCEL);
+        assertThat(txs.get(0).getWalletId()).isEqualTo(winnerWalletId);
+        assertThat(txs.get(0).getAmount()).isEqualByComparingTo("450.00");
+        assertThat(txs.get(0).getAvailableBalanceBefore()).isEqualByComparingTo("150.00");
+        assertThat(txs.get(0).getAvailableBalanceAfter()).isEqualByComparingTo("600.00");
+        assertThat(txs.get(1).getType()).isEqualTo(TransactionType.FORFEIT);
+        assertThat(txs.get(1).getWalletId()).isEqualTo(winnerWalletId);
+        assertThat(txs.get(1).getAmount()).isEqualByComparingTo("50.00");
+        assertThat(txs.get(1).getAvailableBalanceBefore()).isEqualByComparingTo("600.00");
+        assertThat(txs.get(1).getAvailableBalanceAfter()).isEqualByComparingTo("600.00");
+        assertThat(txs.get(2).getType()).isEqualTo(TransactionType.FORFEIT);
+        assertThat(txs.get(2).getWalletId()).isEqualTo(platformWalletId);
+        assertThat(txs.get(2).getAmount()).isEqualByComparingTo("50.00");
+        assertThat(txs.get(2).getAvailableBalanceBefore()).isEqualByComparingTo("1000.00");
+        assertThat(txs.get(2).getAvailableBalanceAfter()).isEqualByComparingTo("1050.00");
+        txs.forEach(tx -> assertThat(tx.getReferenceId()).isEqualTo(auctionId));
+
+        assertThat(lock.getStatus()).isEqualTo(DepositLockStatus.FORFEITED);
+        assertThat(lock.getReleasedAt()).isNotNull();
+        verify(depositLockRepository).save(lock);
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.FORFEITED);
+        assertThat(h.getCompletedAt()).isNotNull();
+        verify(paymentHoldRepository).save(h);
+
+        PaymentEvent event = capturedEvent();
+        assertThat(event.getPaymentType()).isEqualTo("FAILED");
+        assertThat(event.getAuctionId()).isEqualTo(auctionId);
+        assertThat(event.getUserId()).isEqualTo(winnerUserId);
+        assertThat(event.getSellerId()).isEqualTo(sellerUserId);
+        assertThat(event.getAmount()).isEqualByComparingTo("500.00");
+        assertThat(event.getDepositAmount()).isEqualByComparingTo("50.00");
+        assertThat(event.getRemaining()).isEqualByComparingTo("450.00");
+    }
+
+    @Test
+    void forfeitExpiredHold_notFunded_forfeitsDepositWithoutHoldCancel() {
+        DepositLock lock = depositLock("50.00", DepositLockStatus.LOCKED);
+        PaymentHold h = hold("500.00", "50.00", "450.00", false, lock.getId(),
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "150.00", "100.00", "50.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00");
+        stubForfeit(h, winner, platform);
+        when(depositLockRepository.findById(lock.getId())).thenReturn(Optional.of(lock));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(winner.getAvailableBalance()).isEqualByComparingTo("100.00");
+        assertThat(winner.getLockedBalance()).isEqualByComparingTo("0.00");
+        assertThat(winner.getTotalBalance()).isEqualByComparingTo("100.00");
+        assertThat(platform.getTotalBalance()).isEqualByComparingTo("50.00");
+        List<Transaction> txs = savedTransactions(2);
+        assertThat(txs).extracting(Transaction::getType).containsOnly(TransactionType.FORFEIT);
+    }
+
+    @Test
+    void forfeitExpiredHold_depositLargerThanBid_forfeitsWholeDeposit() {
+        DepositLock lock = depositLock("600.00", DepositLockStatus.LOCKED);
+        PaymentHold h = hold("500.00", "500.00", "0.00", true, lock.getId(),
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "600.00", "0.00", "600.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00");
+        stubForfeit(h, winner, platform);
+        when(depositLockRepository.findById(lock.getId())).thenReturn(Optional.of(lock));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(winner.getLockedBalance()).isEqualByComparingTo("0.00");
+        assertThat(winner.getTotalBalance()).isEqualByComparingTo("0.00");
+        assertThat(platform.getTotalBalance()).isEqualByComparingTo("600.00");
+        assertThat(capturedEvent().getDepositAmount()).isEqualByComparingTo("600.00");
+    }
+
+    @Test
+    void forfeitExpiredHold_noDepositLock_releasesHeldFundsAndForfeitsNothing() {
+        PaymentHold h = hold("500.00", "0.00", "500.00", true, null,
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "500.00", "0.00", "500.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00");
+        stubForfeit(h, winner, platform);
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(winner.getAvailableBalance()).isEqualByComparingTo("500.00");
+        assertThat(winner.getLockedBalance()).isEqualByComparingTo("0.00");
+        assertThat(winner.getTotalBalance()).isEqualByComparingTo("500.00");
+        List<Transaction> txs = savedTransactions(1);
+        assertThat(txs.get(0).getType()).isEqualTo(TransactionType.HOLD_CANCEL);
+        verify(walletRepository, never()).save(platform);
+        verifyNoInteractions(depositLockRepository);
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.FORFEITED);
+        assertThat(capturedEvent().getDepositAmount()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void forfeitExpiredHold_depositNoLongerLocked_forfeitsNothingButClosesHold() {
+        DepositLock lock = depositLock("50.00", DepositLockStatus.RELEASED);
+        PaymentHold h = hold("500.00", "50.00", "450.00", false, lock.getId(),
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "100.00", "100.00", "0.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00");
+        stubForfeit(h, winner, platform);
+        when(depositLockRepository.findById(lock.getId())).thenReturn(Optional.of(lock));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        verify(transactionRepository, never()).save(any());
+        verify(walletRepository, never()).save(any());
+        verify(depositLockRepository, never()).save(any());
+        assertThat(lock.getStatus()).isEqualTo(DepositLockStatus.RELEASED);
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.FORFEITED);
+        verify(paymentHoldRepository).save(h);
+        assertThat(capturedEvent().getDepositAmount()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void forfeitExpiredHold_notYetDue_isNoOp() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().plusHours(1), PaymentHoldStatus.PENDING_PAYMENT);
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.of(h));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.PENDING_PAYMENT);
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(walletRepository, transactionRepository, depositLockRepository, eventPublisher);
+    }
+
+    @Test
+    void forfeitExpiredHold_alreadyCompleted_isNoOp() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.COMPLETED);
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.of(h));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.COMPLETED);
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(walletRepository, transactionRepository, depositLockRepository, eventPublisher);
+    }
+
+    @Test
+    void forfeitExpiredHold_lockedByAnotherInstance_isNoOp() {
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.empty());
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(walletRepository, transactionRepository, depositLockRepository, eventPublisher);
+    }
+
+    @Test
+    void forfeitExpiredHold_platformWalletMissing_throwsAndChangesNothing() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.of(h));
+        ReflectionTestUtils.setField(paymentService, "platformUserId", platformUserId.toString());
+        when(walletRepository.findIdByUserId(platformUserId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> paymentService.forfeitExpiredHold(auctionId))
+                .isInstanceOf(NotFoundException.class)
+                .extracting("errorCode").isEqualTo("WALLET_NOT_FOUND");
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.PENDING_PAYMENT);
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(transactionRepository, eventPublisher);
+    }
+
+    @Test
+    void forfeitExpiredHold_locksHoldThenWinnerFirstWhenWinnerIdIsLower() {
+        winnerWalletId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        platformWalletId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        PaymentHold h = hold("500.00", "0.00", "500.00", true, null,
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        stubForfeit(h, wallet(winnerWalletId, winnerUserId, "500.00", "0.00", "500.00"),
+                wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00"));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        InOrder order = inOrder(paymentHoldRepository, walletRepository);
+        order.verify(paymentHoldRepository).findByAuctionIdForUpdateSkipLocked(auctionId);
+        order.verify(walletRepository).findByIdForUpdate(winnerWalletId);
+        order.verify(walletRepository).findByIdForUpdate(platformWalletId);
+    }
+
+    @Test
+    void forfeitExpiredHold_locksPlatformFirstWhenPlatformIdIsLower() {
+        winnerWalletId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        platformWalletId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        PaymentHold h = hold("500.00", "0.00", "500.00", true, null,
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        stubForfeit(h, wallet(winnerWalletId, winnerUserId, "500.00", "0.00", "500.00"),
+                wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00"));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        InOrder order = inOrder(paymentHoldRepository, walletRepository);
+        order.verify(paymentHoldRepository).findByAuctionIdForUpdateSkipLocked(auctionId);
+        order.verify(walletRepository).findByIdForUpdate(platformWalletId);
+        order.verify(walletRepository).findByIdForUpdate(winnerWalletId);
+    }
+
+    @Test
+    void forfeitExpiredHold_readsDepositLockOnlyAfterBothWalletLocks() {
+        DepositLock lock = depositLock("50.00", DepositLockStatus.LOCKED);
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, lock.getId(),
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "650.00", "150.00", "500.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00");
+        stubForfeit(h, winner, platform);
+        when(depositLockRepository.findById(lock.getId())).thenReturn(Optional.of(lock));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        InOrder order = inOrder(paymentHoldRepository, walletRepository, depositLockRepository);
+        order.verify(paymentHoldRepository).findByAuctionIdForUpdateSkipLocked(auctionId);
+        order.verify(walletRepository, times(2)).findByIdForUpdate(any());
+        order.verify(depositLockRepository).findById(lock.getId());
+    }
+
+    @Test
+    void forfeitExpiredHold_alreadyCancelled_isNoOp() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.CANCELLED);
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.of(h));
+
+        paymentService.forfeitExpiredHold(auctionId);
+
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.CANCELLED);
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(walletRepository, transactionRepository, depositLockRepository, eventPublisher);
+    }
+
+    @Test
+    void forfeitExpiredHold_depositLockOfAnotherWallet_throwsAndChangesNothing() {
+        DepositLock lock = DepositLock.builder()
+                .id(UUID.randomUUID())
+                .walletId(UUID.randomUUID())
+                .auctionId(auctionId)
+                .amount(new BigDecimal("50.00"))
+                .status(DepositLockStatus.LOCKED)
+                .build();
+        PaymentHold h = hold("500.00", "50.00", "450.00", false, lock.getId(),
+                LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT);
+        Wallet winner = wallet(winnerWalletId, winnerUserId, "100.00", "100.00", "0.00");
+        Wallet platform = wallet(platformWalletId, platformUserId, "0.00", "0.00", "0.00");
+        stubForfeit(h, winner, platform);
+        when(depositLockRepository.findById(lock.getId())).thenReturn(Optional.of(lock));
+
+        assertThatThrownBy(() -> paymentService.forfeitExpiredHold(auctionId))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(transactionRepository, never()).save(any());
+        verify(walletRepository, never()).save(any());
+        assertThat(winner.getTotalBalance()).isEqualByComparingTo("100.00");
+        assertThat(platform.getTotalBalance()).isEqualByComparingTo("0.00");
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.PENDING_PAYMENT);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void cancelPaymentHold_forfeitedHold_leavesItUntouched() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().plusHours(10), PaymentHoldStatus.FORFEITED);
+        when(paymentHoldRepository.findByAuctionIdForUpdate(auctionId)).thenReturn(Optional.of(h));
+
+        paymentService.cancelPaymentHold(auctionId);
+
+        assertThat(h.getStatus()).isEqualTo(PaymentHoldStatus.FORFEITED);
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(walletRepository, transactionRepository);
     }
 }
