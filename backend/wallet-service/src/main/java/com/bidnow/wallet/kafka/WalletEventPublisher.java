@@ -2,6 +2,7 @@ package com.bidnow.wallet.kafka;
 
 import com.bidnow.common.dto.event.DepositReceivedEvent;
 import com.bidnow.common.dto.event.DepositRefundedEvent;
+import com.bidnow.common.dto.event.PaymentEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -16,6 +17,7 @@ public class WalletEventPublisher {
 
     private static final String DEPOSIT_RECEIVED_TOPIC = "deposit-received-topic";
     private static final String DEPOSIT_REFUNDED_TOPIC = "deposit-refunded-topic";
+    private static final String PAYMENT_EVENT_TOPIC = "payment-event-topic";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -55,6 +57,21 @@ public class WalletEventPublisher {
                     } else {
                         log.info("Published DepositRefundedEvent for userId={}, auctionId={}",
                                 event.getUserId(), event.getAuctionId());
+                    }
+                });
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onPaymentEvent(PaymentApplicationEvent event) {
+        PaymentEvent payment = event.getPayment();
+        kafkaTemplate.send(PAYMENT_EVENT_TOPIC, payment.getUserId().toString(), payment)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish PaymentEvent type={} for auctionId={}",
+                                payment.getPaymentType(), payment.getAuctionId(), ex);
+                    } else {
+                        log.info("Published PaymentEvent type={} for auctionId={}",
+                                payment.getPaymentType(), payment.getAuctionId());
                     }
                 });
     }

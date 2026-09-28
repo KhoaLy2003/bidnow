@@ -10,8 +10,10 @@ import com.bidnow.wallet.exception.DepositReleaseException;
 import com.bidnow.wallet.repository.DepositLockRepository;
 import com.bidnow.wallet.repository.WalletRepository;
 import com.bidnow.wallet.service.DepositLockService;
+import com.bidnow.wallet.service.PaymentService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -43,6 +46,9 @@ class AuctionLifecycleEventConsumerTest {
 
     @Mock
     private DepositLockService depositLockService;
+
+    @Mock
+    private PaymentService paymentService;
 
     @InjectMocks
     private AuctionLifecycleEventConsumer consumer;
@@ -151,5 +157,101 @@ class AuctionLifecycleEventConsumerTest {
                     assertThat(ex.getFailedLockIds()).containsExactly(lockA.getId());
                 });
         verify(depositLockService).releaseDeposit(lockB.getId(), walletB, RefundReason.AUCTION_CANCELLED);
+    }
+
+    // ── payment hold integration ──────────────────────────────────────────────
+
+    private final UUID sellerUserId = UUID.randomUUID();
+
+    private AuctionEndedEvent endedWithWinner() {
+        return AuctionEndedEvent.builder()
+                .auctionId(auctionId)
+                .winnerId(winnerUserId)
+                .sellerId(sellerUserId)
+                .winningBidAmount(new BigDecimal("500.00"))
+                .build();
+    }
+
+    @Test
+    void onAuctionEnded_withWinner_createsPaymentHold() {
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of());
+
+        consumer.onAuctionEnded(endedWithWinner());
+
+        verify(paymentService).createPaymentHold(auctionId, winnerUserId, sellerUserId, new BigDecimal("500.00"));
+    }
+
+    @Test
+    void onAuctionEnded_noWinner_createsNoPaymentHold() {
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of());
+
+        consumer.onAuctionEnded(ended(null, null));
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    void onAuctionEnded_releaseFails_stillCreatesHoldThenThrowsReleaseFailure() {
+        DepositLock lockA = lockFor(walletA);
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of(lockA));
+        when(walletRepository.findByUserId(winnerUserId)).thenReturn(Optional.empty());
+        doThrow(new RuntimeException("db down"))
+                .when(depositLockService).releaseDeposit(eq(lockA.getId()), any(), any());
+
+        assertThatThrownBy(() -> consumer.onAuctionEnded(endedWithWinner()))
+                .isInstanceOf(DepositReleaseException.class);
+        verify(paymentService).createPaymentHold(auctionId, winnerUserId, sellerUserId, new BigDecimal("500.00"));
+    }
+
+    @Test
+    void onAuctionEnded_holdFails_releasesLosersThenRethrowsHoldFailure() {
+        DepositLock lockA = lockFor(walletA);
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of(lockA));
+        when(walletRepository.findByUserId(winnerUserId)).thenReturn(Optional.empty());
+        IllegalStateException holdFailure = new IllegalStateException("hold failed");
+        doThrow(holdFailure).when(paymentService).createPaymentHold(any(), any(), any(), any());
+
+        assertThatThrownBy(() -> consumer.onAuctionEnded(endedWithWinner())).isSameAs(holdFailure);
+        verify(depositLockService).releaseDeposit(lockA.getId(), walletA, RefundReason.AUCTION_LOST);
+    }
+
+    @Test
+    void onAuctionCancelled_cancelsPaymentHold() {
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of());
+
+        consumer.onAuctionCancelled(AuctionCancelledEvent.builder().auctionId(auctionId).build());
+
+        verify(paymentService).cancelPaymentHold(auctionId);
+    }
+
+    @Test
+    void onAuctionCancelled_voidsHoldBeforeReleasingDeposits() {
+        DepositLock lockA = lockFor(walletA);
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of(lockA));
+
+        consumer.onAuctionCancelled(AuctionCancelledEvent.builder().auctionId(auctionId).build());
+
+        InOrder order = inOrder(paymentService, depositLockService);
+        order.verify(paymentService).cancelPaymentHold(auctionId);
+        order.verify(depositLockService).releaseDeposit(lockA.getId(), walletA, RefundReason.AUCTION_CANCELLED);
+    }
+
+    @Test
+    void onAuctionCancelled_holdCancelFails_releasesDepositsThenRethrows() {
+        DepositLock lockA = lockFor(walletA);
+        when(depositLockRepository.findByAuctionIdAndStatus(auctionId, DepositLockStatus.LOCKED))
+                .thenReturn(List.of(lockA));
+        IllegalStateException cancelFailure = new IllegalStateException("cancel failed");
+        doThrow(cancelFailure).when(paymentService).cancelPaymentHold(auctionId);
+
+        assertThatThrownBy(() -> consumer.onAuctionCancelled(
+                AuctionCancelledEvent.builder().auctionId(auctionId).build())).isSameAs(cancelFailure);
+        verify(depositLockService).releaseDeposit(lockA.getId(), walletA, RefundReason.AUCTION_CANCELLED);
     }
 }

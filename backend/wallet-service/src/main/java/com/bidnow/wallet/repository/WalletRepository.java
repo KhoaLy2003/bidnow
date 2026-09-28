@@ -25,4 +25,8 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM Wallet w WHERE w.id = :id")
     Optional<Wallet> findByIdForUpdate(@Param("id") UUID id);
+
+    /** Wallet id only — does not load the entity, so it never pollutes the persistence context before a row lock. */
+    @Query("SELECT w.id FROM Wallet w WHERE w.userId = :userId")
+    Optional<UUID> findIdByUserId(@Param("userId") UUID userId);
 }

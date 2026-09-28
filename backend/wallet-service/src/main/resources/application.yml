@@ -41,6 +41,8 @@ spring:
 
 wallet:
   platform-user-id: 87754524-54c7-4aa4-b6fb-43d359c2121f
+  payment:
+    deadline-hours: 48
 
 eureka:
   instance:

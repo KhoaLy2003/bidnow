@@ -1,6 +1,7 @@
 package com.bidnow.wallet.kafka;
 
 import com.bidnow.common.dto.event.DepositRefundedEvent;
+import com.bidnow.common.dto.event.PaymentEvent;
 import com.bidnow.wallet.domain.enums.RefundReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,5 +55,27 @@ class WalletEventPublisherTest {
         assertThat(event.getAmount()).isEqualByComparingTo("50.00");
         assertThat(event.getReason()).isEqualTo("AUCTION_CANCELLED");
         assertThat(event.getRefundedAt()).isEqualTo(refundedAt);
+    }
+
+    @Test
+    void onPaymentEvent_sendsPayloadToPaymentTopicKeyedByWinner() {
+        UUID winnerId = UUID.randomUUID();
+        PaymentEvent payment = PaymentEvent.builder()
+                .auctionId(UUID.randomUUID())
+                .userId(winnerId)
+                .sellerId(UUID.randomUUID())
+                .amount(new BigDecimal("500.00"))
+                .depositAmount(new BigDecimal("50.00"))
+                .remaining(new BigDecimal("450.00"))
+                .deadline(Instant.parse("2026-09-30T10:00:00Z"))
+                .insufficientFunds(false)
+                .paymentType("REQUIRED")
+                .build();
+        CompletableFuture<SendResult<String, Object>> sent = CompletableFuture.completedFuture(null);
+        when(kafkaTemplate.send(anyString(), anyString(), any())).thenReturn(sent);
+
+        publisher.onPaymentEvent(new PaymentApplicationEvent(this, payment));
+
+        verify(kafkaTemplate).send(eq("payment-event-topic"), eq(winnerId.toString()), eq(payment));
     }
 }

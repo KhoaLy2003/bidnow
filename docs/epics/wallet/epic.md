@@ -119,29 +119,25 @@ The Wallet Service acts as the **escrow and financial hub** that:
 - [ ] Failures: other locks still refunded; record retried (1s/2s/4s) then sent to `<topic>.DLT`; replay of processing failures is idempotent (undeserializable records need manual decoding)
 - [ ] Notification to bidder: "Your deposit has been refunded" (media-service consumes `deposit-refunded-topic` — later story)
 
+**Winner Payment — WALLET-305:**
+
+- [ ] On `auction-ended-topic` with a winner, create a `payment_holds` row (one per auction): `deposit_applied = min(LOCKED deposit, winning bid)`, `remaining = bid − deposit_applied`, deadline `now + 48h`
+- [ ] If available ≥ remaining, move remaining to locked (HOLD ledger row); otherwise the hold is unfunded (`funds_held = false`) and the winner must top up before confirming
+- [ ] `GET /api/v1/wallets/payments/pending` — pending holds with `deadline`, `hoursLeft`, `expired`
+- [ ] `POST /api/v1/wallets/payments/confirm { auctionId }` — atomic: winner pays exactly the winning bid (deposit consumed, excess refunded), seller credited exactly the winning bid, PAYMENT ledger rows for both, hold COMPLETED
+- [ ] Errors: `404 PAYMENT_HOLD_NOT_FOUND`, `400 PAYMENT_DEADLINE_EXPIRED`, `409 PAYMENT_NOT_PENDING`, `400 INSUFFICIENT_BALANCE`, `409 DEPOSIT_LOCK_CLOSED`, `404 SELLER_WALLET_NOT_FOUND`
+- [ ] `PaymentEvent` on `payment-event-topic`: `REQUIRED` on hold creation, `COMPLETED` on confirm
+- [ ] On `auction-cancelled-topic`, a `PENDING_PAYMENT` hold is voided (held funds returned, HOLD_CANCEL ledger row, status CANCELLED)
+- [ ] Follow-ups: auction-service consumes `PaymentEvent` to set `payment_deadline` / `winner_paid_at`; WALLET-306 forfeit must lock the `payment_holds` row before wallets
+
 **Known gaps (follow-up tickets, outside WALLET-304):**
 
 - Auction-service publishes `AuctionCancelledEvent` (admin and seller cancel) and the admin force-close `AuctionEndedEvent` *before* its DB transaction commits; a rollback after the send would refund deposits on a still-ACTIVE auction. Only `AuctionClosureService` publishes after commit.
-- `AuctionItem` has no optimistic lock and close/cancel don't lock the auction row, so an auction can emit both ended and cancelled events. Refunds stay idempotent, but the winner's deposit may be refunded (`AUCTION_CANCELLED`) while the auction ends COMPLETED — WALLET-305 must handle this.
+- `AuctionItem` has no optimistic lock and close/cancel don't lock the auction row, so an auction can emit both ended and cancelled events. WALLET-305 handles either order: a cancel voids any pending hold and records an `auction_cancellations` marker; a later end event creates no hold when the marker exists or the winner's deposit was already released. A cancel after the payment was COMPLETED is logged at ERROR for manual reconciliation. Residual: if both events are processed at the same instant on different consumer threads, a hold can still be created (needs a per-auction lock or auction-service serialization).
 - A deposit lock created after the refund sweep (or after the auction closed) stays LOCKED: wallet does not know auction state. Needs a closed-auction guard in `lockDeposit` or a reconciliation job.
+- WALLET-306 (forfeit) must ship with WALLET-305: until then, expired PENDING_PAYMENT holds keep funds locked. WALLET-306 must lock the `payment_holds` row before wallets and order wallet locks with Java `UUID.compareTo` (same comparator as confirm).
 
-**Winner Payment Flow:**
-
-- [ ] Event: Auction Service publishes `AUCTION_ENDED_WITH_WINNER` event
-- [ ] Calculate final_payment_amount = winning_bid_amount
-- [ ] Validate winner's available_balance >= final_payment_amount
-- [ ] Create HOLD transaction (status = PENDING_PAYMENT, deadline = now + 48 hours)
-- [ ] Update available_balance = available - final_payment_amount (temporarily)
-- [ ] Set payment_deadline in database
-- [ ] Notification to winner: "Complete payment within 48 hours"
-- [ ] Expose payment confirmation endpoint:
-  - Accept payment from winner
-  - Deduct final_payment_amount from winner's wallet
-  - Calculate and deduct platform_fee from amount
-  - Transfer (final_payment_amount - platform_fee) to seller's wallet
-  - Create PAYMENT transaction for winner, PAYMENT transaction for seller
-  - Update HOLD status = COMPLETED
-  - Emit PAYMENT_COMPLETED event
+**Winner Payment Flow:** see **Winner Payment — WALLET-305** above (supersedes the original draft: no `AUCTION_ENDED_WITH_WINNER` event, no PENDING_PAYMENT transaction, no platform fee in Phase 1).
 
 **Forfeit Logic (Non-Payment):**
 
@@ -394,8 +390,8 @@ See detailed schema in [wallet-schema.md](./wallet-schema.md) (to be created). C
 
 **Payment (Winner Only):**
 
-- `POST /api/v1/wallet/payment/confirm` — Confirm payment for won auction
-- `GET /api/v1/wallet/payment-pending` — List pending payments with deadlines
+- `POST /api/v1/wallets/payments/confirm` `{ auctionId }` — Confirm payment for won auction
+- `GET /api/v1/wallets/payments/pending` — List pending payments with deadlines
 
 ### Internal Service Endpoints (service-to-service, not routed via API Gateway)
 
