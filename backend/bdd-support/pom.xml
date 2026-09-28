@@ -17,7 +17,7 @@
 
     <properties>
         <cucumber.version>7.18.0</cucumber.version>
-        <wiremock.version>3.5.4</wiremock.version>
+        <wiremock.version>3.13.2</wiremock.version>
     </properties>
 
     <dependencies>
@@ -85,7 +85,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.16.0</version>
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
