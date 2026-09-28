@@ -106,17 +106,24 @@ The Wallet Service acts as the **escrow and financial hub** that:
 - [ ] If insufficient funds, reject registration with clear error message
 - [ ] Prevent bidding without completed registration (Bidding Service validates)
 
-**Refund Logic (Losing Bidders):**
+**Refund Logic (Losing Bidders & Cancelled Auctions) — WALLET-304:**
 
-- [ ] Event: Auction Service publishes `AUCTION_ENDED` with list of all bidders
-- [ ] For each non-winner bidder:
-  - Find their LOCKED deposit for this auction
-  - Create REFUND transaction
-  - Update available_balance += deposit_amount
-  - Update deposit_locks status = RELEASED
-  - Emit DEPOSIT_REFUNDED event for Media Service
-- [ ] Refund processing: batch job runs every 5-15 minutes post-auction closure
-- [ ] Notification to bidder: "Your deposit has been refunded"
+- [ ] Wallet consumes `auction-ended-topic` (`AuctionEndedEvent`) and `auction-cancelled-topic` (`AuctionCancelledEvent`)
+- [ ] Refund targets are derived from `deposit_locks` (`status = LOCKED` for the auction): on end, everyone except the winner; on cancel, everyone. `AuctionEndedEvent.loserIds` is not used (it is empty until the bidding-service exists)
+- [ ] For each lock, in its own DB transaction (wallet row locked first):
+  - `available_balance += amount`, `locked_balance -= amount` (total unchanged)
+  - Create REFUND transaction (before/after balances, `reference_id = auctionId`)
+  - Update `deposit_locks.status = RELEASED`, `released_at = now`
+  - After commit, emit `DepositRefundedEvent` on `deposit-refunded-topic` (reason `AUCTION_LOST` / `AUCTION_CANCELLED`)
+- [ ] Zero-amount locks are released without a transaction or event
+- [ ] Failures: other locks still refunded; record retried (1s/2s/4s) then sent to `<topic>.DLT`; replay of processing failures is idempotent (undeserializable records need manual decoding)
+- [ ] Notification to bidder: "Your deposit has been refunded" (media-service consumes `deposit-refunded-topic` — later story)
+
+**Known gaps (follow-up tickets, outside WALLET-304):**
+
+- Auction-service publishes `AuctionCancelledEvent` (admin and seller cancel) and the admin force-close `AuctionEndedEvent` *before* its DB transaction commits; a rollback after the send would refund deposits on a still-ACTIVE auction. Only `AuctionClosureService` publishes after commit.
+- `AuctionItem` has no optimistic lock and close/cancel don't lock the auction row, so an auction can emit both ended and cancelled events. Refunds stay idempotent, but the winner's deposit may be refunded (`AUCTION_CANCELLED`) while the auction ends COMPLETED — WALLET-305 must handle this.
+- A deposit lock created after the refund sweep (or after the auction closed) stays LOCKED: wallet does not know auction state. Needs a closed-auction guard in `lockDeposit` or a reconciliation job.
 
 **Winner Payment Flow:**
 

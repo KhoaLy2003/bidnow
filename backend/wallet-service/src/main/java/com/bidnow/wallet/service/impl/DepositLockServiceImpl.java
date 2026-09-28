@@ -7,6 +7,7 @@ import com.bidnow.wallet.domain.entity.DepositLock;
 import com.bidnow.wallet.domain.entity.Transaction;
 import com.bidnow.wallet.domain.entity.Wallet;
 import com.bidnow.wallet.domain.enums.DepositLockStatus;
+import com.bidnow.wallet.domain.enums.RefundReason;
 import com.bidnow.wallet.domain.enums.TransactionStatus;
 import com.bidnow.wallet.domain.enums.TransactionType;
 import com.bidnow.wallet.domain.enums.WalletStatus;
@@ -15,17 +16,21 @@ import com.bidnow.wallet.dto.response.DepositLockResponse;
 import com.bidnow.wallet.dto.response.DepositLockStatusResponse;
 import com.bidnow.wallet.exception.ConflictException;
 import com.bidnow.wallet.exception.InsufficientBalanceException;
+import com.bidnow.wallet.kafka.DepositRefundedApplicationEvent;
 import com.bidnow.wallet.repository.DepositLockRepository;
 import com.bidnow.wallet.repository.TransactionRepository;
 import com.bidnow.wallet.repository.WalletRepository;
 import com.bidnow.wallet.service.DepositLockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +42,7 @@ public class DepositLockServiceImpl implements DepositLockService {
     private final WalletRepository walletRepository;
     private final DepositLockRepository depositLockRepository;
     private final TransactionRepository transactionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -113,6 +119,62 @@ public class DepositLockServiceImpl implements DepositLockService {
 
         log.info("Deposit locked for userId={}, auctionId={}, amount={}", userId, auctionId, amount);
         return toResponse(lock, wallet, false);
+    }
+
+    @Override
+    @Transactional
+    public void releaseDeposit(UUID lockId, UUID walletId, RefundReason reason) {
+        // Row lock first, same order as lockDeposit: wallet row, then deposit lock row.
+        Optional<Wallet> maybeWallet = walletRepository.findByIdForUpdate(walletId);
+        if (maybeWallet.isEmpty()) {
+            log.warn("Deposit release skipped: wallet {} not found (lockId={})", walletId, lockId);
+            return;
+        }
+        Wallet wallet = maybeWallet.get();
+
+        Optional<DepositLock> maybeLock = depositLockRepository.findById(lockId);
+        if (maybeLock.isEmpty() || maybeLock.get().getStatus() != DepositLockStatus.LOCKED) {
+            log.debug("Deposit release skipped: lock {} missing or not LOCKED", lockId);
+            return;
+        }
+        DepositLock lock = maybeLock.get();
+        if (!walletId.equals(lock.getWalletId())) {
+            throw new IllegalStateException("Deposit lock " + lockId + " belongs to wallet " + lock.getWalletId()
+                    + ", not " + walletId);
+        }
+        BigDecimal amount = lock.getAmount();
+
+        if (amount.signum() > 0) {
+            BigDecimal balanceBefore = wallet.getAvailableBalance();
+            BigDecimal balanceAfter = balanceBefore.add(amount);
+            wallet.setAvailableBalance(balanceAfter);
+            wallet.setLockedBalance(wallet.getLockedBalance().subtract(amount));
+            walletRepository.save(wallet);
+
+            transactionRepository.save(Transaction.builder()
+                    .walletId(wallet.getId())
+                    .type(TransactionType.REFUND)
+                    .amount(amount)
+                    .availableBalanceBefore(balanceBefore)
+                    .availableBalanceAfter(balanceAfter)
+                    .referenceId(lock.getAuctionId())
+                    .status(TransactionStatus.COMPLETED)
+                    .description("Deposit refund for auction " + lock.getAuctionId() + " (" + reason + ")")
+                    .build());
+        }
+
+        Instant now = Instant.now();
+        lock.setStatus(DepositLockStatus.RELEASED);
+        lock.setReleasedAt(LocalDateTime.ofInstant(now, ZoneId.systemDefault()));
+        depositLockRepository.save(lock);
+
+        if (amount.signum() > 0) {
+            eventPublisher.publishEvent(new DepositRefundedApplicationEvent(this, wallet.getUserId(),
+                    wallet.getId(), lock.getAuctionId(), amount, reason, now));
+        }
+
+        log.info("Deposit released for walletId={}, auctionId={}, amount={}, reason={}",
+                wallet.getId(), lock.getAuctionId(), amount, reason);
     }
 
     private DepositLockResponse toResponse(DepositLock lock, Wallet wallet, boolean alreadyLocked) {

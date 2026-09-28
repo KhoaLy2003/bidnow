@@ -7,6 +7,7 @@ import com.bidnow.wallet.domain.entity.DepositLock;
 import com.bidnow.wallet.domain.entity.Transaction;
 import com.bidnow.wallet.domain.entity.Wallet;
 import com.bidnow.wallet.domain.enums.DepositLockStatus;
+import com.bidnow.wallet.domain.enums.RefundReason;
 import com.bidnow.wallet.domain.enums.TransactionStatus;
 import com.bidnow.wallet.domain.enums.TransactionType;
 import com.bidnow.wallet.domain.enums.WalletStatus;
@@ -15,6 +16,7 @@ import com.bidnow.wallet.dto.response.DepositLockResponse;
 import com.bidnow.wallet.dto.response.DepositLockStatusResponse;
 import com.bidnow.wallet.exception.ConflictException;
 import com.bidnow.wallet.exception.InsufficientBalanceException;
+import com.bidnow.wallet.kafka.DepositRefundedApplicationEvent;
 import com.bidnow.wallet.repository.DepositLockRepository;
 import com.bidnow.wallet.repository.TransactionRepository;
 import com.bidnow.wallet.repository.WalletRepository;
@@ -22,9 +24,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,8 +38,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +55,9 @@ class DepositLockServiceImplTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private DepositLockServiceImpl depositLockService;
@@ -329,5 +338,182 @@ class DepositLockServiceImplTest {
         verify(walletRepository, never()).save(any());
         verify(transactionRepository, never()).save(any());
         verify(depositLockRepository, never()).saveAndFlush(any());
+    }
+
+    // ── releaseDeposit ────────────────────────────────────────────────────────
+
+    @Test
+    void releaseDeposit_lockedLock_refundsMarksReleasedAndPublishesEvent() {
+        Wallet w = wallet("200.00", "150.00", "50.00", WalletStatus.ACTIVE);
+        DepositLock l = lock("50.00", DepositLockStatus.LOCKED);
+        when(walletRepository.findByIdForUpdate(walletId)).thenReturn(Optional.of(w));
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_LOST);
+
+        assertThat(w.getAvailableBalance()).isEqualByComparingTo("200.00");
+        assertThat(w.getLockedBalance()).isEqualByComparingTo("0.00");
+        assertThat(w.getTotalBalance()).isEqualByComparingTo("200.00");
+        verify(walletRepository).save(w);
+
+        ArgumentCaptor<Transaction> txCaptor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository).save(txCaptor.capture());
+        Transaction refund = txCaptor.getValue();
+        assertThat(refund.getWalletId()).isEqualTo(walletId);
+        assertThat(refund.getType()).isEqualTo(TransactionType.REFUND);
+        assertThat(refund.getStatus()).isEqualTo(TransactionStatus.COMPLETED);
+        assertThat(refund.getAmount()).isEqualByComparingTo("50.00");
+        assertThat(refund.getAvailableBalanceBefore()).isEqualByComparingTo("150.00");
+        assertThat(refund.getAvailableBalanceAfter()).isEqualByComparingTo("200.00");
+        assertThat(refund.getReferenceId()).isEqualTo(auctionId);
+        assertThat(refund.getDescription()).contains(auctionId.toString()).contains("AUCTION_LOST");
+
+        assertThat(l.getStatus()).isEqualTo(DepositLockStatus.RELEASED);
+        assertThat(l.getReleasedAt()).isNotNull();
+        verify(depositLockRepository).save(l);
+
+        ArgumentCaptor<DepositRefundedApplicationEvent> eventCaptor =
+                ArgumentCaptor.forClass(DepositRefundedApplicationEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        DepositRefundedApplicationEvent event = eventCaptor.getValue();
+        assertThat(event.getUserId()).isEqualTo(userId);
+        assertThat(event.getWalletId()).isEqualTo(walletId);
+        assertThat(event.getAuctionId()).isEqualTo(auctionId);
+        assertThat(event.getAmount()).isEqualByComparingTo("50.00");
+        assertThat(event.getReason()).isEqualTo(RefundReason.AUCTION_LOST);
+        assertThat(event.getRefundedAt()).isNotNull();
+    }
+
+    @Test
+    void releaseDeposit_readsWalletOnlyThroughRowLock() {
+        DepositLock l = lock("50.00", DepositLockStatus.LOCKED);
+        when(walletRepository.findByIdForUpdate(walletId))
+                .thenReturn(Optional.of(wallet("200.00", "150.00", "50.00", WalletStatus.ACTIVE)));
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_CANCELLED);
+
+        verify(walletRepository).findByIdForUpdate(walletId);
+        verify(walletRepository, never()).findById(any());
+        verify(walletRepository, never()).findByUserId(any());
+
+        InOrder order = inOrder(walletRepository, depositLockRepository);
+        order.verify(walletRepository).findByIdForUpdate(walletId);
+        order.verify(depositLockRepository).findById(l.getId());
+    }
+
+    @Test
+    void releaseDeposit_alreadyReleased_isSilentNoOp() {
+        Wallet w = wallet("200.00", "200.00", "0.00", WalletStatus.ACTIVE);
+        DepositLock l = lock("50.00", DepositLockStatus.RELEASED);
+        when(walletRepository.findByIdForUpdate(walletId)).thenReturn(Optional.of(w));
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_LOST);
+
+        assertThat(w.getAvailableBalance()).isEqualByComparingTo("200.00");
+        verify(walletRepository, never()).save(any());
+        verify(transactionRepository, never()).save(any());
+        verify(depositLockRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void releaseDeposit_forfeited_isSilentNoOp() {
+        when(walletRepository.findByIdForUpdate(walletId))
+                .thenReturn(Optional.of(wallet("150.00", "150.00", "0.00", WalletStatus.ACTIVE)));
+        DepositLock l = lock("50.00", DepositLockStatus.FORFEITED);
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_LOST);
+
+        assertThat(l.getStatus()).isEqualTo(DepositLockStatus.FORFEITED);
+        verify(transactionRepository, never()).save(any());
+        verify(depositLockRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void releaseDeposit_lockMissing_isSilentNoOp() {
+        UUID lockId = UUID.randomUUID();
+        when(walletRepository.findByIdForUpdate(walletId))
+                .thenReturn(Optional.of(wallet("200.00", "150.00", "50.00", WalletStatus.ACTIVE)));
+        when(depositLockRepository.findById(lockId)).thenReturn(Optional.empty());
+
+        depositLockService.releaseDeposit(lockId, walletId, RefundReason.AUCTION_LOST);
+
+        verify(walletRepository, never()).save(any());
+        verify(transactionRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void releaseDeposit_walletMissing_isSilentNoOp() {
+        UUID lockId = UUID.randomUUID();
+        when(walletRepository.findByIdForUpdate(walletId)).thenReturn(Optional.empty());
+
+        depositLockService.releaseDeposit(lockId, walletId, RefundReason.AUCTION_LOST);
+
+        verify(depositLockRepository, never()).findById(any());
+        verify(transactionRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void releaseDeposit_zeroAmount_releasesWithoutTransactionOrEvent() {
+        Wallet w = wallet("0.00", "0.00", "0.00", WalletStatus.ACTIVE);
+        DepositLock l = lock("0.00", DepositLockStatus.LOCKED);
+        when(walletRepository.findByIdForUpdate(walletId)).thenReturn(Optional.of(w));
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_LOST);
+
+        assertThat(l.getStatus()).isEqualTo(DepositLockStatus.RELEASED);
+        assertThat(l.getReleasedAt()).isNotNull();
+        verify(depositLockRepository).save(l);
+        assertThat(w.getAvailableBalance()).isEqualByComparingTo("0.00");
+        assertThat(w.getLockedBalance()).isEqualByComparingTo("0.00");
+        verify(walletRepository, never()).save(any());
+        verify(transactionRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void releaseDeposit_suspendedWallet_isStillRefunded() {
+        Wallet w = wallet("200.00", "150.00", "50.00", WalletStatus.SUSPENDED);
+        DepositLock l = lock("50.00", DepositLockStatus.LOCKED);
+        when(walletRepository.findByIdForUpdate(walletId)).thenReturn(Optional.of(w));
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_CANCELLED);
+
+        assertThat(w.getAvailableBalance()).isEqualByComparingTo("200.00");
+        assertThat(w.getLockedBalance()).isEqualByComparingTo("0.00");
+        assertThat(l.getStatus()).isEqualTo(DepositLockStatus.RELEASED);
+    }
+
+    @Test
+    void releaseDeposit_lockBelongsToAnotherWallet_throwsAndChangesNothing() {
+        Wallet w = wallet("200.00", "150.00", "50.00", WalletStatus.ACTIVE);
+        DepositLock l = DepositLock.builder()
+                .id(UUID.randomUUID())
+                .walletId(UUID.randomUUID())
+                .auctionId(auctionId)
+                .amount(new BigDecimal("50.00"))
+                .status(DepositLockStatus.LOCKED)
+                .lockedAt(LocalDateTime.of(2026, 9, 28, 10, 0))
+                .build();
+        when(walletRepository.findByIdForUpdate(walletId)).thenReturn(Optional.of(w));
+        when(depositLockRepository.findById(l.getId())).thenReturn(Optional.of(l));
+
+        assertThatThrownBy(() -> depositLockService.releaseDeposit(l.getId(), walletId, RefundReason.AUCTION_LOST))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(w.getAvailableBalance()).isEqualByComparingTo("150.00");
+        assertThat(w.getLockedBalance()).isEqualByComparingTo("50.00");
+        verify(walletRepository, never()).save(any());
+        verify(transactionRepository, never()).save(any());
+        verify(depositLockRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
     }
 }
