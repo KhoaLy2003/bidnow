@@ -7,5 +7,6 @@
 
     <include file="db/changelog/migrations/01-init-wallets.sql"/>
     <include file="db/changelog/migrations/02-init-transactions.sql"/>
+    <include file="db/changelog/migrations/03-init-deposit-locks.sql"/>
 
 </databaseChangeLog>

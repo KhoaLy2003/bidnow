@@ -390,13 +390,17 @@ See detailed schema in [wallet-schema.md](./wallet-schema.md) (to be created). C
 - `POST /api/v1/wallet/payment/confirm` — Confirm payment for won auction
 - `GET /api/v1/wallet/payment-pending` — List pending payments with deadlines
 
-### Internal Service Endpoints (Auth Required)
+### Internal Service Endpoints (service-to-service, not routed via API Gateway)
 
-**Auction Service Integration:**
+Called directly via Eureka/OpenFeign. The gateway blocks `/api/v1/**/internal/**`; wallet-service permits `/api/v1/internal/**` without user auth. Responses use `BaseResponse<T>`; errors use `ErrorResponse`.
 
-- `POST /api/v1/internal/wallet/lock-deposit` — Lock deposit for auction participation
-- `POST /api/v1/internal/wallet/unlock-deposit` — Release locked deposit
-- `GET /api/v1/internal/wallet/balance/{userId}` — Check user balance (sync call)
+**Bidding Service Integration (WALLET-303 — first bid = implicit registration):**
+
+- `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` — Deposit lock status → `{ locked, amount?, status?, lockedAt? }`
+- `POST /api/v1/internal/wallet/deposit-lock` `{ userId, auctionId, depositAmount }` — Idempotently lock the deposit → `{ lockId, amount, status, alreadyLocked, availableBalance, lockedBalance }`
+  - Errors: `400 INSUFFICIENT_BALANCE` (`errors: { availableBalance, required }`), `400 INVALID_INPUT`, `403 WALLET_NOT_ACTIVE`, `404 WALLET_NOT_FOUND`, `409 DEPOSIT_LOCK_CLOSED`
+- `GET /api/v1/internal/wallet/balance/{userId}` — `{ totalBalance, availableBalance, lockedBalance, currency }`; `404 WALLET_NOT_FOUND`
+- Deposit release (unlock) — future story (refund/forfeit flows)
 
 **Event Publishing:**
 

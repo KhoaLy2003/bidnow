@@ -60,6 +60,16 @@
 - **WebSockets**: Used for live price updates on auction pages and "Outbid" alerts.
 - **Message Broker**: Ensures eventual consistency between services (e.g., Auction closed → Notification sent → Wallet refund initiated).
 
+### Service-to-Service Internal APIs
+
+Synchronous internal calls go directly between services via Eureka + OpenFeign, never through the API Gateway. The gateway's `AuthenticationFilter` blocks `/api/v1/**/internal/**`, and each owning service `permitAll`s its own internal paths.
+
+| Owner | Endpoint | Caller | Purpose |
+|---|---|---|---|
+| Wallet | `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` | Bidding | Is the user's deposit locked for this auction? |
+| Wallet | `POST /api/v1/internal/wallet/deposit-lock` `{userId, auctionId, depositAmount}` | Bidding | Idempotently lock the deposit on first bid (implicit registration). Errors: `INSUFFICIENT_BALANCE` 400, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 404, `DEPOSIT_LOCK_CLOSED` 409 |
+| Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |
+
 ---
 
 ## High-Level Diagram
