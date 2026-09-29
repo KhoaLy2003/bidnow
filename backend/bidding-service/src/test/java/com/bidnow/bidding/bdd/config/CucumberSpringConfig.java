@@ -1,6 +1,7 @@
 // backend/bidding-service/src/test/java/com/bidnow/bidding/bdd/config/CucumberSpringConfig.java
 package com.bidnow.bidding.bdd.config;
 
+import com.bidnow.bdd.container.KafkaContainerSupport;
 import com.bidnow.bdd.container.PostgresContainerSupport;
 import com.bidnow.bdd.container.RedisContainerSupport;
 import com.bidnow.bdd.wiremock.WireMockSupport;
@@ -24,5 +25,8 @@ public class CucumberSpringConfig {
         PostgresContainerSupport.properties().forEach((key, value) -> registry.add(key, () -> value));
         RedisContainerSupport.properties().forEach((key, value) -> registry.add(key, () -> value));
         registry.add("spring.cloud.openfeign.client.config.auction-service.url", WireMockSupport::baseUrl);
+        KafkaContainerSupport.properties().forEach((key, value) -> registry.add(key, () -> value));
+        registry.add("spring.cloud.openfeign.client.config.wallet-service.url", WireMockSupport::baseUrl);
+        registry.add("spring.cloud.openfeign.client.config.user-service.url", WireMockSupport::baseUrl);
     }
 }

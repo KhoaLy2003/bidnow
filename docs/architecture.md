@@ -72,6 +72,17 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 | Wallet | `POST /api/v1/internal/wallet/deposit-lock` `{userId, auctionId, depositAmount}` | Bidding | Idempotently lock the deposit on first bid (implicit registration). Errors: `INSUFFICIENT_BALANCE` 400, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 404, `DEPOSIT_LOCK_CLOSED` 409 |
 | Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |
 
+### Bidding Service (public API & events)
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /api/v1/bids` `{auctionId, amount}` | `X-User-Id` | Place a bid: pre-validate (cached context, refreshed once on 409) → lock deposit on first bid (wallet) → insert bid + apply atomically (auction, row-locked) → 201 `PlaceBidResponse`. Errors: `BID_TOO_LOW` 400 (`errors.minimumBid`), `BID_OWN_AUCTION` / `BID_INSUFFICIENT_BALANCE` (`errors.availableBalance`, `errors.required`) / `WALLET_NOT_ACTIVE` / `WALLET_NOT_FOUND` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` / `DEPOSIT_LOCK_CLOSED` 409, `SERVICE_UNAVAILABLE` 503 |
+
+| Topic | Direction | Payload / effect |
+|---|---|---|
+| `bid-placed-topic` | publishes (after commit, key = auctionId) | `BidPlacedEvent` incl. `bidId`, `totalBids`, `endTime`, `previousHighestBidderId` |
+| `auction-ended-topic`, `auction-cancelled-topic` | consumes (`bidding-service-group`) | Evict `bidding:auction:{id}:context` |
+
 ### Wallet Events (Kafka)
 
 | Direction | Topic | Payload | Purpose |

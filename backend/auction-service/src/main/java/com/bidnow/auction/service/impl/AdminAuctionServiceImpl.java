@@ -17,6 +17,7 @@ import com.bidnow.auction.repository.AuctionImageRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.auction.service.AdminAuctionService;
+import com.bidnow.auction.util.AfterCommit;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
@@ -150,14 +151,15 @@ public class AdminAuctionServiceImpl implements AdminAuctionService {
 
         recordStatusHistory(auction, oldStatus, AuctionStatus.CANCELLED, adminId, reason);
 
-        auctionKafkaProducer.publishAuctionCancelled(AuctionCancelledEvent.builder()
+        AuctionCancelledEvent cancelledEvent = AuctionCancelledEvent.builder()
                 .auctionId(auction.getId())
                 .sellerId(auction.getSellerId())
                 .auctionTitle(auction.getTitle())
                 .previousStatus(oldStatus.name())
                 .reason(reason)
                 .cancelledAt(now.toInstant())
-                .build());
+                .build();
+        AfterCommit.run(() -> auctionKafkaProducer.publishAuctionCancelled(cancelledEvent));
 
         log.info("Admin {} cancelled auction {} (was {})", adminId, id, oldStatus);
         return toResponse(auction);
@@ -189,7 +191,7 @@ public class AdminAuctionServiceImpl implements AdminAuctionService {
 
         recordStatusHistory(auction, oldStatus, AuctionStatus.COMPLETED, adminId, reason);
 
-        auctionKafkaProducer.publishAuctionEnded(AuctionEndedEvent.builder()
+        AuctionEndedEvent endedEvent = AuctionEndedEvent.builder()
                 .auctionId(auction.getId())
                 .auctionTitle(auction.getTitle())
                 .sellerId(auction.getSellerId())
@@ -198,7 +200,8 @@ public class AdminAuctionServiceImpl implements AdminAuctionService {
                 .totalBids(auction.getTotalBids())
                 .endedAt(now.toInstant())
                 .closureSource("ADMIN")
-                .build());
+                .build();
+        AfterCommit.run(() -> auctionKafkaProducer.publishAuctionEnded(endedEvent));
 
         log.info("Admin {} force-closed auction {} with winner {}", adminId, id, auction.getWinnerId());
         return toResponse(auction);

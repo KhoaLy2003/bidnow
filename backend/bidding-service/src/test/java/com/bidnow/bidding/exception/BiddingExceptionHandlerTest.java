@@ -46,6 +46,22 @@ class BiddingExceptionHandlerTest {
     }
 
     @Test
+    void handleInsufficientBalance_returns403WithWalletDetails() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/bids");
+
+        ResponseEntity<ErrorResponse> response = handler.handleInsufficientBalance(
+                new InsufficientBalanceException(java.util.Map.of("availableBalance", "10.00", "required", "20.00")),
+                request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getErrorCode()).isEqualTo(BiddingErrorCodes.BID_INSUFFICIENT_BALANCE);
+        assertThat(response.getBody().getErrors())
+                .containsEntry("availableBalance", "10.00")
+                .containsEntry("required", "20.00");
+    }
+
+    @Test
     void exceptionStatuses() {
         assertThat(new ConflictException("closed", BiddingErrorCodes.AUCTION_NOT_OPEN).getStatus())
                 .isEqualTo(HttpStatus.CONFLICT);

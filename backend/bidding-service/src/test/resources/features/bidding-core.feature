@@ -10,12 +10,6 @@ Feature: Bidding service core — schema, security, context cache and pre-valida
     When an unauthenticated request bids "105.00" on auction "c0000000-0000-0000-0000-000000000001"
     Then the response status should be 401
 
-  Scenario: A valid bid passes pre-validation (placement arrives in BID-102)
-    Given auction-service has auction "c0000000-0000-0000-0000-000000000002" with status "ACTIVE", price "100.00", increment "5.00", 1 bids and seller "550e8400-e29b-41d4-a716-446655440001"
-    When user "550e8400-e29b-41d4-a716-446655440010" bids "105.00" on auction "c0000000-0000-0000-0000-000000000002"
-    Then the response status should be 501
-    And the bid context for auction "c0000000-0000-0000-0000-000000000002" should be cached in Redis
-
   Scenario: The bid context is fetched once and then served from Redis
     Given auction-service has auction "c0000000-0000-0000-0000-000000000003" with status "ACTIVE", price "100.00", increment "5.00", 1 bids and seller "550e8400-e29b-41d4-a716-446655440001"
     When user "550e8400-e29b-41d4-a716-446655440010" bids "104.00" on auction "c0000000-0000-0000-0000-000000000003"

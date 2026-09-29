@@ -29,4 +29,12 @@ public class CommonSteps {
                 .as("Expected field '%s' to equal '%s' but was '%s'", jsonPath, expectedValue, actual)
                 .isEqualTo(expectedValue);
     }
+
+    @Then("the response field {string} should be present")
+    public void assertFieldPresent(String jsonPath) {
+        Object value = ctx.getLastResponse().jsonPath().get(jsonPath);
+        assertThat(value)
+                .as("Expected field '%s' to be present in response: %s", jsonPath, ctx.getLastResponse().asString())
+                .isNotNull();
+    }
 }

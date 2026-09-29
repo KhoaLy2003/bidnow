@@ -22,6 +22,10 @@ import com.bidnow.common.dto.event.AuctionRejectedEvent;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -61,6 +65,21 @@ class AdminAuctionServiceImplTest {
     private UserServiceClient userServiceClient;
     @InjectMocks
     private AdminAuctionServiceImpl adminAuctionService;
+
+    @BeforeEach
+    void initTransactionSync() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void clearTransactionSync() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private void triggerAfterCommit() {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+    }
 
     private AuctionItem buildItem(UUID id, AuctionStatus status) {
         AuctionCategory category = AuctionCategory.builder()
@@ -193,6 +212,8 @@ class AdminAuctionServiceImplTest {
         assertThat(item.getStatus()).isEqualTo(AuctionStatus.CANCELLED);
         assertThat(item.getCancelledBy()).isEqualTo(ADMIN_ID);
 
+        org.mockito.Mockito.verify(auctionKafkaProducer, never()).publishAuctionCancelled(any());
+        triggerAfterCommit();
         ArgumentCaptor<AuctionCancelledEvent> captor = ArgumentCaptor.forClass(AuctionCancelledEvent.class);
         org.mockito.Mockito.verify(auctionKafkaProducer).publishAuctionCancelled(captor.capture());
         assertThat(captor.getValue().getAuctionId()).isEqualTo(item.getId());
@@ -238,6 +259,8 @@ class AdminAuctionServiceImplTest {
         assertThat(item.getWinnerId()).isEqualTo(winnerId);
         assertThat(item.getCompletedAt()).isNotNull();
 
+        org.mockito.Mockito.verify(auctionKafkaProducer, never()).publishAuctionEnded(any());
+        triggerAfterCommit();
         ArgumentCaptor<AuctionEndedEvent> captor = ArgumentCaptor.forClass(AuctionEndedEvent.class);
         org.mockito.Mockito.verify(auctionKafkaProducer).publishAuctionEnded(captor.capture());
         assertThat(captor.getValue().getClosureSource()).isEqualTo("ADMIN");

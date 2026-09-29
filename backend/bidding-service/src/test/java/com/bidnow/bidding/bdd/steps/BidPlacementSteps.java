@@ -4,12 +4,10 @@ package com.bidnow.bidding.bdd.steps;
 import com.bidnow.bdd.client.BddRestClient;
 import com.bidnow.bdd.context.ScenarioContext;
 import com.bidnow.bdd.wiremock.WireMockSupport;
-import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -18,10 +16,13 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,15 +33,6 @@ public class BidPlacementSteps {
     private final ScenarioContext ctx;
     private final StringRedisTemplate redisTemplate;
     private final JdbcTemplate jdbcTemplate;
-
-    @Before
-    public void resetExternalState() {
-        WireMockSupport.reset();
-        redisTemplate.execute((RedisCallback<Object>) connection -> {
-            connection.serverCommands().flushAll();
-            return null;
-        });
-    }
 
     @Given("auction-service has auction {string} with status {string}, price {string}, increment {string}, {int} bids and seller {string}")
     public void stubBidContext(String auctionId, String status, String price, String increment,
@@ -102,6 +94,83 @@ public class BidPlacementSteps {
                 "SELECT indexname FROM pg_indexes WHERE tablename = 'bids'", String.class);
         assertThat(indexes).contains("idx_bids_auction_created", "idx_bids_auction_amount",
                 "idx_bids_bidder_auction_created");
+    }
+
+    @Given("wallet-service locks deposits successfully")
+    public void walletLocksDeposits() {
+        WireMockSupport.SERVER.stubFor(post(urlEqualTo(WALLET_LOCK_PATH))
+                .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"status":200,"message":"Success","data":{"lockId":"%s","amount":20.00,
+                                 "status":"LOCKED","alreadyLocked":false,"availableBalance":80.00,"lockedBalance":20.00}}
+                                """.formatted(UUID.randomUUID()))));
+    }
+
+    @Given("wallet-service rejects deposit locks for insufficient balance")
+    public void walletInsufficientBalance() {
+        WireMockSupport.SERVER.stubFor(post(urlEqualTo(WALLET_LOCK_PATH))
+                .willReturn(aResponse().withStatus(400).withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"status":400,"errorCode":"INSUFFICIENT_BALANCE","message":"Insufficient balance",
+                                 "errors":{"availableBalance":"10.00","required":"20.00"}}
+                                """)));
+    }
+
+    @Given("wallet-service responds {int} to deposit locks")
+    public void walletResponds(int status) {
+        WireMockSupport.SERVER.stubFor(post(urlEqualTo(WALLET_LOCK_PATH))
+                .willReturn(aResponse().withStatus(status).withHeader("Content-Type", "application/json")
+                        .withBody("{\"status\":" + status + ",\"errorCode\":\"X\",\"message\":\"stub\"}")));
+    }
+
+    @Given("auction-service applies bids on auction {string} returning price {string} and {int} total bids")
+    public void auctionAppliesBids(String auctionId, String price, int totalBids) {
+        String body = """
+                {"status":200,"message":"Success","data":{"auctionId":"%s","currentPrice":%s,
+                 "currentWinnerId":"%s","previousWinnerId":null,"totalBids":%d,"endTime":"%s",
+                 "extended":false,"extensionCount":0}}
+                """.formatted(auctionId, price, UUID.randomUUID(), totalBids,
+                OffsetDateTime.now(ZoneOffset.UTC).plusHours(1));
+        WireMockSupport.SERVER.stubFor(post(urlEqualTo(applyPath(auctionId)))
+                .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody(body)));
+    }
+
+    @Given("auction-service rejects bids on auction {string} with {int} {string}")
+    public void auctionRejectsBids(String auctionId, int status, String errorCode) {
+        WireMockSupport.SERVER.stubFor(post(urlEqualTo(applyPath(auctionId)))
+                .willReturn(aResponse().withStatus(status).withHeader("Content-Type", "application/json")
+                        .withBody("{\"status\":" + status + ",\"errorCode\":\"" + errorCode + "\",\"message\":\"stub\"}")));
+    }
+
+    @Given("user-service knows user {string} as {string}")
+    public void userServiceKnows(String userId, String name) {
+        WireMockSupport.SERVER.stubFor(get(urlEqualTo("/api/v1/users/internal/" + userId + "/summary"))
+                .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                        .withBody("{\"status\":200,\"message\":\"Success\",\"data\":{\"id\":\"" + userId
+                                + "\",\"name\":\"" + name + "\",\"avatarUrl\":null}}")));
+    }
+
+    @Then("wallet-service should have received {int} deposit-lock request(s)")
+    public void verifyWalletCalls(int count) {
+        WireMockSupport.SERVER.verify(count, postRequestedFor(urlEqualTo(WALLET_LOCK_PATH)));
+    }
+
+    @Then("auction-service should have received {int} apply-bid request(s) for auction {string}")
+    public void verifyApplyCalls(int count, String auctionId) {
+        WireMockSupport.SERVER.verify(count, postRequestedFor(urlEqualTo(applyPath(auctionId))));
+    }
+
+    @Then("{int} bid(s) should be stored for auction {string}")
+    public void storedBids(int count, String auctionId) {
+        Integer stored = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM bids WHERE auction_id = ?::uuid", Integer.class, auctionId);
+        assertThat(stored).isEqualTo(count);
+    }
+
+    private static final String WALLET_LOCK_PATH = "/api/v1/internal/wallet/deposit-lock";
+
+    private static String applyPath(String auctionId) {
+        return "/api/v1/internal/auctions/" + auctionId + "/bids";
     }
 
     private static String contextPath(String auctionId) {

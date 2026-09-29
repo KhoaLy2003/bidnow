@@ -6,6 +6,10 @@ import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -36,6 +40,21 @@ class AuctionActivationServiceTest {
 
     @InjectMocks
     private AuctionActivationService activationService;
+
+    @BeforeEach
+    void initTransactionSync() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void clearTransactionSync() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private void triggerAfterCommit() {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+    }
 
     private AuctionItem scheduled(UUID id) {
         return AuctionItem.builder()
@@ -85,5 +104,18 @@ class AuctionActivationServiceTest {
 
         verify(auctionItemRepository, never()).save(any());
         assertThat(auction.getStatus()).isEqualTo(AuctionStatus.CANCELLED);
+    }
+
+    @Test
+    void activate_publishesCreatedEventOnlyAfterCommit() {
+        UUID id = UUID.randomUUID();
+        AuctionItem auction = scheduled(id);
+        when(auctionItemRepository.findByIdForUpdate(id)).thenReturn(Optional.of(auction));
+
+        activationService.activate(id);
+
+        verify(kafkaProducer, never()).publishAuctionCreated(any());
+        triggerAfterCommit();
+        verify(kafkaProducer).publishAuctionCreated(any());
     }
 }

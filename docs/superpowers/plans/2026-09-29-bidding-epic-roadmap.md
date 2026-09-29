@@ -156,22 +156,23 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
   - `BidController` wired to return 201
 
 **Tasks:**
-- [ ] **3.0 Move in-transaction Kafka publishes** in seller cancel, admin cancel and admin force-close (auction-service) to afterCommit hooks, so they never run while holding the auction row lock; update AdminAuctionServiceImplTest/AuctionServiceImplTest to trigger afterCommit.
-- [ ] **3.0a Carry-overs from Story 2.**
+- [x] **3.0 Move in-transaction Kafka publishes** in seller cancel, admin cancel and admin force-close (auction-service) to afterCommit hooks, so they never run while holding the auction row lock; update AdminAuctionServiceImplTest/AuctionServiceImplTest to trigger afterCommit. Also applied to `AuctionActivationService.activate`.
+- [x] **3.0a Carry-overs from Story 2.**
   - Move pre-validation, the stale-409 refresh, and the `clock.instant()` read from `BidController` into `BidService`.
   - Move the Cucumber `@Before` hook from `BidPlacementSteps` into a dedicated `bdd/steps/Hooks` class.
   - Because `Bid` is `Persistable` with `isNew = true`, a replayed `bidId` will throw `DataIntegrityViolationException` on INSERT. Handle it, or look up the bid before inserting.
   - Consider a single-flight lock for concurrent context-cache misses on hot auctions.
   - Add a `@WebMvcTest` security slice test (401 without `X-User-Id`, api-docs public) if feasible with `@EnableFeignClients`.
-- [ ] **3.1 Feign clients + error decoder.** Tests per mapping: wallet 400 `INSUFFICIENT_BALANCE` → 403 `BID_INSUFFICIENT_BALANCE` with `errors` preserved; wallet 403 → 403; wallet 409 → 409; auction 409/400/403/404 pass through; any 5xx or `RetryableException` → 503.
-- [ ] **3.2 `DepositGate`.** Tests: flag present → no wallet call; flag absent → POST → flag set with TTL `endTime + 24h`; Redis down → still POSTs; wallet error propagates and leaves no flag.
-- [ ] **3.3 `BidService.placeBid`** (mock all collaborators). Tests:
+  - Replay handling not needed (bidId is per-request, never retried); single-flight and the @WebMvcTest security slice deferred — 401 covered by BDD.
+- [x] **3.1 Feign clients + error decoder.** Tests per mapping: wallet 400 `INSUFFICIENT_BALANCE` → 403 `BID_INSUFFICIENT_BALANCE` with `errors` preserved; wallet 403 → 403; wallet 409 → 409; auction 409/400/403/404 pass through; any 5xx or `RetryableException` → 503.
+- [x] **3.2 `DepositGate`.** Tests: flag present → no wallet call; flag absent → POST → flag set with TTL `endTime + 24h`; Redis down → still POSTs; wallet error propagates and leaves no flag.
+- [x] **3.3 `BidService.placeBid`** (mock all collaborators). Tests:
   - happy path, in this order: pre-validate → gate → insert → applyBid → event after commit → cache overwrite with the returned state
   - `applyBid` 409 → exception, cache evicted, no event, no bid row (rollback asserted with a `TransactionTemplate`-backed test or verified `save` never flushed)
   - wallet 503 → no insert, no applyBid
   - event carries `previousHighestBidderId = previousWinnerId`, `bidderName` from `UserSummaryCacheService` (fallback "Unknown bidder"), and `auctionTitle` from the context
-- [ ] **3.4 `AuctionLifecycleConsumer`.** Ended/cancelled → `evict(auctionId)`.
-- [ ] **3.5 Controller.** 201 body shape and status mapping for all spec §4 error codes.
+- [x] **3.4 `AuctionLifecycleConsumer`.** Ended/cancelled → `evict(auctionId)`.
+- [x] **3.5 Controller.** 201 body shape and status mapping for all spec §4 error codes.
 - [ ] **3.6 Contract test against real wallet + auction** (docker-compose): first bid locks the deposit, a second bid skips the wallet (verify via the wallet transactions count), insufficient balance → 403 with no bid row, wallet stopped → 503.
 
 ---
@@ -296,4 +297,7 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 - **DB connection held across the apply-bid Feign call** (Story 3). Mitigated by the 2s read timeout. Watch the Hikari pool under load and move the insert after apply-bid (idempotent on `bidId`) if the pool saturates.
 - **Kafka outage after commit:** the bid is correct, but the live push is lost. Clients resync on reload. #19 may add a replay.
 - Remaining unlocked writers to `auction_items` (update/delete/publish/reject) can overwrite at the start-time boundary. Consider a `@Version` column (optimistic locking) as defence in depth.
+- **Orphan deposit lock (cross-service):** a bid can pass pre-validation on a stale ACTIVE context after an admin cancel/force-close, lock a deposit, then be rejected by apply-bid; wallet has already settled the auction, so that lock is never released. Needs a wallet-side guard (settled-auction tombstone -> `DEPOSIT_LOCK_CLOSED`, or a sweep). bidding-service logs a WARN breadcrumb.
+- **Unknown apply-bid outcome on timeout:** logged `CRITICAL: apply-bid outcome unknown`; a single idempotent replay with the same `bidId` (auction-service `last_bid_id`) could resolve most cases - deferred (plan: never retry).
+- **Story 5 notes:** unify bid timestamps (one `Instant` per request; `bids.created_at` uses JVM-zone `BaseEntity`); negative-cache 'Unknown bidder' to avoid user-service latency on every bid when it is down.
 - Internal endpoints are protected at the gateway: `AuthenticationFilter` blocks `/api/v1/**/internal/**`, so the new `/api/v1/internal/auctions/**` and `/api/v1/users/internal/summaries` endpoints need no gateway changes.

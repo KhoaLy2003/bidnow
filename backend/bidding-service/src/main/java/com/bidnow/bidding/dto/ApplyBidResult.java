@@ -10,27 +10,19 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Auction state used to pre-validate bids. Deserialized from auction-service's internal
- * {@code GET /api/v1/internal/auctions/{id}/bid-context} and cached as JSON in Redis — field names
- * must stay identical to auction-service's {@code BidContextResponse}.
- */
+/** auction-service's authoritative state after an applied bid (mirrors its ApplyBidResponse). */
 @Data
-@Builder(toBuilder = true)
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BidContext {
-    public static final String STATUS_ACTIVE = "ACTIVE";
-
+public class ApplyBidResult {
     private UUID auctionId;
-    private String title;
-    private UUID sellerId;
-    private String status;
     private BigDecimal currentPrice;
-    private BigDecimal bidIncrement;
-    private BigDecimal depositAmount;
     private UUID currentWinnerId;
+    private UUID previousWinnerId;
     private int totalBids;
     private OffsetDateTime endTime;
+    private boolean extended;
+    private int extensionCount;
 }

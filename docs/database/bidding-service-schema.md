@@ -36,3 +36,5 @@ CREATE INDEX idx_bids_bidder_auction_created ON bids (bidder_id, auction_id, cre
 | Key | Value | TTL |
 | :--- | :--- | :--- |
 | `bidding:auction:{auctionId}:context` | JSON bid context from auction-service | `bidding.cache.context-ttl-seconds` (600) |
+| `bidding:deposit:{auctionId}:{userId}` | `"1"` — deposit already locked in wallet-service | auction `endTime` + 24h (min 60 s) |
+| `bidding:user:{userId}:summary` | JSON `UserSummaryResponse` (display name for events) | `bidding.cache.user-summary-ttl-seconds` (600) |

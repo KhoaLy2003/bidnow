@@ -60,6 +60,8 @@ POST /api/v1/bids  { auctionId, amount }         (bidderId = X-User-Id, never fr
  5. 201 Created  PlaceBidResponse { bidId, auctionId, amount, placedAt, currentPrice, totalBids, endTime, extended }
 ```
 
+- **Implementation notes (BID-102):** `bidTime`/`placedAt` come from the service `Clock` (UTC). The Kafka producer uses `max.block.ms: 2000` so an unreachable broker cannot stall a bid. A replayed `bidId` cannot reach the `bids` INSERT because `bidId` is generated per request and apply-bid is never retried — no duplicate-key handling is needed. auction-service publishes its cancel / force-close / activation events after commit so a stalled broker never extends the auction row lock.
+
 - **Why the lock comes before apply-bid:** a bid must never become the winner without backing funds. If apply-bid then rejects the bid (for example, the bidder was outbid in the same instant), the deposit stays `LOCKED`. That is acceptable, because the lock *is* the auction registration and it is refunded at auction end (WALLET-304).
 - **Why the GET deposit-lock pre-check was dropped:** the POST is idempotent (`alreadyLocked`), and the Redis flag removes the wallet round-trip on every later bid. That saves one call compared with the original BID-102 text.
 - **Commit failure after a successful apply-bid:** the window is tiny (local insert already done, so only commit can fail). auction-service stores `last_bid_id`. Log `CRITICAL` with the bidId so the two services can be reconciled.
@@ -101,7 +103,7 @@ GET  /api/v1/bids/auction/{auctionId}/my-bids?page=&size=  → 200 PageResponse<
 BidHistoryResponse { id, auctionId, bidderId, bidderName, bidderAvatarUrl, amount, placedAt, isAutoBid, isAntiSnipingTriggered }
 ```
 
-Error codes (in `BiddingErrorCodes`): `BID_TOO_LOW` 400, `BID_OWN_AUCTION` 403, `BID_INSUFFICIENT_BALANCE` 403, `WALLET_NOT_ACTIVE` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` 409, `DEPOSIT_LOCK_CLOSED` 409, `SERVICE_UNAVAILABLE` 503.
+Error codes (in `BiddingErrorCodes`): `BID_TOO_LOW` 400, `BID_OWN_AUCTION` 403, `BID_INSUFFICIENT_BALANCE` 403, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` 409, `DEPOSIT_LOCK_CLOSED` 409, `SERVICE_UNAVAILABLE` 503.
 
 ### user-service (internal)
 
