@@ -39,7 +39,7 @@ public class AuctionActivationService {
      */
     @Transactional
     public void activate(UUID auctionId) {
-        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)
+        AuctionItem auction = auctionItemRepository.findByIdForUpdate(auctionId)
                 .orElse(null);
         if (auction == null) {
             log.warn("Activation skipped — auction {} not found or deleted", auctionId);

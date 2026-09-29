@@ -71,6 +71,9 @@ public class AuctionItem extends BaseEntity {
     @Builder.Default
     private Integer totalBids = 0;
 
+    @Column(name = "last_bid_id")
+    private UUID lastBidId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     @Builder.Default

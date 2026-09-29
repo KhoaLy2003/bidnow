@@ -66,6 +66,8 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 
 | Owner | Endpoint | Caller | Purpose |
 |---|---|---|---|
+| Auction | `GET /api/v1/internal/auctions/{id}/bid-context` | Bidding | Price, increment, deposit, status, seller, winner, total bids and end time for bid pre-validation. Errors: `AUCTION_NOT_FOUND` 404 |
+| Auction | `POST /api/v1/internal/auctions/{id}/bids` `{bidId, bidderId, amount}` | Bidding | Authoritative, row-locked bid application (`SELECT … FOR UPDATE`, serialized with closure/cancel). Idempotent on `bidId`. First bid ≥ current price, later bids ≥ current price + increment. Errors: `BID_TOO_LOW` 400 (`errors.minimumBid`), `BID_OWN_AUCTION` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` 409 |
 | Wallet | `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` | Bidding | Is the user's deposit locked for this auction? |
 | Wallet | `POST /api/v1/internal/wallet/deposit-lock` `{userId, auctionId, depositAmount}` | Bidding | Idempotently lock the deposit on first bid (implicit registration). Errors: `INSUFFICIENT_BALANCE` 400, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 404, `DEPOSIT_LOCK_CLOSED` 409 |
 | Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |

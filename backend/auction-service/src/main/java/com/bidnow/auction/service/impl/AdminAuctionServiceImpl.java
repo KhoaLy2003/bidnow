@@ -130,7 +130,7 @@ public class AdminAuctionServiceImpl implements AdminAuctionService {
     @Override
     @Transactional
     public SellerAuctionResponse cancelAuction(UUID adminId, UUID id, AdminAuctionReasonRequest request) {
-        AuctionItem auction = findById(id);
+        AuctionItem auction = findByIdForUpdate(id);
 
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             throw new BadRequestException(
@@ -166,7 +166,7 @@ public class AdminAuctionServiceImpl implements AdminAuctionService {
     @Override
     @Transactional
     public SellerAuctionResponse forceCloseAuction(UUID adminId, UUID id, AdminAuctionReasonRequest request) {
-        AuctionItem auction = findById(id);
+        AuctionItem auction = findByIdForUpdate(id);
 
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             throw new BadRequestException(
@@ -206,6 +206,12 @@ public class AdminAuctionServiceImpl implements AdminAuctionService {
 
     private AuctionItem findById(UUID id) {
         return auctionItemRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
+    }
+
+    /** Locking read for writes that race with bid application (cancel, force-close). */
+    private AuctionItem findByIdForUpdate(UUID id) {
+        return auctionItemRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
     }
 

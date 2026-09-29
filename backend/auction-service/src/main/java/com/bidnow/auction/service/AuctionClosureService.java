@@ -55,7 +55,7 @@ public class AuctionClosureService {
      */
     @Transactional
     public void close(UUID auctionId) {
-        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)
+        AuctionItem auction = auctionItemRepository.findByIdForUpdate(auctionId)
                 .orElse(null);
         if (auction == null) {
             log.warn("Closure skipped — auction {} not found or deleted", auctionId);

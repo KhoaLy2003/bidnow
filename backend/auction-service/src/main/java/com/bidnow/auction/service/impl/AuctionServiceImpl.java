@@ -165,7 +165,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Override
     @Transactional
     public void cancelAuction(UUID sellerId, UUID id, CancelAuctionRequest request) {
-        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
+        AuctionItem auction = auctionItemRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
 
         if (!auction.getSellerId().equals(sellerId)) {

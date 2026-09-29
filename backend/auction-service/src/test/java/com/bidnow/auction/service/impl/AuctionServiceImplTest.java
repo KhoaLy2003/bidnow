@@ -327,4 +327,19 @@ class AuctionServiceImplTest {
 //        assertThat(result.get(0).getCategoryName()).isEqualTo("Electronics");
 //        assertThat(result.get(0).getCount()).isEqualTo(5L);
 //    }
+
+    @Test
+    void cancelAuction_activeAuction_readsWithRowLockAndCancels() {
+        UUID auctionId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+        AuctionItem item = buildItem(auctionId);
+        item.setSellerId(sellerId);
+        item.setStatus(AuctionStatus.ACTIVE);
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(item));
+
+        auctionService.cancelAuction(sellerId, auctionId, null);
+
+        assertThat(item.getStatus()).isEqualTo(AuctionStatus.CANCELLED);
+        verify(auctionItemRepository, never()).findByIdAndDeletedAtIsNull(any());
+    }
 }

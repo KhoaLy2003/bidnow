@@ -184,7 +184,7 @@ class AdminAuctionServiceImplTest {
     @Test
     void cancelAuction_happyPath_transitionsToCancelledAndPublishesEvent() {
         AuctionItem item = buildItem(UUID.randomUUID(), AuctionStatus.ACTIVE);
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(item.getId())).thenReturn(Optional.of(item));
+        when(auctionItemRepository.findByIdForUpdate(item.getId())).thenReturn(Optional.of(item));
         when(auctionItemRepository.save(any())).thenReturn(item);
         when(auctionMapper.toResponse(any(), any())).thenReturn(SellerAuctionResponse.builder().build());
 
@@ -201,7 +201,7 @@ class AdminAuctionServiceImplTest {
     @Test
     void cancelAuction_notActive_throwsBadRequest() {
         AuctionItem item = buildItem(UUID.randomUUID(), AuctionStatus.SCHEDULED);
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(item.getId())).thenReturn(Optional.of(item));
+        when(auctionItemRepository.findByIdForUpdate(item.getId())).thenReturn(Optional.of(item));
 
         assertThatThrownBy(() -> adminAuctionService.cancelAuction(ADMIN_ID, item.getId(),
                 new AdminAuctionReasonRequest("reason")))
@@ -212,7 +212,7 @@ class AdminAuctionServiceImplTest {
     @Test
     void cancelAuction_blankReason_throwsBadRequest() {
         AuctionItem item = buildItem(UUID.randomUUID(), AuctionStatus.ACTIVE);
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(item.getId())).thenReturn(Optional.of(item));
+        when(auctionItemRepository.findByIdForUpdate(item.getId())).thenReturn(Optional.of(item));
 
         assertThatThrownBy(() -> adminAuctionService.cancelAuction(ADMIN_ID, item.getId(),
                 new AdminAuctionReasonRequest(null)))
@@ -228,7 +228,7 @@ class AdminAuctionServiceImplTest {
     void forceCloseAuction_happyPath_setsWinnerAndPublishesEvent() {
         AuctionItem item = buildItem(UUID.randomUUID(), AuctionStatus.ACTIVE);
         UUID winnerId = item.getCurrentWinnerId();
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(item.getId())).thenReturn(Optional.of(item));
+        when(auctionItemRepository.findByIdForUpdate(item.getId())).thenReturn(Optional.of(item));
         when(auctionItemRepository.save(any())).thenReturn(item);
         when(auctionMapper.toResponse(any(), any())).thenReturn(SellerAuctionResponse.builder().build());
 
@@ -247,7 +247,7 @@ class AdminAuctionServiceImplTest {
     @Test
     void forceCloseAuction_notActive_throwsBadRequest() {
         AuctionItem item = buildItem(UUID.randomUUID(), AuctionStatus.SCHEDULED);
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(item.getId())).thenReturn(Optional.of(item));
+        when(auctionItemRepository.findByIdForUpdate(item.getId())).thenReturn(Optional.of(item));
 
         assertThatThrownBy(() -> adminAuctionService.forceCloseAuction(ADMIN_ID, item.getId(), null))
                 .isInstanceOf(BadRequestException.class)
@@ -258,7 +258,7 @@ class AdminAuctionServiceImplTest {
     void forceCloseAuction_zeroBids_throwsBadRequest() {
         AuctionItem item = buildItem(UUID.randomUUID(), AuctionStatus.ACTIVE);
         item.setTotalBids(0);
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(item.getId())).thenReturn(Optional.of(item));
+        when(auctionItemRepository.findByIdForUpdate(item.getId())).thenReturn(Optional.of(item));
 
         assertThatThrownBy(() -> adminAuctionService.forceCloseAuction(ADMIN_ID, item.getId(), null))
                 .isInstanceOf(BadRequestException.class)

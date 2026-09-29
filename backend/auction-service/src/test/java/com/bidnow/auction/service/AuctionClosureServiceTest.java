@@ -69,7 +69,7 @@ class AuctionClosureServiceTest {
                 .title("Test Auction")
                 .sellerId(UUID.randomUUID())
                 .build();
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(auction));
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(auction));
 
         closureService.close(auctionId);
         triggerAfterCommit();
@@ -103,7 +103,7 @@ class AuctionClosureServiceTest {
                 .sellerId(UUID.randomUUID())
                 .currentPrice(new BigDecimal("100.00"))
                 .build();
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(auction));
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(auction));
 
         closureService.close(auctionId);
         triggerAfterCommit();
@@ -123,7 +123,7 @@ class AuctionClosureServiceTest {
     @Test
     void close_whenAuctionNotFound_skipsGracefully() {
         UUID auctionId = UUID.randomUUID();
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.empty());
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.empty());
 
         closureService.close(auctionId);
 
@@ -138,11 +138,29 @@ class AuctionClosureServiceTest {
                 .id(auctionId)
                 .status(AuctionStatus.COMPLETED)
                 .build();
-        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)).thenReturn(Optional.of(auction));
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(auction));
 
         closureService.close(auctionId);
 
         verify(auctionItemRepository, never()).save(any());
         verify(kafkaProducer, never()).publishAuctionEnded(any());
+    }
+
+    @Test
+    void close_readsAuctionWithRowLock() {
+        UUID auctionId = UUID.randomUUID();
+        AuctionItem auction = AuctionItem.builder()
+                .id(auctionId)
+                .status(AuctionStatus.ACTIVE)
+                .totalBids(0)
+                .title("Test Auction")
+                .sellerId(UUID.randomUUID())
+                .currentPrice(new BigDecimal("100.00"))
+                .build();
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(auction));
+
+        closureService.close(auctionId);
+
+        verify(auctionItemRepository, never()).findByIdAndDeletedAtIsNull(any());
     }
 }
