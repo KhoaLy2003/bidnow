@@ -8,6 +8,7 @@ import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface UserProfileService {
@@ -15,6 +16,8 @@ public interface UserProfileService {
     UserProfileResponse createUserProfile(CreateUserProfileRequest request);
 
     UserSummaryResponse getUserSummary(UUID userId);
+
+    List<UserSummaryResponse> getUserSummaries(List<UUID> userIds);
 
     UserProfileResponse getUserProfile(UUID userId);
 

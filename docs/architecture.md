@@ -71,12 +71,15 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 | Wallet | `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` | Bidding | Is the user's deposit locked for this auction? |
 | Wallet | `POST /api/v1/internal/wallet/deposit-lock` `{userId, auctionId, depositAmount}` | Bidding | Idempotently lock the deposit on first bid (implicit registration). Errors: `INSUFFICIENT_BALANCE` 400, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 404, `DEPOSIT_LOCK_CLOSED` 409 |
 | Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |
+| User | `POST /api/v1/users/internal/summaries` `{userIds: [≤100]}` | Bidding | Batch display name + avatar for bid history (one query; unknown ids omitted) |
 
 ### Bidding Service (public API & events)
 
 | Endpoint | Auth | Purpose |
 |---|---|---|
 | `POST /api/v1/bids` `{auctionId, amount}` | `X-User-Id` | Place a bid: pre-validate (cached context, refreshed once on 409) → lock deposit on first bid (wallet) → insert bid + apply atomically (auction, row-locked) → 201 `PlaceBidResponse`. Errors: `BID_TOO_LOW` 400 (`errors.minimumBid`), `BID_OWN_AUCTION` / `BID_INSUFFICIENT_BALANCE` (`errors.availableBalance`, `errors.required`) / `WALLET_NOT_ACTIVE` / `WALLET_NOT_FOUND` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` / `DEPOSIT_LOCK_CLOSED` 409, `SERVICE_UNAVAILABLE` 503 |
+| `GET /api/v1/bids/auction/{auctionId}?page=&size=` | public (gateway + service) | Bid history, newest first, `size` ≤ 100; bidder names batch-resolved (fallback "Unknown bidder") |
+| `GET /api/v1/bids/auction/{auctionId}/my-bids?page=&size=` | `X-User-Id` | The caller's bids on the auction |
 
 | Topic | Direction | Payload / effect |
 |---|---|---|

@@ -15,6 +15,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -134,5 +136,24 @@ class UserProfileServiceImplTest {
         ArgumentCaptor<UserProfile> captor = ArgumentCaptor.forClass(UserProfile.class);
         verify(userProfileRepository).save(captor.capture());
         assertThat(captor.getValue().getDisplayName()).isNull();
+    }
+
+    @Test
+    void getUserSummaries_returnsOnlyExistingUsersWithOneQuery() {
+        UUID alice = UUID.randomUUID();
+        UUID unknown = UUID.randomUUID();
+        when(userProfileRepository.findByUserIdIn(any())).thenReturn(List.of(
+                UserProfile.builder().userId(alice).displayName("Alice").avatarUrl("https://cdn/a.png").build()));
+
+        List<UserSummaryResponse> result = userProfileService.getUserSummaries(List.of(alice, unknown, alice));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(alice);
+        assertThat(result.get(0).getName()).isEqualTo("Alice");
+        assertThat(result.get(0).getAvatarUrl()).isEqualTo("https://cdn/a.png");
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(userProfileRepository).findByUserIdIn(ids.capture());
+        assertThat(ids.getValue()).containsExactlyInAnyOrder(alice, unknown);
     }
 }
