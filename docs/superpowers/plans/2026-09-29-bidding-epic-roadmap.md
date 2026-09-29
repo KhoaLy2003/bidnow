@@ -103,35 +103,36 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 
 **Files** (under `backend/bidding-service/`):
 - Modify `pom.xml`: add `spring-cloud-starter-openfeign`, `spring-boot-starter-data-redis`, and the test deps inherited from the parent.
-- Modify `src/main/resources/application.yml`: add `spring.data.redis`, `spring.kafka` (producer + consumer, following wallet-service), Feign timeouts (`spring.cloud.openfeign.client.config.default.connect-timeout: 1000`, `read-timeout: 2000`), and `bidding.cache.context-ttl-seconds: 600`.
+- Modify `src/main/resources/application.yml`: add `spring.data.redis`, Feign timeouts (`spring.cloud.openfeign.client.config.default.connect-timeout: 1000`, `read-timeout: 2000`), and `bidding.cache.context-ttl-seconds: 600`.
 - Modify `BiddingApplication.java` to add `@EnableFeignClients`.
 - Create `db/changelog/db.changelog-master.xml` and `migrations/001-init-bids.sql` (spec §5).
 - Create `domain/entity/Bid.java` (extends `BaseEntity`) and `repository/BidRepository.java`.
-- Create `config/SecurityConfig.java` (`RoleHeaderFilter`, `permitAll` on `GET /api/v1/bids/auction/*`) and `config/RedisConfig.java` (`RedisTemplate<String,String>` + a Jackson `ObjectMapper` with `JavaTimeModule`).
+- Create `config/SecurityConfig.java` (`RoleHeaderFilter`; shared `PUBLIC_ENDPOINTS` only — history-GET `permitAll` deferred to Story 5).
 - Create `constant/BiddingErrorCodes.java` and `exception/ConflictException.java`, `ServiceUnavailableException.java` (503).
 - Create `feign/AuctionServiceClient.java`, with `getBidContext` for now (`applyBid` comes in Story 3).
-- Create `dto/BidContext.java` (the cached record mirroring `BidContextResponse`), `dto/request/PlaceBidRequest.java` (`auctionId`, `amount`) and `dto/response/PlaceBidResponse.java`.
+- Create `dto/BidContext.java` (the cached record mirroring `BidContextResponse`) and `dto/request/PlaceBidRequest.java` (`auctionId`, `amount`).
 - Create `service/AuctionContextCacheService.java` with `get(UUID)`, `put(BidContext)` and `evict(UUID)`.
 - Create `service/BidValidationService.java` with `preValidate(BidContext, UUID bidderId, BigDecimal amount, Instant now)`.
 - Create `controller/BidController.java` (`POST /api/v1/bids` skeleton).
-- Modify the repo-root `docker-compose.yml` to replace `SPRING_REDIS_HOST` with `SPRING_DATA_REDIS_HOST` for bidding-service, and ensure `bidding_db` is in `docker/postgres/init-db.sh`.
+- Kafka config deferred to Story 3; no `RedisConfig` — Boot's `StringRedisTemplate` + `ObjectMapper` are used; `PlaceBidResponse` deferred to Story 3; the BDD harness (Testcontainers Postgres/Redis + WireMock auction-service) is added here and reused by Stories 3–5.
+- Modify the repo-root `docker-compose.yml` to replace `SPRING_REDIS_HOST` with `REDIS_HOST` for bidding-service (read by `application.yml` as `${REDIS_HOST:localhost}`); `bidding_db` already exists in `docker/postgres/init-db.sh`.
 
 **Tasks:**
 - [ ] **2.1 Dependencies + config + schema + entity/repo.** Check: `mvn -q -pl bidding-service -am test` compiles and passes, and the service starts against docker-compose Postgres/Redis with the Liquibase changelog applied.
-- [ ] **2.2 `BidValidationService`.** Boundary tests:
+- [x] **2.2 `BidValidationService`.** Boundary tests:
   - seller → 403 `BID_OWN_AUCTION`
   - SCHEDULED/COMPLETED/FAILED/CANCELLED → 409
   - `now == endTime` → 409, `now = endTime - 1ms` → OK
   - first bid `< currentPrice` → 400, `== currentPrice` → OK
   - `currentPrice=100, inc=5`: `104` → 400, `105` → OK
-- [ ] **2.3 `AuctionContextCacheService`.** Tests:
+- [x] **2.3 `AuctionContextCacheService`.** Tests:
   - miss → Feign → `SET` with TTL
   - hit → no Feign call
   - `evict` deletes the key
   - Redis exception on read → falls through to Feign and does not fail
   - Feign 404 → `NotFoundException(AUCTION_NOT_FOUND)`
   - Feign 5xx/timeout → `ServiceUnavailableException`
-- [ ] **2.4 `BidController` skeleton + `SecurityConfig`.** MockMvc: missing `X-User-Id` → 401; validation (`amount` ≤ 0, null `auctionId`) → 400; pre-validation errors map to the correct status.
+- [x] **2.4 `BidController` skeleton + `SecurityConfig`.** MockMvc: validation (`amount` ≤ 0, null `auctionId`, >2 decimals) → 400; pre-validation errors map to the correct status. Missing `X-User-Id` → 401 is covered by the BDD scenario (not yet run).
 
 ---
 
@@ -156,6 +157,12 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 
 **Tasks:**
 - [ ] **3.0 Move in-transaction Kafka publishes** in seller cancel, admin cancel and admin force-close (auction-service) to afterCommit hooks, so they never run while holding the auction row lock; update AdminAuctionServiceImplTest/AuctionServiceImplTest to trigger afterCommit.
+- [ ] **3.0a Carry-overs from Story 2.**
+  - Move pre-validation, the stale-409 refresh, and the `clock.instant()` read from `BidController` into `BidService`.
+  - Move the Cucumber `@Before` hook from `BidPlacementSteps` into a dedicated `bdd/steps/Hooks` class.
+  - Because `Bid` is `Persistable` with `isNew = true`, a replayed `bidId` will throw `DataIntegrityViolationException` on INSERT. Handle it, or look up the bid before inserting.
+  - Consider a single-flight lock for concurrent context-cache misses on hot auctions.
+  - Add a `@WebMvcTest` security slice test (401 without `X-User-Id`, api-docs public) if feasible with `@EnableFeignClients`.
 - [ ] **3.1 Feign clients + error decoder.** Tests per mapping: wallet 400 `INSUFFICIENT_BALANCE` → 403 `BID_INSUFFICIENT_BALANCE` with `errors` preserved; wallet 403 → 403; wallet 409 → 409; auction 409/400/403/404 pass through; any 5xx or `RetryableException` → 503.
 - [ ] **3.2 `DepositGate`.** Tests: flag present → no wallet call; flag absent → POST → flag set with TTL `endTime + 24h`; Redis down → still POSTs; wallet error propagates and leaves no flag.
 - [ ] **3.3 `BidService.placeBid`** (mock all collaborators). Tests:

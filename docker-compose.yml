@@ -136,7 +136,7 @@ services:
       - DB_USERNAME=bidnow
       - DB_PASSWORD=bidnow
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - SPRING_REDIS_HOST=redis
+      - REDIS_HOST=redis
     depends_on:
       db:
         condition: service_healthy

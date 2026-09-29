@@ -122,14 +122,16 @@ The batch endpoint prevents N+1 calls from bid history. Unknown IDs are omitted,
 ```sql
 bids (id UUID PK, auction_id UUID NOT NULL, bidder_id UUID NOT NULL, amount DECIMAL(15,2) NOT NULL CHECK (amount > 0),
       is_auto_bid BOOLEAN NOT NULL DEFAULT false, is_anti_sniping_triggered BOOLEAN NOT NULL DEFAULT false,
-      created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL)
+      created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL)
 INDEX (auction_id, created_at DESC); INDEX (auction_id, amount DESC); INDEX (bidder_id, auction_id, created_at DESC)
 ```
+
+Timestamps are `TIMESTAMP` (not `TIMESTAMPTZ`) to match the shared `BaseEntity` (`LocalDateTime`) used by every service. `id` has no DB default — bidding-service assigns it.
 
 auction_db migration `004-bid-tracking.sql`: `ALTER TABLE auction_items ADD COLUMN last_bid_id UUID`.
 
 Redis keys (bidding-service):
-- `bidding:auction:{id}:context` holds the JSON `BidContext` with a 10 min TTL. It is overwritten after each accepted bid and evicted on lifecycle events and on 409/400 from apply-bid.
+- `bidding:auction:{id}:context` holds the JSON `BidContext` with a 10 min TTL. It is overwritten after each accepted bid and evicted on lifecycle events and on 409/400 from apply-bid. A pre-validation `AUCTION_NOT_OPEN` from a cached context is never returned directly: the context is refreshed from auction-service once and re-validated (a cached SCHEDULED status or pre-extension `endTime` may be stale).
 - `bidding:deposit:{auctionId}:{userId}` holds `"1"` and expires 24h after the auction's `endTime`.
 - `bidding:user:{id}:summary` holds the JSON user summary with a 10 min TTL.
 
