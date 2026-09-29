@@ -225,10 +225,10 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
   - `BidController` GET endpoints; `size` capped at 100, default 20
 
 **Tasks:**
-- [ ] **5.1 user-service batch endpoint.** Tests: returns only existing users; 101 IDs → 400; empty → 400.
-- [ ] **5.2 `UserSummaryCacheService.getAll`.** Tests: all cached → zero Feign calls; partial → exactly one batch call for the misses; user-service down → names fall back to "Unknown bidder" (history must not 503).
-- [ ] **5.3 `BidHistoryService`.** Tests: sort order; my-bids filters by the caller; empty auction → empty `PageResponse`, not 404; exactly one batch lookup per page.
-- [ ] **5.4 Controller.** The public GET works without `X-User-Id`; my-bids without it → 401; the `PageResponse` shape matches `PaginationMeta`.
+- [x] **5.1 user-service batch endpoint.** Tests: returns only existing users; 101 IDs → 400; empty → 400.
+- [x] **5.2 `UserSummaryCacheService.getAll`.** Tests: all cached → zero Feign calls; partial → exactly one batch call for the misses; user-service down → names fall back to "Unknown bidder" (history must not 503).
+- [x] **5.3 `BidHistoryService`.** Tests: sort order; my-bids filters by the caller; empty auction → empty `PageResponse`, not 404; exactly one batch lookup per page.
+- [x] **5.4 Controller.** The public GET works without `X-User-Id`; my-bids without it → 401; the `PageResponse` shape matches `PaginationMeta`. Gateway PUBLIC_PATHS gains /api/v1/bids/auction/* (single segment; /my-bids stays authenticated). BDD bid-history.feature written. (test-compiled only; not yet executed with -Pbdd).
 
 ---
 
@@ -299,5 +299,5 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 - Remaining unlocked writers to `auction_items` (update/delete/publish/reject) can overwrite at the start-time boundary. Consider a `@Version` column (optimistic locking) as defence in depth.
 - **Orphan deposit lock (cross-service):** a bid can pass pre-validation on a stale ACTIVE context after an admin cancel/force-close, lock a deposit, then be rejected by apply-bid; wallet has already settled the auction, so that lock is never released. Needs a wallet-side guard (settled-auction tombstone -> `DEPOSIT_LOCK_CLOSED`, or a sweep). bidding-service logs a WARN breadcrumb.
 - **Unknown apply-bid outcome on timeout:** logged `CRITICAL: apply-bid outcome unknown`; a single idempotent replay with the same `bidId` (auction-service `last_bid_id`) could resolve most cases - deferred (plan: never retry).
-- **Story 5 notes:** unify bid timestamps (one `Instant` per request; `bids.created_at` uses JVM-zone `BaseEntity`); negative-cache 'Unknown bidder' to avoid user-service latency on every bid when it is down.
+- **Story 5 notes:** unify bid timestamps (one `Instant` per request; `bids.created_at` uses JVM-zone `BaseEntity`); negative-cache 'Unknown bidder' to avoid user-service latency on every bid when it is down. placedAt uses bids.created_at in the JVM zone (converted via ZoneId.systemDefault()); the negative cache for "Unknown bidder" is still deferred.
 - Internal endpoints are protected at the gateway: `AuthenticationFilter` blocks `/api/v1/**/internal/**`, so the new `/api/v1/internal/auctions/**` and `/api/v1/users/internal/summaries` endpoints need no gateway changes.
