@@ -407,13 +407,14 @@ Called directly via Eureka/OpenFeign. The gateway blocks `/api/v1/**/internal/**
 - `POST /api/v1/internal/wallet/events/refund-batch` — Trigger refund processing
 - `POST /api/v1/internal/wallet/events/forfeit-batch` — Trigger forfeit processing
 
-### Admin Endpoints
+### Admin Endpoints (WALLET-307 — ADMIN role, `/api/v1/admin/wallets`)
 
-- `GET /api/v1/admin/wallet/{userId}` — View user's full wallet details
-- `GET /api/v1/admin/transactions` — View all transactions (platform-wide)
-- `GET /api/v1/admin/wallet-stats` — Dashboard stats (total fees, active locks, etc.)
-- `POST /api/v1/admin/transactions/{id}/refund` — Manual refund (with audit reason)
-- `POST /api/v1/admin/wallet/{userId}/freeze` — Freeze account (fraud prevention)
+- `GET /stats` — `{ platformWalletBalance, totalActiveWallets, totalLockedBalance, totalActiveDepositLocks }`
+- `GET /transactions?type&page=0&size=50` — all transactions across wallets, newest first
+- `GET /{userId}` — wallet, last 20 transactions, active deposit locks
+- `POST /{userId}/freeze` / `POST /{userId}/unfreeze` — status `SUSPENDED` / `ACTIVE` (freeze blocks mock deposits and new deposit locks; incoming refunds/proceeds still allowed; platform wallet cannot be frozen)
+- `POST /transactions/{transactionId}/refund { reason }` — refunds a user-side `PAYMENT`/`FORFEIT` debit in full, once (409 on repeat); funded by the platform wallet (400 if it can't cover); REFUND rows on both wallets with `{adminId, reason, originalTransactionId, direction}` metadata
+- All actions audited via `@Audit` → `audit-events`
 
 ---
 

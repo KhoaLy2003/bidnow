@@ -12,4 +12,8 @@ public interface DepositLockRepository extends JpaRepository<DepositLock, UUID> 
     Optional<DepositLock> findByWalletIdAndAuctionId(UUID walletId, UUID auctionId);
 
     List<DepositLock> findByAuctionIdAndStatus(UUID auctionId, DepositLockStatus status);
+
+    long countByStatus(DepositLockStatus status);
+
+    List<DepositLock> findByWalletIdAndStatus(UUID walletId, DepositLockStatus status);
 }

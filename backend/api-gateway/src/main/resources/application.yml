@@ -36,7 +36,7 @@ spring:
         - id: wallet-service
           uri: lb://wallet-service
           predicates:
-            - Path=/api/v1/wallets/**
+            - Path=/api/v1/wallets/**, /api/v1/admin/wallets/**
         - id: media-service
           uri: lb://media-service
           predicates:

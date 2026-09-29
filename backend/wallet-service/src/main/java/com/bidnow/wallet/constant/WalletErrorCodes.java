@@ -9,6 +9,9 @@ public final class WalletErrorCodes {
     public static final String PAYMENT_NOT_PENDING = "PAYMENT_NOT_PENDING";
     public static final String PAYMENT_DEADLINE_EXPIRED = "PAYMENT_DEADLINE_EXPIRED";
     public static final String SELLER_WALLET_NOT_FOUND = "SELLER_WALLET_NOT_FOUND";
+    public static final String TRANSACTION_NOT_FOUND = "TRANSACTION_NOT_FOUND";
+    public static final String TRANSACTION_NOT_REFUNDABLE = "TRANSACTION_NOT_REFUNDABLE";
+    public static final String TRANSACTION_ALREADY_REFUNDED = "TRANSACTION_ALREADY_REFUNDED";
 
     private WalletErrorCodes() {
     }

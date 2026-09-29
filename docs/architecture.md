@@ -85,6 +85,18 @@ Each refund is its own DB transaction. The retry/DLT policy applies to **all** w
 
 **Winner payment endpoints (public, via gateway):** `GET /api/v1/wallets/payments/pending`, `POST /api/v1/wallets/payments/confirm { auctionId }`. Confirm settles atomically: hold row locked first, then winner and seller wallets in ascending id order.
 
+**Wallet admin API (ADMIN role, via gateway `/api/v1/admin/wallets/**`):**
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/admin/wallets/stats` | Platform wallet balance, active wallets, total locked, active deposit locks |
+| GET | `/api/v1/admin/wallets/transactions?type&page=0&size=50` | All transactions, newest first |
+| GET | `/api/v1/admin/wallets/{userId}` | Wallet, last 20 transactions, active deposit locks |
+| POST | `/api/v1/admin/wallets/{userId}/freeze` · `/unfreeze` | Status SUSPENDED / ACTIVE |
+| POST | `/api/v1/admin/wallets/transactions/{id}/refund` `{ reason }` | Refund a user-side PAYMENT/FORFEIT once, funded by the platform wallet |
+
+Admin actions are audited (`@Audit` → `audit-events` topic).
+
 ---
 
 ## High-Level Diagram
