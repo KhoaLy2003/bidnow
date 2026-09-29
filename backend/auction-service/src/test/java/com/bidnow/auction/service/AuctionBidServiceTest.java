@@ -1,6 +1,8 @@
 package com.bidnow.auction.service;
 
+import com.bidnow.auction.config.AntiSnipeProperties;
 import com.bidnow.auction.constant.AuctionErrorCodes;
+import com.bidnow.auction.domain.entity.AuctionExtension;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.ApplyBidRequest;
@@ -8,16 +10,23 @@ import com.bidnow.auction.dto.response.ApplyBidResponse;
 import com.bidnow.auction.dto.response.BidContextResponse;
 import com.bidnow.auction.exception.BidTooLowException;
 import com.bidnow.auction.exception.ConflictException;
+import com.bidnow.auction.kafka.AuctionKafkaProducer;
+import com.bidnow.auction.repository.AuctionExtensionRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
+import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.exception.ForbiddenException;
 import com.bidnow.common.exception.NotFoundException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -45,11 +54,33 @@ class AuctionBidServiceTest {
     @Mock
     private AuctionItemRepository auctionItemRepository;
 
+    @Mock
+    private AuctionExtensionRepository auctionExtensionRepository;
+    @Mock
+    private AuctionKafkaProducer kafkaProducer;
+
     private AuctionBidService service;
 
     @BeforeEach
     void setUp() {
-        service = new AuctionBidService(auctionItemRepository, Clock.fixed(NOW, ZoneOffset.UTC));
+        TransactionSynchronizationManager.initSynchronization();
+        service = new AuctionBidService(auctionItemRepository, auctionExtensionRepository, kafkaProducer,
+                new AntiSnipeProperties(120, 300), Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @AfterEach
+    void clearTransactionSync() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private void triggerAfterCommit() {
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+    }
+
+    private AuctionItem endingIn(long secondsLeft) {
+        AuctionItem auction = activeAuction(1, "100.00");
+        auction.setEndTime(OffsetDateTime.ofInstant(NOW.plusSeconds(secondsLeft), ZoneOffset.UTC));
+        return auction;
     }
 
     private AuctionItem activeAuction(int totalBids, String currentPrice) {
@@ -255,5 +286,124 @@ class AuctionBidServiceTest {
     void minimumBid_usesCurrentPriceForFirstBidAndAddsIncrementAfter() {
         assertThat(AuctionBidService.minimumBid(activeAuction(0, "100.00"))).isEqualByComparingTo("100.00");
         assertThat(AuctionBidService.minimumBid(activeAuction(2, "100.00"))).isEqualByComparingTo("105.00");
+    }
+
+    // ---------------------------------------------------------------------
+    // anti-sniping extension
+    // ---------------------------------------------------------------------
+
+    @Test
+    void bidInsideSnipeWindow_extendsEndTimeAndRecordsExtension() {
+        AuctionItem auction = endingIn(119);
+        OffsetDateTime previousEnd = auction.getEndTime();
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+        ApplyBidRequest request = bid("105.00");
+
+        ApplyBidResponse response = service.applyBid(auction.getId(), request);
+
+        OffsetDateTime expectedEnd = previousEnd.plusSeconds(300);
+        assertThat(auction.getEndTime()).isEqualTo(expectedEnd);
+        assertThat(auction.getExtensionCount()).isEqualTo(1);
+        assertThat(response.isExtended()).isTrue();
+        assertThat(response.getEndTime()).isEqualTo(expectedEnd);
+        assertThat(response.getExtensionCount()).isEqualTo(1);
+
+        ArgumentCaptor<AuctionExtension> extension = ArgumentCaptor.forClass(AuctionExtension.class);
+        verify(auctionExtensionRepository).save(extension.capture());
+        assertThat(extension.getValue().getAuction()).isSameAs(auction);
+        assertThat(extension.getValue().getPreviousEndTime()).isEqualTo(previousEnd);
+        assertThat(extension.getValue().getNewEndTime()).isEqualTo(expectedEnd);
+        assertThat(extension.getValue().getExtensionDurationSeconds()).isEqualTo(300);
+        assertThat(extension.getValue().getTriggeredByBidId()).isEqualTo(request.getBidId());
+        assertThat(extension.getValue().getTriggeredByUserId()).isEqualTo(BIDDER_ID);
+    }
+
+    @Test
+    void extensionEvent_isPublishedOnlyAfterCommit() {
+        AuctionItem auction = endingIn(30);
+        OffsetDateTime previousEnd = auction.getEndTime();
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+        ApplyBidRequest request = bid("105.00");
+
+        service.applyBid(auction.getId(), request);
+
+        verify(kafkaProducer, never()).publishAuctionExtended(any());
+        triggerAfterCommit();
+        ArgumentCaptor<AuctionExtendedEvent> event = ArgumentCaptor.forClass(AuctionExtendedEvent.class);
+        verify(kafkaProducer).publishAuctionExtended(event.capture());
+        assertThat(event.getValue().getAuctionId()).isEqualTo(auction.getId());
+        assertThat(event.getValue().getAuctionTitle()).isEqualTo("Vintage Watch");
+        assertThat(event.getValue().getPreviousEndTime()).isEqualTo(previousEnd.toInstant());
+        assertThat(event.getValue().getNewEndTime()).isEqualTo(previousEnd.plusSeconds(300).toInstant());
+        assertThat(event.getValue().getExtensionCount()).isEqualTo(1);
+        assertThat(event.getValue().getTriggeredByBidId()).isEqualTo(request.getBidId());
+        assertThat(event.getValue().getTriggeredByUserId()).isEqualTo(BIDDER_ID);
+    }
+
+    @Test
+    void bidExactlyAtWindowBoundary_doesNotExtend() {
+        AuctionItem auction = endingIn(120);
+        OffsetDateTime previousEnd = auction.getEndTime();
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        ApplyBidResponse response = service.applyBid(auction.getId(), bid("105.00"));
+
+        assertThat(response.isExtended()).isFalse();
+        assertThat(auction.getEndTime()).isEqualTo(previousEnd);
+        assertThat(auction.getExtensionCount()).isZero();
+        verify(auctionExtensionRepository, never()).save(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+    }
+
+    @Test
+    void bidOutsideSnipeWindow_doesNotExtend() {
+        AuctionItem auction = endingIn(121);
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        ApplyBidResponse response = service.applyBid(auction.getId(), bid("105.00"));
+
+        assertThat(response.isExtended()).isFalse();
+        verify(auctionExtensionRepository, never()).save(any());
+    }
+
+    @Test
+    void repeatedInWindowBids_extendAgain() {
+        AuctionItem auction = endingIn(10);
+        auction.setExtensionCount(1);
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        ApplyBidResponse response = service.applyBid(auction.getId(), bid("105.00"));
+
+        assertThat(response.isExtended()).isTrue();
+        assertThat(auction.getExtensionCount()).isEqualTo(2);
+    }
+
+    @Test
+    void rejectedBidInsideWindow_doesNotExtend() {
+        AuctionItem auction = endingIn(10);
+        OffsetDateTime previousEnd = auction.getEndTime();
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThatThrownBy(() -> service.applyBid(auction.getId(), bid("101.00")))
+                .isInstanceOf(BidTooLowException.class);
+
+        assertThat(auction.getEndTime()).isEqualTo(previousEnd);
+        verify(auctionExtensionRepository, never()).save(any());
+    }
+
+    @Test
+    void replayInsideWindow_doesNotExtendAgain() {
+        AuctionItem auction = endingIn(10);
+        UUID bidId = UUID.randomUUID();
+        auction.setLastBidId(bidId);
+        OffsetDateTime previousEnd = auction.getEndTime();
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        ApplyBidResponse response = service.applyBid(auction.getId(),
+                new ApplyBidRequest(bidId, BIDDER_ID, new BigDecimal("105.00")));
+
+        assertThat(response.isExtended()).isFalse();
+        assertThat(auction.getEndTime()).isEqualTo(previousEnd);
+        verify(auctionExtensionRepository, never()).save(any());
     }
 }

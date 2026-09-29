@@ -194,15 +194,15 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 - bidding-service: `BidService` sets `bid.isAntiSnipingTriggered = result.extended()` before commit. `AuctionLifecycleConsumer` also listens to `auction-extended-topic` → evict.
 
 **Tasks:**
-- [ ] **4.1 `AntiSnipeProperties` + extension in `applyBid`.** Boundary tests with a fixed `Clock`:
+- [x] **4.1 `AntiSnipeProperties` + extension in `applyBid`.** Boundary tests with a fixed `Clock`:
   - `endTime - now = 119s` → extended, `end = old + 300s`, `extension_count+1`, one `AuctionExtension` row with `previous/new/triggeredBy*`
   - `= 120s` → not extended (strictly less than the window)
   - `= 121s` → not extended
   - a second in-window bid after an extension extends again
   - `AuctionExtendedEvent` is registered afterCommit only when extended
-- [ ] **4.2 Closure reschedule.** Tests: `close()` at the original end time on an extended auction → no status change, and a new job is scheduled at the new `endTime` with a different ID; `close()` at/after `endTime` → closes as before; the job-ID derivation is deterministic per `(auctionId, endTime)`.
-- [ ] **4.3 bidding-service flag + consumer.** Tests: extended response → persisted bid flag true and event `isAntiSnipingTriggered=true`, `endTime` = new end; `auction-extended-topic` → evict.
-- [ ] **4.4 Integration.** A bid inside the window moves `end_time` in auction_db and the closure fires at the new time, not the old. A bid outside the window leaves it unchanged. Extend the Story 1 concurrency test: closure racing an in-window bid → the auction stays ACTIVE and is extended.
+- [x] **4.2 Closure reschedule.** Tests: `close()` at the original end time on an extended auction → no status change, and a new job is scheduled at the new `endTime` with a different ID; `close()` at/after `endTime` → closes as before; the job-ID derivation is deterministic per `(auctionId, endTime)`.
+- [x] **4.3 bidding-service flag + consumer.** Tests: extended response → persisted bid flag true and event `isAntiSnipingTriggered=true`, `endTime` = new end; `auction-extended-topic` → evict.
+- [ ] **4.4 Integration.** A bid inside the window moves `end_time` in auction_db and the closure fires at the new time, not the old. A bid outside the window leaves it unchanged. Extend the Story 1 concurrency test: closure racing an in-window bid → the auction stays ACTIVE and is extended. BDD scenarios written (auction-service internal-bid-api.feature @anti-snipe); close-race scenario now races admin force-close because close() defers before endTime.
 
 ---
 

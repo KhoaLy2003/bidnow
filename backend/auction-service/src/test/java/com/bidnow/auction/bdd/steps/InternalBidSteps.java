@@ -1,6 +1,8 @@
 package com.bidnow.auction.bdd.steps;
 
+import com.bidnow.auction.service.AdminAuctionService;
 import com.bidnow.auction.service.AuctionClosureService;
+import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.bdd.client.BddRestClient;
 import com.bidnow.bdd.context.ScenarioContext;
 import io.cucumber.java.en.Given;
@@ -34,10 +36,13 @@ public class InternalBidSteps {
     /** current_winner_id seeded on the close-race auctions. */
     private static final String INITIAL_WINNER = "550e8400-e29b-41d4-a716-446655440002";
 
+    private static final String BDD_ADMIN_ID = "550e8400-e29b-41d4-a716-000000000001";
+
     private final BddRestClient client;
     private final ScenarioContext ctx;
     private final JdbcTemplate jdbcTemplate;
     private final AuctionClosureService closureService;
+    private final AdminAuctionService adminAuctionService;
     private final TransactionTemplate transactionTemplate;
 
     /** One bid attempt of a close-race round. */
@@ -165,6 +170,45 @@ public class InternalBidSteps {
                 .as("bids must overlap the closure, results: %s", raceRounds).isPositive();
     }
 
+    @Given("auction {string} ends in {int} seconds")
+    public void auctionEndsIn(String auctionId, int seconds) {
+        jdbcTemplate.update("UPDATE auction_items SET end_time = NOW() + (? * INTERVAL '1 second') WHERE id = ?::uuid",
+                seconds, auctionId);
+    }
+
+    @Then("auction {string} should end about {int} seconds from now")
+    public void auctionEndsAbout(String auctionId, int seconds) {
+        Long remaining = jdbcTemplate.queryForObject(
+                "SELECT EXTRACT(EPOCH FROM (end_time - NOW()))::bigint FROM auction_items WHERE id = ?::uuid",
+                Long.class, auctionId);
+        assertThat(remaining).isBetween((long) seconds - 5, (long) seconds + 1);
+    }
+
+    @Then("auction {string} should have {int} extension(s) recorded")
+    public void extensionsRecorded(String auctionId, int count) {
+        Integer rows = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM auction_extensions WHERE auction_id = ?::uuid", Integer.class, auctionId);
+        Integer counter = jdbcTemplate.queryForObject(
+                "SELECT extension_count FROM auction_items WHERE id = ?::uuid", Integer.class, auctionId);
+        assertThat(rows).isEqualTo(count);
+        assertThat(counter).isEqualTo(count);
+    }
+
+    @When("{int} seconds pass")
+    public void secondsPass(int seconds) throws InterruptedException {
+        Thread.sleep(seconds * 1000L);
+    }
+
+    @When("the closure job runs for auction {string}")
+    public void closureRuns(String auctionId) {
+        closureService.close(UUID.fromString(auctionId));
+    }
+
+    @Then("auction {string} should still be ACTIVE")
+    public void stillActive(String auctionId) {
+        assertThat(row(auctionId).get("status")).isEqualTo("ACTIVE");
+    }
+
     private List<BidResult> raceOnce(String auctionId, int bidders) throws Exception {
         UUID id = UUID.fromString(auctionId);
         BigDecimal start = currentPrice(auctionId);
@@ -178,7 +222,11 @@ public class InternalBidSteps {
         }
         tasks.add(() -> {
             Thread.sleep(30); // let bids overlap the closure instead of all losing the race to it
-            closureService.close(id);
+            try {
+                adminAuctionService.forceCloseAuction(UUID.fromString(BDD_ADMIN_ID), id, null);
+            } catch (BadRequestException e) {
+                // auction no longer ACTIVE: keep race assertions about bids only
+            }
             return null; // marker for the closure task, excluded from bid results
         });
         List<BidResult> results = new ArrayList<>();

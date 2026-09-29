@@ -18,6 +18,7 @@ Feature: Internal bid API used by bidding-service
   Scenario: First bid at the starting price, then increment enforcement
     When bidder "550e8400-e29b-41d4-a716-446655440010" bids "500.00" on auction "b0000000-0000-0000-0000-000000000005"
     Then the response status should be 200
+    And the response field "data.extended" should equal "false"
     And the response field "data.totalBids" should equal "1"
     When bidder "550e8400-e29b-41d4-a716-446655440011" bids "540.00" on auction "b0000000-0000-0000-0000-000000000005"
     Then the response status should be 400
@@ -60,3 +61,24 @@ Feature: Internal bid API used by bidding-service
     Given the row lock on auction "b0000000-0000-0000-0000-000000000009" is held by another transaction for 3000 ms
     When bidder "550e8400-e29b-41d4-a716-446655440010" bids "500.00" on auction "b0000000-0000-0000-0000-000000000009"
     Then the bid response should be a server error returned within 2500 ms
+
+  @anti-snipe
+  Scenario: A bid inside the final two minutes extends the auction by five minutes
+    Given auction "b0000000-0000-0000-0000-00000000000d" ends in 60 seconds
+    When bidder "550e8400-e29b-41d4-a716-446655440010" bids "100.00" on auction "b0000000-0000-0000-0000-00000000000d"
+    Then the response status should be 200
+    And the response field "data.extended" should equal "true"
+    And the response field "data.extensionCount" should equal "1"
+    And auction "b0000000-0000-0000-0000-00000000000d" should end about 360 seconds from now
+    And auction "b0000000-0000-0000-0000-00000000000d" should have 1 extension recorded
+
+  @anti-snipe
+  Scenario: The closure job for the original end time does not close an extended auction
+    Given auction "b0000000-0000-0000-0000-00000000000e" ends in 2 seconds
+    When bidder "550e8400-e29b-41d4-a716-446655440010" bids "100.00" on auction "b0000000-0000-0000-0000-00000000000e"
+    Then the response status should be 200
+    And the response field "data.extended" should equal "true"
+    When 3 seconds pass
+    And the closure job runs for auction "b0000000-0000-0000-0000-00000000000e"
+    Then auction "b0000000-0000-0000-0000-00000000000e" should still be ACTIVE
+    And auction "b0000000-0000-0000-0000-00000000000e" should end about 298 seconds from now

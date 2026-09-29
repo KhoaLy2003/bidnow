@@ -1,6 +1,8 @@
 package com.bidnow.auction.service;
 
+import com.bidnow.auction.config.AntiSnipeProperties;
 import com.bidnow.auction.constant.AuctionErrorCodes;
+import com.bidnow.auction.domain.entity.AuctionExtension;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.ApplyBidRequest;
@@ -8,7 +10,11 @@ import com.bidnow.auction.dto.response.ApplyBidResponse;
 import com.bidnow.auction.dto.response.BidContextResponse;
 import com.bidnow.auction.exception.BidTooLowException;
 import com.bidnow.auction.exception.ConflictException;
+import com.bidnow.auction.kafka.AuctionKafkaProducer;
+import com.bidnow.auction.repository.AuctionExtensionRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
+import com.bidnow.auction.util.AfterCommit;
+import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.exception.ForbiddenException;
 import com.bidnow.common.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -32,6 +39,9 @@ import java.util.UUID;
 public class AuctionBidService {
 
     private final AuctionItemRepository auctionItemRepository;
+    private final AuctionExtensionRepository auctionExtensionRepository;
+    private final AuctionKafkaProducer kafkaProducer;
+    private final AntiSnipeProperties antiSnipe;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -64,7 +74,7 @@ public class AuctionBidService {
 
         if (request.getBidId().equals(auction.getLastBidId())) {
             log.info("Replay of bid {} on auction {} — returning current state", request.getBidId(), auctionId);
-            return toResponse(auction, null);
+            return toResponse(auction, null, false);
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -84,11 +94,49 @@ public class AuctionBidService {
         auction.setCurrentWinnerId(request.getBidderId());
         auction.setTotalBids(auction.getTotalBids() + 1);
         auction.setLastBidId(request.getBidId());
+        boolean extended = extendIfInSnipeWindow(auction, request, now);
         auctionItemRepository.save(auction);
 
-        log.info("Applied bid {} on auction {}: price={}, bidder={}, totalBids={}",
-                request.getBidId(), auctionId, request.getAmount(), request.getBidderId(), auction.getTotalBids());
-        return toResponse(auction, previousWinnerId);
+        log.info("Applied bid {} on auction {}: price={}, bidder={}, totalBids={}, extended={}",
+                request.getBidId(), auctionId, request.getAmount(), request.getBidderId(), auction.getTotalBids(), extended);
+        return toResponse(auction, previousWinnerId, extended);
+    }
+
+    /**
+     * Anti-sniping: a bid with less than {@code window} remaining pushes the end time out by
+     * {@code extension}. Runs under the same row lock as the bid, so it is atomic with it and
+     * serialized against closure.
+     */
+    private boolean extendIfInSnipeWindow(AuctionItem auction, ApplyBidRequest request, OffsetDateTime now) {
+        OffsetDateTime previousEnd = auction.getEndTime();
+        if (Duration.between(now, previousEnd).compareTo(antiSnipe.window()) >= 0) {
+            return false;
+        }
+        OffsetDateTime newEnd = previousEnd.plus(antiSnipe.extension());
+        auction.setEndTime(newEnd);
+        auction.setExtensionCount(auction.getExtensionCount() + 1);
+        auctionExtensionRepository.save(AuctionExtension.builder()
+                .auction(auction)
+                .previousEndTime(previousEnd)
+                .newEndTime(newEnd)
+                .extensionDurationSeconds((int) antiSnipe.extension().toSeconds())
+                .triggeredByBidId(request.getBidId())
+                .triggeredByUserId(request.getBidderId())
+                .build());
+
+        AuctionExtendedEvent event = AuctionExtendedEvent.builder()
+                .auctionId(auction.getId())
+                .auctionTitle(auction.getTitle())
+                .previousEndTime(previousEnd.toInstant())
+                .newEndTime(newEnd.toInstant())
+                .extensionCount(auction.getExtensionCount())
+                .triggeredByBidId(request.getBidId())
+                .triggeredByUserId(request.getBidderId())
+                .build();
+        AfterCommit.run(() -> kafkaProducer.publishAuctionExtended(event));
+        log.info("Anti-sniping: auction {} extended from {} to {} by bid {}",
+                auction.getId(), previousEnd, newEnd, request.getBidId());
+        return true;
     }
 
     /** The first bid may equal the starting price (current_price starts there); later bids must add the increment. */
@@ -98,7 +146,7 @@ public class AuctionBidService {
                 : auction.getCurrentPrice().add(auction.getBidIncrement());
     }
 
-    private static ApplyBidResponse toResponse(AuctionItem auction, UUID previousWinnerId) {
+    private static ApplyBidResponse toResponse(AuctionItem auction, UUID previousWinnerId, boolean extended) {
         return ApplyBidResponse.builder()
                 .auctionId(auction.getId())
                 .currentPrice(auction.getCurrentPrice())
@@ -106,7 +154,7 @@ public class AuctionBidService {
                 .previousWinnerId(previousWinnerId)
                 .totalBids(auction.getTotalBids())
                 .endTime(auction.getEndTime())
-                .extended(false)
+                .extended(extended)
                 .extensionCount(auction.getExtensionCount())
                 .build();
     }

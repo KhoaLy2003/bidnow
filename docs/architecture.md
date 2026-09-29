@@ -67,7 +67,7 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 | Owner | Endpoint | Caller | Purpose |
 |---|---|---|---|
 | Auction | `GET /api/v1/internal/auctions/{id}/bid-context` | Bidding | Price, increment, deposit, status, seller, winner, total bids and end time for bid pre-validation. Errors: `AUCTION_NOT_FOUND` 404 |
-| Auction | `POST /api/v1/internal/auctions/{id}/bids` `{bidId, bidderId, amount}` | Bidding | Authoritative, row-locked bid application (`SELECT … FOR UPDATE`, serialized with closure/cancel). Idempotent on `bidId`. First bid ≥ current price, later bids ≥ current price + increment. Errors: `BID_TOO_LOW` 400 (`errors.minimumBid`), `BID_OWN_AUCTION` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` 409 |
+| Auction | `POST /api/v1/internal/auctions/{id}/bids` `{bidId, bidderId, amount}` | Bidding | Authoritative, row-locked bid application (`SELECT … FOR UPDATE`, serialized with closure/cancel). Idempotent on `bidId`. First bid ≥ current price, later bids ≥ current price + increment. Anti-sniping: a bid with < 120 s left extends end_time by 300 s (auction.anti-snipe.*), recorded in auction_extensions; response extended=true. Closure jobs are keyed on (auctionId, end_time) and fire at end_time + `auction.closure.grace-seconds` (20 s), because JobRunr enqueues scheduled jobs up to one poll interval early; a job finding the auction extended reschedules for the new end time. Errors: `BID_TOO_LOW` 400 (`errors.minimumBid`), `BID_OWN_AUCTION` 403, `AUCTION_NOT_FOUND` 404, `AUCTION_NOT_OPEN` 409 |
 | Wallet | `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` | Bidding | Is the user's deposit locked for this auction? |
 | Wallet | `POST /api/v1/internal/wallet/deposit-lock` `{userId, auctionId, depositAmount}` | Bidding | Idempotently lock the deposit on first bid (implicit registration). Errors: `INSUFFICIENT_BALANCE` 400, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 404, `DEPOSIT_LOCK_CLOSED` 409 |
 | Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |
@@ -81,7 +81,8 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 | Topic | Direction | Payload / effect |
 |---|---|---|
 | `bid-placed-topic` | publishes (after commit, key = auctionId) | `BidPlacedEvent` incl. `bidId`, `totalBids`, `endTime`, `previousHighestBidderId` |
-| `auction-ended-topic`, `auction-cancelled-topic` | consumes (`bidding-service-group`) | Evict `bidding:auction:{id}:context` |
+| `auction-ended-topic`, `auction-cancelled-topic`, `auction-extended-topic` | consumes (`bidding-service-group`) | Evict `bidding:auction:{id}:context` |
+| `auction-extended-topic` | published by auction-service (after commit, key = auctionId) | `AuctionExtendedEvent {auctionId, auctionTitle, previousEndTime, newEndTime, extensionCount, triggeredByBidId, triggeredByUserId}` |
 
 ### Wallet Events (Kafka)
 

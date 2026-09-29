@@ -3,6 +3,7 @@ package com.bidnow.bidding.kafka;
 import com.bidnow.bidding.service.AuctionContextCacheService;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +37,15 @@ class AuctionLifecycleConsumerTest {
         UUID auctionId = UUID.randomUUID();
 
         consumer.onAuctionCancelled(AuctionCancelledEvent.builder().auctionId(auctionId).build());
+
+        verify(contextCache).evict(auctionId);
+    }
+
+    @Test
+    void auctionExtended_evictsContext() {
+        UUID auctionId = UUID.randomUUID();
+
+        consumer.onAuctionExtended(AuctionExtendedEvent.builder().auctionId(auctionId).build());
 
         verify(contextCache).evict(auctionId);
     }

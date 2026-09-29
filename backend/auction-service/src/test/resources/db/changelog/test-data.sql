@@ -140,3 +140,28 @@ VALUES ('b0000000-0000-0000-0000-000000000009'::uuid,
         'ACTIVE',
         NOW() - INTERVAL '1 day', NOW() + INTERVAL '7 days', NOW() + INTERVAL '7 days',
         NOW(), NOW()) ON CONFLICT (id) DO NOTHING;
+
+-- changeset bidnow:bdd-anti-snipe-auctions
+-- comment: Auctions for anti-sniping BDD (end times are moved by steps at runtime)
+INSERT INTO auction_items (id, seller_id, title, description, category_id,
+                           starting_price, bid_increment, deposit_amount,
+                           current_price, total_bids, current_winner_id,
+                           status, start_time, end_time, original_end_time,
+                           created_at, updated_at)
+VALUES ('b0000000-0000-0000-0000-00000000000d'::uuid,
+        '550e8400-e29b-41d4-a716-446655440001'::uuid,
+        'BDD Anti-Snipe Auction', 'Anti-sniping extension',
+        'a0000000-0000-0000-0000-000000000001'::uuid,
+        100.00, 10.00, 20.00, 100.00, 0, NULL,
+        'ACTIVE',
+        NOW() - INTERVAL '1 day', NOW() + INTERVAL '7 days', NOW() + INTERVAL '7 days',
+        NOW(), NOW()),
+
+       ('b0000000-0000-0000-0000-00000000000e'::uuid,
+        '550e8400-e29b-41d4-a716-446655440001'::uuid,
+        'BDD Deferred Closure Auction', 'Closure after extension',
+        'a0000000-0000-0000-0000-000000000001'::uuid,
+        100.00, 10.00, 20.00, 100.00, 0, NULL,
+        'ACTIVE',
+        NOW() - INTERVAL '1 day', NOW() + INTERVAL '7 days', NOW() + INTERVAL '7 days',
+        NOW(), NOW()) ON CONFLICT (id) DO NOTHING;

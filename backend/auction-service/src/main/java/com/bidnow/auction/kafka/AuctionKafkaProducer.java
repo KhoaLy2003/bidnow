@@ -3,6 +3,7 @@ package com.bidnow.auction.kafka;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.dto.event.AuctionRejectedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ public class AuctionKafkaProducer {
     private static final String AUCTION_CANCELLED_TOPIC = "auction-cancelled-topic";
     private static final String AUCTION_REJECTED_TOPIC = "auction-rejected-topic";
     private static final String AUCTION_ENDED_TOPIC = "auction-ended-topic";
+    private static final String AUCTION_EXTENDED_TOPIC = "auction-extended-topic";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -46,6 +48,19 @@ public class AuctionKafkaProducer {
                     } else {
                         log.info("Published AuctionEndedEvent for auction: {} (source={})",
                                 event.getAuctionId(), event.getClosureSource());
+                    }
+                });
+    }
+
+    public void publishAuctionExtended(AuctionExtendedEvent event) {
+        kafkaTemplate.send(AUCTION_EXTENDED_TOPIC, event.getAuctionId().toString(), event)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("CRITICAL: Failed to publish AuctionExtendedEvent for auction {} (new end {})",
+                                event.getAuctionId(), event.getNewEndTime(), ex);
+                    } else {
+                        log.info("Published AuctionExtendedEvent for auction {} (new end {})",
+                                event.getAuctionId(), event.getNewEndTime());
                     }
                 });
     }

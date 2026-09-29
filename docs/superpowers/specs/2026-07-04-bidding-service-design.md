@@ -35,7 +35,7 @@ Auction-service exposes one internal command, `POST /api/v1/internal/auctions/{i
 3. It updates `current_price`, `current_winner_id`, `total_bids` and `last_bid_id`.
 4. If `endTime - now < antiSnipeWindow`, it extends `end_time` by `extensionDuration`, increments `extension_count` and writes an `auction_extensions` row.
 
-It returns the new state. `AuctionClosureService.close()` and both cancel paths (seller and admin) take the **same row lock**. Closure and bid acceptance are therefore strictly serialized. Closure also re-checks `now >= endTime` under the lock, and if the auction was extended it reschedules itself instead of closing.
+It returns the new state. `AuctionClosureService.close()` and both cancel paths (seller and admin) take the **same row lock**. Closure and bid acceptance are therefore strictly serialized. Closure also re-checks `now >= endTime` under the lock, and if the auction was extended it reschedules itself instead of closing. Closure job IDs are name-based on (auctionId, closeAt) so the deferred job for a new end time is a distinct JobRunr job; the stale job for the old end time finds now < endTime and reschedules (idempotent). Closure jobs fire at end_time + `auction.closure.grace-seconds` (20 s) because JobRunr enqueues scheduled jobs up to one poll interval (15 s) early; the job ID stays keyed on the real end time.
 
 This one call **replaces** the separate `extend` endpoint (original BID-104) and the `bid-placed-topic` consumer in auction-service (original #125, scenario 3). Anti-snipe configuration therefore moves into auction-service. Bidding-service's Redis context remains as a **fast pre-filter** that rejects obviously invalid bids without a network hop. It is never the authority.
 
