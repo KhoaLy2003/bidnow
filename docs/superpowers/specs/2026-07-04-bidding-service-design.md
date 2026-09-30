@@ -140,13 +140,13 @@ Redis keys (bidding-service):
 ## 6. Real-time delivery (STOMP via media-service)
 
 - media-service already runs a STOMP broker at `/ws-notifications` (SockJS). A new `AuctionRealtimeBroadcaster` consumes `bid-placed-topic`, `auction-extended-topic`, `auction-ended-topic` and `auction-cancelled-topic`. It uses a **per-instance consumer group** (`media-realtime-${random.uuid}`), so every media instance forwards to its own connected clients.
-- Destination `/topic/auctions/{auctionId}` carries the message `{ type: "BID_PLACED" | "AUCTION_EXTENDED" | "AUCTION_ENDED" | "AUCTION_CANCELLED", payload }`.
+- Destination `/topic/auctions/{auctionId}` carries the message `{ type: "BID_PLACED" | "AUCTION_EXTENDED" | "AUCTION_ENDED" | "AUCTION_CANCELLED", auctionId, payload }`.
   - `BID_PLACED`: `{ bidId, bidderId, bidderName, amount, placedAt, totalBids, endTime, antiSnipingTriggered }`
-  - `AUCTION_EXTENDED`: `{ newEndTime, extensionCount }`
-  - `AUCTION_ENDED`: `{ winnerId, finalPrice }`
+  - `AUCTION_EXTENDED`: `{ previousEndTime, newEndTime, extensionCount }`
+  - `AUCTION_ENDED`: `{ winnerId, finalPrice, endedAt }`
   - `AUCTION_CANCELLED`: `{ reason }`
-- The outbid alert goes to `/user/{previousHighestBidderId}/queue/notifications`. This needs a STOMP `Principal` from the `X-User-Id` header injected by the gateway.
-- Gateway: add a WebSocket route `/ws-notifications/**` → `lb:ws://media-service`. The SockJS HTTP fallback needs `lb://media-service` on the same path.
+- The outbid alert (`OUTBID`: `{ auctionTitle, currentPrice, newLeaderName }`) goes to `/user/{previousHighestBidderId}/queue/notifications`. This needs a STOMP `Principal` from the `X-User-Id` header injected by the gateway.
+- Gateway: a single route `/ws-notifications/**` → `lb://media-service`, auto-upgraded to WebSocket for upgrade requests (covers the SockJS HTTP fallback too).
 - Frontend: `useAuctionSocket` replaces socket.io-client with `@stomp/stompjs` + `sockjs-client` and maps the message types onto the existing `auctionStore` actions.
 
 ## 7. Failure modes

@@ -57,12 +57,19 @@
 
 ### Real-time Communication
 
-- **WebSockets**: Used for live price updates on auction pages and "Outbid" alerts.
-- **Message Broker**: Ensures eventual consistency between services (e.g., Auction closed → Notification sent → Wallet refund initiated).
+Real-time auction updates use STOMP over WebSocket (SockJS fallback) served by media-service at `/ws-notifications`, reached through the gateway (`/ws-notifications/**` → `lb://media-service`, auto-upgraded to `ws`).
+
+- **Public auction topic** `/topic/auctions/{auctionId}` — messages `{type, auctionId, payload}` with `type` ∈ `BID_PLACED` `{bidId, bidderId, bidderName, amount, placedAt, totalBids, endTime, antiSnipingTriggered}`, `AUCTION_EXTENDED` `{previousEndTime, newEndTime, extensionCount}`, `AUCTION_ENDED` `{winnerId, finalPrice, endedAt}`, `AUCTION_CANCELLED` `{reason}`. Anonymous viewers may subscribe.
+- **Private queue** `/user/queue/notifications` — `OUTBID` `{auctionTitle, currentPrice, newLeaderName}` to the previous leader. Requires an identified session.
+- **Auth:** the gateway treats `/ws-notifications/**` as optional-auth: it strips client `X-User-Id`/`X-User-Roles`, accepts a JWT via `Authorization: Bearer` or `?access_token=` (browsers cannot set WebSocket headers), injects `X-User-Id` when valid (401 when invalid), and never forwards `access_token`. media-service names the STOMP session after `X-User-Id` (`GatewayUserHandshakeHandler`).
+- **Gateway hardening:** internal paths are also blocked under service-name prefixes (`/{service}/api/v1/**/internal/**`, discovery-locator routes), and identity headers (`X-User-Id`/`X-User-Roles`) are stripped on public paths. On the optional-auth path the gateway rejects `;` and `..` segments and encoded slashes/dots with 400, returns 400 (not 500) for malformed queries, and strips `access_token` even when URL-encoded. The global `DedupeResponseHeader` default filter keeps a single `Access-Control-Allow-Origin` (gateway CORS + SockJS both set it).
+- **Receive-only clients:** an inbound STOMP guard rejects every client command except CONNECT/SUBSCRIBE/UNSUBSCRIBE/DISCONNECT/ACK/NACK, and allows SUBSCRIBE only to `/topic/auctions/{uuid}` and, for identified sessions, `/user/queue/notifications`.
+- **Scaling:** SockJS HTTP-fallback transports need session affinity when media-service runs more than one instance (not configured yet); iframe transports are unsupported (X-Frame-Options DENY).
+- **Fan-out:** media-service consumes `bid-placed-topic`, `auction-extended-topic`, `auction-ended-topic`, `auction-cancelled-topic` with per-instance consumer groups (one per listener per instance; `media-realtime-<uuid>`, latest offsets) so every instance pushes to its own clients. Delivery is best-effort; clients resync via REST on reload.
 
 ### Service-to-Service Internal APIs
 
-Synchronous internal calls go directly between services via Eureka + OpenFeign, never through the API Gateway. The gateway's `AuthenticationFilter` blocks `/api/v1/**/internal/**`, and each owning service `permitAll`s its own internal paths.
+Synchronous internal calls go directly between services via Eureka + OpenFeign, never through the API Gateway. The gateway's `AuthenticationFilter` blocks `/api/v1/**/internal/**` and `/*/api/v1/**/internal/**` (service-name-prefixed discovery routes), and each owning service `permitAll`s its own internal paths.
 
 | Owner | Endpoint | Caller | Purpose |
 |---|---|---|---|

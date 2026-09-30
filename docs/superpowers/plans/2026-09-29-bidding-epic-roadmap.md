@@ -243,16 +243,21 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
   - `kafka/AuctionRealtimeConsumer.java`, with its own `groupId = "media-realtime-${random.uuid}"` and `auto-offset-reset: latest`. Keep it separate from `NotificationKafkaConsumer` so email/notification processing keeps its shared group.
   - `config/WebSocketConfig.java`: add a `HandshakeHandler` that builds a `Principal` from `X-User-Id` so `/user` destinations work
 - api-gateway:
-  - route `media-websocket`: `Path=/ws-notifications/**` → `lb:ws://media-service` (plus SockJS HTTP on `lb://media-service`)
+  - route `media-websocket`: `Path=/ws-notifications/**` → `lb://media-service (auto-upgraded to ws)`
   - CORS for the SockJS info endpoint
   - confirm the JWT filter reads the token from the `access_token` query param for WebSocket upgrades, since browsers cannot set headers on WebSockets. Add this if it is missing.
 
 **Tasks:**
-- [ ] **6.1 Broadcaster.** Unit tests: each event maps to the right destination and payload, and an outbid message is sent only when `previousHighestBidderId != null && != bidderId`.
-- [ ] **6.2 Consumer.** Tests delegate per topic. A per-instance group ID is configured (assert on the annotation/property).
-- [ ] **6.3 Handshake principal.** Test: `X-User-Id` present → principal name = the userId; absent → anonymous, which can still subscribe to `/topic`.
-- [ ] **6.4 Gateway route + WS auth.** Test with `WebTestClient` or a manual smoke run that `/ws-notifications/info` is reachable through 8080.
+- [x] **6.1 Broadcaster.** Unit tests: each event maps to the right destination and payload, and an outbid message is sent only when `previousHighestBidderId != null && != bidderId`.
+- [x] **6.2 Consumer.** Tests delegate per topic. A per-instance group ID is configured (assert on the annotation/property).
+- [x] **6.3 Handshake principal.** Test: `X-User-Id` present → principal name = the userId; absent → anonymous, which can still subscribe to `/topic`.
+- [ ] **6.4 Gateway route + WS auth.** Test with `WebTestClient` or a manual smoke run that `/ws-notifications/info` is reachable through 8080. (route + auth unit-tested; reachability through 8080 pending smoke 6.5)
 - [ ] **6.5 Manual smoke:** two browser tabs, place a bid through Swagger, and both tabs receive `BID_PLACED`.
+
+  Smoke steps (requires the full stack via docker-compose):
+  1. Two browser tabs, each running `new SockJS('http://localhost:8080/ws-notifications?access_token=<jwt>')` with `@stomp/stompjs`, subscribing to `/topic/auctions/<id>` (one tab also to `/user/queue/notifications`).
+  2. Place a bid via Swagger / `POST /api/v1/bids` as another user → both tabs receive `BID_PLACED`; the previous leader's tab receives `OUTBID`.
+  3. Place a bid within the last 2 minutes → `AUCTION_EXTENDED` arrives. Admin cancel → `AUCTION_CANCELLED`.
 
 ---
 
@@ -294,10 +299,13 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 
 ## Risks carried forward
 
+- **Per-instance media consumer groups** (Story 6). `media-realtime-<uuid>` accumulate four groups per instance start (one per listener) until Kafka's `offsets.retention` expires them — harmless, but visible in tooling. media-service's consumer now uses `ErrorHandlingDeserializer` (fixed in Story 6), so a poison message is logged and skipped.
+- **SockJS XHR fallback needs sticky routing** before scaling media-service beyond one instance.
+- **Story 7 notes:** build the SockJS URL with a fresh token in `webSocketFactory` and `deactivate()` on logout; merge BID_PLACED/AUCTION_EXTENDED monotonically (max endTime / amount) and dedupe history by `bidId` (topics are not mutually ordered); WS `placedAt` is UTC while REST uses the JVM offset — compare as instants; STOMP heartbeats are not configured.
 - **DB connection held across the apply-bid Feign call** (Story 3). Mitigated by the 2s read timeout. Watch the Hikari pool under load and move the insert after apply-bid (idempotent on `bidId`) if the pool saturates.
 - **Kafka outage after commit:** the bid is correct, but the live push is lost. Clients resync on reload. #19 may add a replay.
 - Remaining unlocked writers to `auction_items` (update/delete/publish/reject) can overwrite at the start-time boundary. Consider a `@Version` column (optimistic locking) as defence in depth.
 - **Orphan deposit lock (cross-service):** a bid can pass pre-validation on a stale ACTIVE context after an admin cancel/force-close, lock a deposit, then be rejected by apply-bid; wallet has already settled the auction, so that lock is never released. Needs a wallet-side guard (settled-auction tombstone -> `DEPOSIT_LOCK_CLOSED`, or a sweep). bidding-service logs a WARN breadcrumb.
 - **Unknown apply-bid outcome on timeout:** logged `CRITICAL: apply-bid outcome unknown`; a single idempotent replay with the same `bidId` (auction-service `last_bid_id`) could resolve most cases - deferred (plan: never retry).
 - **Story 5 notes:** unify bid timestamps (one `Instant` per request; `bids.created_at` uses JVM-zone `BaseEntity`); negative-cache 'Unknown bidder' to avoid user-service latency on every bid when it is down. placedAt uses bids.created_at in the JVM zone (converted via ZoneId.systemDefault()); the negative cache for "Unknown bidder" is still deferred.
-- Internal endpoints are protected at the gateway: `AuthenticationFilter` blocks `/api/v1/**/internal/**`, so the new `/api/v1/internal/auctions/**` and `/api/v1/users/internal/summaries` endpoints need no gateway changes.
+- Internal endpoints are protected at the gateway: `AuthenticationFilter` blocks `/api/v1/**/internal/**` and `/*/api/v1/**/internal/**` (service-name-prefixed discovery routes), so the new `/api/v1/internal/auctions/**` and `/api/v1/users/internal/summaries` endpoints need no gateway changes.

@@ -15,8 +15,13 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,7 +45,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
      * Feign clients call these directly via Eureka, not through this gateway.
      */
     private static final List<String> INTERNAL_PATHS = List.of(
-            "/api/v1/**/internal/**"
+            "/api/v1/**/internal/**",
+            // discovery-locator routes: /{service-id}/api/v1/**/internal/**
+            "/*/api/v1/**/internal/**"
     );
     /**
      * Paths that do NOT require a valid JWT.
@@ -63,6 +70,15 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/demo/**",
             "/api/v1/media/download"
     );
+    /**
+     * Paths where a JWT is optional: anonymous callers pass through (public auction topics), a valid
+     * JWT identifies the user (private queues), an invalid one is rejected. Browsers cannot set
+     * headers on WebSocket/SockJS, so the token may also arrive as the {@code access_token} query param.
+     */
+    private static final List<String> OPTIONAL_AUTH_PATHS = List.of(
+            "/ws-notifications/**"
+    );
+    private static final String ACCESS_TOKEN_PARAM = "access_token";
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final JwtUtil jwtUtil;
 
@@ -77,9 +93,20 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
+        if (isOptionalAuthPath(path)) {
+            return filterOptionalAuth(exchange, chain, path);
+        }
+
         // Let public paths through without any token check
         if (isPublicPath(path)) {
-            return chain.filter(exchange);
+            // never forward client-supplied identity headers downstream
+            ServerHttpRequest stripped = exchange.getRequest().mutate()
+                    .headers(headers -> {
+                        headers.remove(X_USER_ID_HEADER);
+                        headers.remove(X_USER_ROLES_HEADER);
+                    })
+                    .build();
+            return chain.filter(exchange.mutate().request(stripped).build());
         }
 
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -122,6 +149,98 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     public int getOrder() {
         // Run before route filters
         return Ordered.HIGHEST_PRECEDENCE;
+    }
+
+    private Mono<Void> filterOptionalAuth(ServerWebExchange exchange, GatewayFilterChain chain, String path) {
+        ServerHttpRequest request = exchange.getRequest();
+        if (hasUnsafePath(request.getURI().getRawPath())) {
+            log.warn("Rejected suspicious optional-auth path: {}", request.getURI().getRawPath());
+            exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
+            return exchange.getResponse().setComplete();
+        }
+        String token = resolveToken(request);
+        if (token != null && !jwtUtil.isTokenValid(token)) {
+            log.warn("Invalid or expired JWT for optional-auth path: {}", path);
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+        URI withoutToken;
+        try {
+            withoutToken = stripAccessToken(request.getURI());
+        } catch (IllegalArgumentException e) {
+            log.warn("Malformed query on optional-auth path: {}", path);
+            exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
+            return exchange.getResponse().setComplete();
+        }
+        String userId = token == null ? null : jwtUtil.extractUserId(token);
+        String roles = token == null ? null : jwtUtil.extractRoles(token);
+        ServerHttpRequest mutated = request.mutate()
+                .uri(withoutToken)
+                .headers(headers -> {
+                    headers.remove(X_USER_ID_HEADER); // never trust client-supplied identity
+                    headers.remove(X_USER_ROLES_HEADER);
+                    if (userId != null) {
+                        headers.add(X_USER_ID_HEADER, userId);
+                        if (roles != null) {
+                            headers.add(X_USER_ROLES_HEADER, roles);
+                        }
+                    }
+                })
+                .build();
+        return chain.filter(exchange.mutate().request(mutated).build());
+    }
+
+    /** Drops every query param whose URL-decoded name is access_token, keeping the rest raw. */
+    static URI stripAccessToken(URI uri) {
+        String rawQuery = uri.getRawQuery();
+        String newQuery = null;
+        if (rawQuery != null) {
+            List<String> kept = new ArrayList<>();
+            for (String part : rawQuery.split("&")) {
+                if (part.isEmpty()) {
+                    continue;
+                }
+                int eq = part.indexOf('=');
+                String rawName = eq < 0 ? part : part.substring(0, eq);
+                if (!ACCESS_TOKEN_PARAM.equals(URLDecoder.decode(rawName, StandardCharsets.UTF_8))) {
+                    kept.add(part);
+                }
+            }
+            newQuery = kept.isEmpty() ? null : String.join("&", kept);
+        }
+        return UriComponentsBuilder.fromUri(uri).replaceQuery(newQuery).build(true).toUri();
+    }
+
+    private static boolean hasUnsafePath(String rawPath) {
+        if (rawPath == null) {
+            return false;
+        }
+        if (rawPath.indexOf(';') >= 0) {
+            return true;
+        }
+        String lower = rawPath.toLowerCase();
+        if (lower.contains("%2f") || lower.contains("%2e") || lower.contains("%5c")) {
+            return true;
+        }
+        for (String segment : rawPath.split("/")) {
+            if (segment.equals("..") || segment.equals(".")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String resolveToken(ServerHttpRequest request) {
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            return authHeader.substring(BEARER_PREFIX.length());
+        }
+        String queryToken = request.getQueryParams().getFirst(ACCESS_TOKEN_PARAM);
+        return queryToken == null || queryToken.isBlank() ? null : queryToken;
+    }
+
+    private boolean isOptionalAuthPath(String path) {
+        return OPTIONAL_AUTH_PATHS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 
     private boolean isInternalPath(String path) {
