@@ -12,10 +12,12 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      # Auto-generated /{service-id}/** routes are disabled: they exposed every
+      # downstream path (actuator, internal endpoints) to any JWT holder.
+      # Only the explicit /api/v1/** routes below are reachable through the gateway.
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false
       routes:
         - id: identity-service
           uri: lb://identity-service
