@@ -6,6 +6,7 @@ package com.bidnow.user.service.impl;
 import com.bidnow.common.annotation.Audit;
 import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.constant.ErrorCodes;
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.enums.AuditAction;
@@ -94,6 +95,18 @@ public class UserProfileServiceImpl implements UserProfileService {
                         .id(profile.getUserId())
                         .name(profile.getDisplayName())
                         .avatarUrl(profile.getAvatarUrl())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserNotificationPreferenceResponse> getNotificationPreferences(List<UUID> userIds) {
+        return userPreferencesRepository.findByUserIdIn(new LinkedHashSet<>(userIds)).stream()
+                .map(preferences -> UserNotificationPreferenceResponse.builder()
+                        .userId(preferences.getUserId())
+                        .language(preferences.getLanguage())
+                        .emailNotifications(preferences.getEmailNotifications())
                         .build())
                 .toList();
     }

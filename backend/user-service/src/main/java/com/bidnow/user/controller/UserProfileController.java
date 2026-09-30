@@ -5,6 +5,7 @@ package com.bidnow.user.controller;
 
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
@@ -71,6 +72,13 @@ public class UserProfileController {
     public ResponseEntity<BaseResponse<List<UserSummaryResponse>>> getUserSummaries(
             @Valid @RequestBody UserSummariesRequest request) {
         return ResponseEntity.ok(BaseResponse.success(userProfileService.getUserSummaries(request.getUserIds())));
+    }
+
+    @Operation(summary = "Get notification preferences by user IDs (Internal)", hidden = true)
+    @PostMapping("/internal/notification-preferences")
+    public ResponseEntity<BaseResponse<List<UserNotificationPreferenceResponse>>> getNotificationPreferences(
+            @Valid @RequestBody UserSummariesRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(userProfileService.getNotificationPreferences(request.getUserIds())));
     }
 
     /**

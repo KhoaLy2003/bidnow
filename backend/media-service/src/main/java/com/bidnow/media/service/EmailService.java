@@ -29,6 +29,14 @@ public interface EmailService {
     EmailLog sendTemplateEmail(String to, NotificationTemplate template, Map<String, Object> variables);
 
     /**
+     * Same as {@link #sendTemplateEmail(String, NotificationTemplate, Map)} but links the log to an in-app
+     * notification. Runs in its own transaction so it commits even when called from an after-commit hook.
+     *
+     * @param notificationId the media_notifications row this email belongs to (nullable)
+     */
+    EmailLog sendTemplateEmail(UUID notificationId, String to, NotificationTemplate template, Map<String, Object> variables);
+
+    /**
      * Sends a test email using a template ID.
      *
      * @param templateId     ID of the template to use

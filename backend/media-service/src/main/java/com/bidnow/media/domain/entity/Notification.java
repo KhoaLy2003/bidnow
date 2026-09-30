@@ -83,4 +83,10 @@ public class Notification extends BaseEntity {
     @Column(name = "retry_count")
     @Builder.Default
     private int retryCount = 0;
+
+    @Column(name = "dedup_key", nullable = false, length = 200)
+    private String dedupKey;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

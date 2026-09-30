@@ -1,8 +1,10 @@
 package com.bidnow.user.service.impl;
 
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.user.domain.entity.UserPreferences;
 import com.bidnow.user.domain.entity.UserProfile;
 import com.bidnow.user.mapper.UserProfileMapper;
 import com.bidnow.user.repository.UserPreferencesRepository;
@@ -154,6 +156,31 @@ class UserProfileServiceImplTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
         verify(userProfileRepository).findByUserIdIn(ids.capture());
+        assertThat(ids.getValue()).containsExactlyInAnyOrder(alice, unknown);
+    }
+
+    // -------------------------------------------------------
+    // getNotificationPreferences
+    // -------------------------------------------------------
+
+    @Test
+    void getNotificationPreferences_returnsExistingPreferencesWithOneQuery() {
+        UUID alice = UUID.randomUUID();
+        UUID unknown = UUID.randomUUID();
+        when(userPreferencesRepository.findByUserIdIn(any())).thenReturn(List.of(
+                UserPreferences.builder().userId(alice).language("vi").emailNotifications(false).build()));
+
+        List<UserNotificationPreferenceResponse> result =
+                userProfileService.getNotificationPreferences(List.of(alice, unknown, alice));
+
+        assertThat(result).singleElement().satisfies(p -> {
+            assertThat(p.getUserId()).isEqualTo(alice);
+            assertThat(p.getLanguage()).isEqualTo("vi");
+            assertThat(p.getEmailNotifications()).isFalse();
+        });
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(userPreferencesRepository).findByUserIdIn(ids.capture());
         assertThat(ids.getValue()).containsExactlyInAnyOrder(alice, unknown);
     }
 }

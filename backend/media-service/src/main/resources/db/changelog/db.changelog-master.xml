@@ -10,5 +10,6 @@
     <include file="db/changelog/migrations/03-otp-verification-templates.sql"/>
     <include file="db/changelog/migrations/04-rename-tables-and-add-media-assets.sql"/>
     <include file="db/changelog/migrations/05-create-audit-logs-table.sql"/>
+    <include file="db/changelog/migrations/06-notification-pipeline.sql"/>
 
 </databaseChangeLog>
