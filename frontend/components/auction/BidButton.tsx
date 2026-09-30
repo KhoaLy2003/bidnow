@@ -6,15 +6,16 @@ import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 interface BidButtonProps {
-  amount?:    number         // cents — shows "Confirm $X.XX" when provided
+  amount?:    number         // dollars — shows "Confirm $X.XX" when provided
   isLoading?: boolean
   disabled?:  boolean
   onClick?:   () => void
+  type?:      'button' | 'submit'
   className?: string
 }
 
 export function BidButton({
-  amount, isLoading, disabled, onClick, className,
+  amount, isLoading, disabled, onClick, type, className,
 }: BidButtonProps) {
   const label = amount
     ? `Confirm ${formatCurrency(amount)}`
@@ -23,6 +24,7 @@ export function BidButton({
   return (
     <Button
       variant="brand"
+      type={type}
       className={cn('h-12 w-full font-medium text-base', className)}
       disabled={disabled || isLoading}
       onClick={onClick}

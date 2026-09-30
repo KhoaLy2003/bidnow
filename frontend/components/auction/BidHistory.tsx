@@ -1,4 +1,7 @@
+'use client'
+
 import { Trophy, Bot } from 'lucide-react'
+import { useHasMounted } from '@/hooks/useHasMounted'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -15,6 +18,9 @@ interface BidHistoryProps {
 }
 
 export function BidHistory({ items, onLoadMore, hasMore, className }: BidHistoryProps) {
+  // Relative time depends on Date.now(); render it only after hydration to avoid a server/client mismatch.
+  const hasMounted = useHasMounted()
+
   if (items.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
@@ -54,7 +60,7 @@ export function BidHistory({ items, onLoadMore, hasMore, className }: BidHistory
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(item.placedAt)}
+                    {hasMounted ? formatRelativeTime(item.placedAt) : ''}
                   </span>
                 </div>
                 <span

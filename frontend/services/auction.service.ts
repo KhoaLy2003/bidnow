@@ -1,7 +1,6 @@
 import { mapAuctionDetailResponse, mapAuctionBrowseItem, mapCategoryCount } from '@/types/mappers/auction.mapper'
-import { MOCK_BIDS } from '@/lib/mock-data'
 import { apiFetch } from '@/lib/apiClient'
-import type { BidHistoryItem, AuctionDetail } from '@/types/ui/auction.ui'
+import type { AuctionDetail } from '@/types/ui/auction.ui'
 import type { AuctionBrowseItem, CategoryCount } from '@/types/ui/auction-browse.ui'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
 import type {
@@ -15,8 +14,6 @@ import type {
   CategoryCountResponse,
   BrowseAuctionParams,
 } from '@/types/api/auction.api'
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export interface GetAuctionsParams {
   q?: string
@@ -138,12 +135,5 @@ export const auctionService = {
     if (!response.ok) return null
     const body: ApiResponse<AuctionDetailResponse> = await response.json()
     return mapAuctionDetailResponse(body.data)
-  },
-
-  async getBidHistory(auctionId: string): Promise<BidHistoryItem[]> {
-    await delay(200)
-    return MOCK_BIDS.filter((b) => b.auctionId === auctionId).length > 0
-      ? MOCK_BIDS.filter((b) => b.auctionId === auctionId)
-      : MOCK_BIDS.map(b => ({ ...b, auctionId }))
   },
 }

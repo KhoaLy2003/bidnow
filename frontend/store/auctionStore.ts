@@ -1,37 +1,50 @@
 import { create } from 'zustand'
-import { AuctionStatus } from '@/lib/design-tokens'
-import type { Bid } from '@/types/ui/auction.ui'
+import {
+  appendOlderBids, applyAuctionCancelled, applyAuctionEnded, applyAuctionExtended,
+  applyBidPlaced, applyOutbid, applyOwnBid, mergeSnapshot, seedLiveState,
+  type LiveAuctionState,
+} from '@/lib/realtime/auction-live'
+import type { AuctionDetail, BidEntry } from '@/types/ui/auction.ui'
+import type { PlaceBidResponse } from '@/types/api/bid.api'
+import type {
+  AuctionEndedPayload, AuctionExtendedPayload, BidPlacedPayload,
+} from '@/types/api/realtime.api'
 
 interface AuctionState {
-  currentBid:      number
-  bidHistory:      Bid[]
-  status:          AuctionStatus
-  isOutbid:        boolean
-  setBid:          (amount: number) => void
-  addBidToHistory: (bid: Bid) => void
-  setStatus:       (status: AuctionStatus) => void
-  setOutbid:       (value: boolean) => void
+  live:            LiveAuctionState | null
+  hydrate:         (auction: AuctionDetail, bids: BidEntry[]) => void
+  bidPlaced:       (auctionId: string, p: BidPlacedPayload, meId: string | null) => void
+  ownBidPlaced:    (r: PlaceBidResponse, me: { id: string; name: string }) => void
+  extended:        (auctionId: string, p: AuctionExtendedPayload) => void
+  ended:           (auctionId: string, p: AuctionEndedPayload) => void
+  cancelled:       (auctionId: string) => void
+  outbid:          (auctionId: string) => void
+  appendOlderBids: (auctionId: string, bids: BidEntry[]) => void
   reset:           () => void
 }
 
-const initialState = {
-  currentBid: 0,
-  bidHistory: [] as Bid[],
-  status:     AuctionStatus.Active,
-  isOutbid:   false,
-}
+/** Live state of the auction detail page being viewed. Pushes before hydration are dropped (resync covers them). */
+export const useAuctionStore = create<AuctionState>((set) => {
+  // Writes addressed to an auction other than the open one (late responses after navigation) are dropped.
+  const update = (auctionId: string, fn: (live: LiveAuctionState) => LiveAuctionState) =>
+    set((state) => (state.live?.auctionId === auctionId ? { live: fn(state.live) } : state))
 
-export const useAuctionStore = create<AuctionState>((set) => ({
-  ...initialState,
+  return {
+    live: null,
 
-  setBid: (amount) => set({ currentBid: amount }),
+    hydrate: (auction, bids) =>
+      set((state) => {
+        const seeded = seedLiveState(auction, bids)
+        return { live: state.live?.auctionId === auction.id ? mergeSnapshot(state.live, seeded) : seeded }
+      }),
 
-  addBidToHistory: (bid) =>
-    set((state) => ({ bidHistory: [bid, ...state.bidHistory].slice(0, 100) })),
-
-  setStatus: (status) => set({ status }),
-
-  setOutbid: (value) => set({ isOutbid: value }),
-
-  reset: () => set(initialState),
-}))
+    bidPlaced:       (id, p, meId) => update(id, (live) => applyBidPlaced(live, p, meId)),
+    ownBidPlaced:    (r, me) => update(r.auctionId, (live) => applyOwnBid(live, r, me)),
+    extended:        (id, p) => update(id, (live) => applyAuctionExtended(live, p)),
+    ended:           (id, p) => update(id, (live) => applyAuctionEnded(live, p)),
+    cancelled:       (id) => update(id, applyAuctionCancelled),
+    outbid:          (id) => update(id, applyOutbid),
+    appendOlderBids: (id, bids) => update(id, (live) => appendOlderBids(live, bids)),
+    reset:           () => set({ live: null }),
+  }
+})

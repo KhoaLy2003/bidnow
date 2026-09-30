@@ -14,7 +14,7 @@ Welcome to the frontend of the BidNow project! As an AI agent working in this di
 - **Components:** Base UI (`@base-ui/react`) and shadcn/ui. **DO NOT** hand-write primitive components if a Base UI or shadcn equivalent exists (e.g., Button, Input, Dialog, etc.). Use the CLI `npx shadcn@latest add <component>` to add them. They reside in `components/ui/`.
 - **Icons:** Lucide React (`lucide-react`). Do not use other icon libraries.
 - **State Management:** Zustand 5 or React Context.
-- **Real-time:** Socket.io-client for live auction updates.
+- **Real-time:** STOMP (`@stomp/stompjs`) over native WebSocket for live auction updates — see `hooks/useAuctionSocket.ts`.
 
 ## 🎨 Design System & Styling Rules
 - **Color System:** We use a dual-layer token system. Layer 1 is shadcn semantic variables, Layer 2 is BidNow extended tokens (auction states, wallet, brand palette). All are defined in `app/globals.css`. Do not hardcode raw hex colors in components; always use the CSS variables (e.g., `bg-[--color-auction-active-bg]`).

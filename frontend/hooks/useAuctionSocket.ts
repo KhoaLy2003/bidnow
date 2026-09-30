@@ -1,50 +1,86 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import { Client, ReconnectionTimeMode, type IMessage } from '@stomp/stompjs'
+import { toast } from 'sonner'
 import { useAuctionStore } from '@/store/auctionStore'
-import { AuctionStatus } from '@/lib/design-tokens'
-import type { Bid } from '@/types/ui/auction.ui'
+import { useAuthStore } from '@/store/authStore'
+import { getFreshAccessToken } from '@/lib/apiClient'
+import { formatCurrency } from '@/lib/format'
+import { dispatchRealtimeMessage, parseRealtimeMessage, type RealtimeHandlers } from '@/lib/realtime/dispatch'
+import { resolveWsEndpoint, withAccessToken } from '@/lib/realtime/ws-url'
 
-interface BidNewEvent      { bid: Bid }
-interface AuctionStatusEvent { status: AuctionStatus }
-interface AuctionEndEvent  { winnerId?: string; finalBid: number }
+const USER_QUEUE = '/user/queue/notifications'
 
-export function useAuctionSocket(auctionId: string) {
-  const { currentBid, bidHistory, status } = useAuctionStore()
-  const socketRef = useRef<Socket | null>(null)
+/**
+ * Live auction updates over STOMP (spec §6). Subscribes to the auction topic and, when logged in,
+ * the private notification queue. Reconnects with exponential backoff; each (re)connect fetches a
+ * fresh token, and every (re)connect calls `onResync` to recover events missed before the subscription.
+ * Re-runs (disconnects and reconnects) when the auction or the logged-in user changes, so logout
+ * drops the private queue.
+ */
+export function useAuctionSocket(auctionId: string, onResync?: () => void): void {
+  const userId = useAuthStore((s) => s.user?.id ?? null)
+  const onResyncRef = useRef(onResync)
 
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SOCKET_URL
-    if (!url) return
+    onResyncRef.current = onResync
+  }, [onResync])
 
-    useAuctionStore.getState().reset()
-
-    const socket = io(url, { autoConnect: true })
-    socketRef.current = socket
-
-    socket.emit('auction:join', auctionId)
-
-    socket.on('bid:new', ({ bid }: BidNewEvent) => {
-      const store = useAuctionStore.getState()
-      store.setBid(bid.amount)
-      store.addBidToHistory(bid)
-    })
-    socket.on('auction:status', ({ status: s }: AuctionStatusEvent) => {
-      useAuctionStore.getState().setStatus(s)
-    })
-    socket.on('auction:end', ({ finalBid }: AuctionEndEvent) => {
-      const store = useAuctionStore.getState()
-      store.setBid(finalBid)
-      store.setStatus(AuctionStatus.Closed)
+  useEffect(() => {
+    const endpoint = resolveWsEndpoint({
+      wsUrl:  process.env.NEXT_PUBLIC_WS_URL,
+      apiUrl: process.env.NEXT_PUBLIC_API_URL,
     })
 
-    return () => {
-      socket.emit('auction:leave', auctionId)
-      socket.disconnect()
-      socketRef.current = null
+    try {
+      new URL(endpoint)
+    } catch {
+      console.error('Invalid WebSocket URL for live auction updates:', endpoint)
+      return
     }
-  }, [auctionId])
 
-  return { currentBid, bidHistory, status }
+    const handlers: RealtimeHandlers = {
+      bidPlaced: (p) => useAuctionStore.getState().bidPlaced(auctionId, p, userId),
+      extended: (p) => {
+        useAuctionStore.getState().extended(auctionId, p)
+        toast.info(`Auction extended — now ends at ${new Date(p.newEndTime).toLocaleTimeString()}`)
+      },
+      ended: (p) => useAuctionStore.getState().ended(auctionId, p),
+      cancelled: () => useAuctionStore.getState().cancelled(auctionId),
+      outbid: (outbidAuctionId, p) => {
+        // The store no-ops unless this is the open auction; the toast shows for any auction.
+        useAuctionStore.getState().outbid(outbidAuctionId)
+        const where = p.auctionTitle ? ` on “${p.auctionTitle}”` : ''
+        toast.warning(`You’ve been outbid${where} — now ${formatCurrency(p.currentPrice)}`)
+      },
+    }
+
+    const onMessage = (message: IMessage) => {
+      const parsed = parseRealtimeMessage(message.body)
+      if (parsed) dispatchRealtimeMessage(parsed, auctionId, handlers)
+    }
+
+    const client = new Client({
+      reconnectDelay:    1_000,
+      maxReconnectDelay: 30_000,
+      reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+      heartbeatIncoming: 0, // the broker has no heartbeats configured (see roadmap risks)
+      heartbeatOutgoing: 0,
+      beforeConnect: async (c) => {
+        const token = userId ? await getFreshAccessToken() : null
+        c.brokerURL = withAccessToken(endpoint, token)
+      },
+      onConnect: () => {
+        client.subscribe(`/topic/auctions/${auctionId}`, onMessage)
+        if (userId) client.subscribe(USER_QUEUE, onMessage)
+        onResyncRef.current?.()
+      },
+    })
+
+    client.activate()
+    return () => {
+      void client.deactivate()
+    }
+  }, [auctionId, userId])
 }

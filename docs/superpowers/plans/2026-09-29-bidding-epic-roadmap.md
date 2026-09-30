@@ -273,17 +273,21 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 - `components/auction/BidForm.tsx`: real submit, error UX
 - `components/auction/BidHistory.tsx` (load more)
 - `app/auctions/[id]/page.tsx`
-- `hooks/useAuctionSocket.ts`: rewrite on `@stomp/stompjs` + `sockjs-client`
+- `hooks/useAuctionSocket.ts`: connects with `@stomp/stompjs` over native WebSocket (`/ws-notifications/websocket`)
 - `store/auctionStore.ts`: add `setEndTime`/`setTotalBids` if they are missing
-- `package.json`: add `@stomp/stompjs` and `sockjs-client`, remove `socket.io-client`
+- `package.json`: add `@stomp/stompjs`, `vitest`
 - `.env.example`: `NEXT_PUBLIC_WS_URL`
 
+**Plan:** `docs/superpowers/plans/2026-09-30-frontend-bidding.md`
+
+**Not done:** My-bids tab / dashboard (needs a cross-auction endpoint); auto-bid UI disabled until auto-bid ships.
+
 **Tasks:**
-- [ ] **7.1 Settle money units.** `BidForm` documents cents, but `auction.mapper.ts` passes `dto.currentPrice` (dollars) straight through. Pick one unit (recommended: keep dollars end-to-end to match the API, and drop the ×100 in `BidForm`). Fix the mapper, `BidForm` and `formatCurrency` usage together, with a unit test on the mapper.
-- [ ] **7.2 Types + `bid.service` + mapper**, with tests for the mapper.
-- [ ] **7.3 `BidForm` submit.** Success → optimistic `setBid`. `BID_INSUFFICIENT_BALANCE` → inline message with a "Top up wallet" link to the wallet page, showing `required`/`availableBalance`. `BID_TOO_LOW` → refresh the minimum from `errors.minimumBid`. `AUCTION_NOT_OPEN` → disable the form. 503 → "Bidding temporarily unavailable, try again". 401 → login redirect.
-- [ ] **7.4 History.** Wire the page and "load more" to the real API, and add a "My bids" tab if the design has one.
-- [ ] **7.5 STOMP hook.** Subscribe to `/topic/auctions/{id}` and `/user/queue/notifications`. Map `BID_PLACED` → `setBid` + `addBidToHistory` + `setEndTime`, `AUCTION_EXTENDED` → `setEndTime` + a toast, and `AUCTION_ENDED`/`CANCELLED` → `setStatus(Closed)`. Reconnect with backoff, and unsubscribe on unmount.
+- [x] **7.1 Settle money units.** `BidForm` documents cents, but `auction.mapper.ts` passes `dto.currentPrice` (dollars) straight through. Pick one unit (recommended: keep dollars end-to-end to match the API, and drop the ×100 in `BidForm`). Fix the mapper, `BidForm` and `formatCurrency` usage together, with a unit test on the mapper.
+- [x] **7.2 Types + `bid.service` + mapper**, with tests for the mapper.
+- [x] **7.3 `BidForm` submit.** Success → optimistic `setBid`. `BID_INSUFFICIENT_BALANCE` → inline message with a "Top up wallet" link to the wallet page, showing `required`/`availableBalance`. `BID_TOO_LOW` → refresh the minimum from `errors.minimumBid`. `AUCTION_NOT_OPEN` → disable the form. 503 → "Bidding temporarily unavailable, try again". 401 → login redirect.
+- [x] **7.4 History.** Wire the page and "load more" to the real API, and add a "My bids" tab if the design has one.
+- [x] **7.5 STOMP hook.** Subscribe to `/topic/auctions/{id}` and `/user/queue/notifications`. Map `BID_PLACED` → `setBid` + `addBidToHistory` + `setEndTime`, `AUCTION_EXTENDED` → `setEndTime` + a toast, and `AUCTION_ENDED`/`CANCELLED` → `setStatus(Closed)`. Reconnect with backoff, and unsubscribe on unmount.
 - [ ] **7.6** `npm run lint && npm run build`. Manual E2E: two users bid against each other, one of them in the final two minutes, then top-up flow with an empty wallet.
 
 ---
@@ -300,7 +304,7 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 ## Risks carried forward
 
 - **Per-instance media consumer groups** (Story 6). `media-realtime-<uuid>` accumulate four groups per instance start (one per listener) until Kafka's `offsets.retention` expires them — harmless, but visible in tooling. media-service's consumer now uses `ErrorHandlingDeserializer` (fixed in Story 6), so a poison message is logged and skipped.
-- **SockJS XHR fallback needs sticky routing** before scaling media-service beyond one instance.
+- **SockJS XHR fallback needs sticky routing** before scaling media-service beyond one instance. The frontend uses the raw WebSocket transport, so this only affects non-browser SockJS clients.
 - **Story 7 notes:** build the SockJS URL with a fresh token in `webSocketFactory` and `deactivate()` on logout; merge BID_PLACED/AUCTION_EXTENDED monotonically (max endTime / amount) and dedupe history by `bidId` (topics are not mutually ordered); WS `placedAt` is UTC while REST uses the JVM offset — compare as instants; STOMP heartbeats are not configured.
 - **DB connection held across the apply-bid Feign call** (Story 3). Mitigated by the 2s read timeout. Watch the Hikari pool under load and move the insert after apply-bid (idempotent on `bidId`) if the pool saturates.
 - **Kafka outage after commit:** the bid is correct, but the live push is lost. Clients resync on reload. #19 may add a replay.

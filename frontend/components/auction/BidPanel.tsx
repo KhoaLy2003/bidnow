@@ -1,7 +1,7 @@
 'use client'
 
 import { AuctionStatus }    from '@/lib/design-tokens'
-import { useAuthStore }     from '@/store/authStore'
+import { useLiveAuction }   from '@/hooks/useLiveAuction'
 import { BidPanelUpcoming } from './BidPanelUpcoming'
 import { BidPanelLive }     from './BidPanelLive'
 import { BidPanelEnded }    from './BidPanelEnded'
@@ -25,10 +25,10 @@ interface BidPanelProps {
   auction: AuctionDetail
 }
 
-export function BidPanel({ auction }: BidPanelProps) {
-  const user = useAuthStore(s => s.user)
-  const isOwner = !!user && !!auction.seller && user.id === auction.seller.id
-  const isCurrentUserWinning = user?.id === auction.currentWinnerId
+export function BidPanel({ auction: base }: BidPanelProps) {
+  const { auction, userId } = useLiveAuction(base)
+  const isOwner = !!userId && !!auction.seller && userId === auction.seller.id
+  const isCurrentUserWinning = !!userId && userId === auction.currentWinnerId
 
   if (isOwner) {
     return <SellerOwnedPanel auctionId={auction.id} />
