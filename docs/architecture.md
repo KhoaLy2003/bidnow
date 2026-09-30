@@ -36,6 +36,8 @@
 ### Core Services
 
 1. **API Gateway**: The entry point for all client requests. Handles routing, rate limiting, and initial security checks.
+   - Routing is **explicit only**: each service is exposed through the `/api/v1/...` path predicates declared in `api-gateway/src/main/resources/application.yml`. The Spring Cloud Gateway discovery locator (`spring.cloud.gateway.discovery.locator.enabled`) is **disabled**, so `/{service-id}/**` routes (e.g. `/auction-service/actuator/**`) are not reachable through the gateway. New endpoints must be added under an existing or new explicit route. `GatewayRoutesTest` enforces this.
+   - `/api/v1/**/internal/**` paths are rejected with `403` by `AuthenticationFilter`; they are only reachable service-to-service (Feign via Eureka).
 2. **Identity Service**: Manages user registration (including email OTP verification), login, and JWT token issuance/validation.
 3. **User Service**: Manages user profiles, preferences, and account metadata.
 4. **Auction Service**: Handles the lifecycle of auction listings (Creation, Active, Closure). Manage "Buy It Now" logic.
