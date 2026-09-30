@@ -1,5 +1,6 @@
 package com.bidnow.media.dto.response;
 
+import com.bidnow.media.domain.entity.Notification;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,4 +24,19 @@ public class NotificationResponse {
     private Map<String, Object> metadata;
     private boolean read;
     private LocalDateTime createdAt;
+
+    /** Maps a stored notification; {@code read} is derived from {@code readAt}. */
+    public static NotificationResponse from(Notification notification) {
+        return NotificationResponse.builder()
+                .id(notification.getId())
+                .type(notification.getType().name())
+                .title(notification.getTitle())
+                .message(notification.getMessage())
+                .actionUrl(notification.getActionUrl())
+                .auctionId(notification.getAuctionId())
+                .metadata(notification.getMetadata())
+                .read(notification.getReadAt() != null)
+                .createdAt(notification.getCreatedAt())
+                .build();
+    }
 }

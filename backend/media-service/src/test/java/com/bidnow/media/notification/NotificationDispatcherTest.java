@@ -58,6 +58,8 @@ class NotificationDispatcherTest {
     private EmailService emailService;
     @Mock
     private UserNotificationPushPublisher pushPublisher;
+    @Mock
+    private UnreadCounter unreadCounter;
 
     private NotificationDispatcher dispatcher;
     private final NotificationTemplate template = NotificationTemplate.builder().name("AUCTION_WON_VI").build();
@@ -66,7 +68,7 @@ class NotificationDispatcherTest {
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-01T10:00:00Z"), ZoneOffset.UTC);
         dispatcher = new NotificationDispatcher(inboxRepository, recipientDirectory, templateResolver,
-                emailService, pushPublisher, clock);
+                emailService, pushPublisher, unreadCounter, clock);
         TransactionSynchronizationManager.initSynchronization();
     }
 
@@ -91,14 +93,14 @@ class NotificationDispatcherTest {
     @Test
     void dispatch_newNotification_persistsNowAndEmailsAndPushesAfterCommit() {
         when(inboxRepository.insertIfAbsent(any())).thenReturn(true);
-        when(inboxRepository.countUnread(ALICE)).thenReturn(3L);
+        when(unreadCounter.count(ALICE)).thenReturn(3L);
         when(recipientDirectory.resolve(Set.of(ALICE)))
                 .thenReturn(Map.of(ALICE, new Recipient(ALICE, "alice@example.com", NotificationLanguage.VI, true)));
         when(templateResolver.resolve("AUCTION_WON", NotificationLanguage.VI)).thenReturn(Optional.of(template));
 
         dispatcher.dispatch(intent(ALICE, email(false)));
 
-        verifyNoInteractions(recipientDirectory, emailService, pushPublisher);
+        verifyNoInteractions(recipientDirectory, emailService, pushPublisher, unreadCounter);
         commit();
 
         ArgumentCaptor<Notification> row = ArgumentCaptor.forClass(Notification.class);
@@ -132,14 +134,13 @@ class NotificationDispatcherTest {
         commit();
 
         assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
-        verify(inboxRepository, never()).countUnread(any());
-        verifyNoInteractions(recipientDirectory, templateResolver, emailService, pushPublisher);
+        verifyNoInteractions(unreadCounter, recipientDirectory, templateResolver, emailService, pushPublisher);
     }
 
     @Test
     void dispatch_withoutEmail_onlyPushes() {
         when(inboxRepository.insertIfAbsent(any())).thenReturn(true);
-        when(inboxRepository.countUnread(ALICE)).thenReturn(1L);
+        when(unreadCounter.count(ALICE)).thenReturn(1L);
 
         dispatcher.dispatch(intent(ALICE, null));
         commit();

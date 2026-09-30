@@ -158,12 +158,12 @@ Story numbers and NOTIF IDs are kept stable after removing Story 3, so they stil
 - media-service:
   - `controller/NotificationController.java` at `/api/v1/notifications`
   - `service/UserNotificationService.java` + `impl`
-  - `dto/request/criteria/NotificationCriteria.java` (`read: Boolean`, `types: List<String>`, `from/to: OffsetDateTime`, `search: String`)
+  - `dto/request/NotificationQuery.java` (`page`, `size` 1–100, `read: Boolean`, `types: List<NotificationType>`, `from/to: OffsetDateTime`, `search` ≤ 100 chars)
   - `repository/NotificationRepository.java`, adding:
     - `countByUserIdAndReadAtIsNullAndDeletedAtIsNull`
     - `@Modifying` bulk updates `markAllRead(userId, now)`, `softDeleteAll(userId, now)`, `softDeleteRead(userId, now)`
     - `findByIdAndUserIdAndDeletedAtIsNull`
-  - `SecurityConfig`: `/api/v1/notifications/**` authenticated
+  - `SecurityConfig`: no change (`anyRequest().authenticated()` already covers it); `exception/MediaExceptionHandler.java` maps invalid path/query values to 400
 - api-gateway: `application.yml` route `media-service` gains `/api/v1/notifications/**`.
 
 **Endpoints** (all use the caller's `X-User-Id`):
@@ -177,22 +177,22 @@ Story numbers and NOTIF IDs are kept stable after removing Story 3, so they stil
 | PUT | `/api/v1/notifications/mark-all-read` | Returns the updated count |
 | DELETE | `/api/v1/notifications/{id}` · `/delete-all` · `/delete-read` | Soft delete (`deleted_at`) |
 
-Every mutation that changes the unread count publishes a push with `type="UNREAD_COUNT"` (payload `{unreadCount}`), so other tabs and devices stay in sync. It reuses `UserNotificationPushPublisher` from Story 1 with a second message type.
+Inbox edits do not push anything (decided 2026-10-01: multi-tab badge sync is not needed for the MVP). The badge stays correct because every `NOTIFICATION` push carries a fresh `unreadCount`, and the frontend refetches `/unread-count` when a tab regains focus (Story 8).
 
 **Tasks:**
-- [ ] **2.1 Repository queries.** Tests against Postgres (BDD support or Testcontainers):
+- [x] **2.1 Repository queries.** Tests against Postgres (BDD support or Testcontainers):
   - the bulk update touches only the caller's non-deleted rows
   - unread count ignores deleted rows
   - the specification filters combine (read + type + date + search)
-- [ ] **2.2 `UserNotificationService`.** Tests:
+- [x] **2.2 `UserNotificationService`.** Tests:
   - another user's ID → `NotFoundException`
   - `get` marks the notification read once, and `read_at` is unchanged on the second call
   - unread → sets `read_at=null`
-  - mark-all/delete-read return counts and publish an `UNREAD_COUNT` push
+  - mark-all/delete-all/delete-read return the changed-row counts
   - size 101 → 400
-- [ ] **2.3 Controller.** Standalone MockMvc: every endpoint with the happy path; missing `X-User-Id` → 401 (BDD/security slice as in bidding); invalid UUID → 400; `PageResponse` shape.
-- [ ] **2.4 Gateway route.** Unit/route test or smoke test: `GET localhost:8080/api/v1/notifications` with a JWT reaches media-service, and `/api/v1/internal/**` is still blocked.
-- [ ] **2.5 API docs.** Refresh `media-service/api-docs.json` and the Postman collection.
+- [x] **2.3 Controller.** Standalone MockMvc: every endpoint with the happy path; missing `X-User-Id` → 401 (BDD/security slice as in bidding); invalid UUID → 400; `PageResponse` shape.
+- [x] **2.4 Gateway route.** Unit/route test or smoke test: `GET localhost:8080/api/v1/notifications` with a JWT reaches media-service, and `/api/v1/internal/**` is still blocked.
+- [ ] **2.5 API docs.** Regenerate media-service/api-docs.json from the running service (manual, see the NOTIF-102 plan Task 6). The Postman collection moves to Story 9.
 
 ---
 
@@ -355,14 +355,14 @@ Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI 
 **Files** (under `frontend/`):
 - `package.json`: add `@stomp/stompjs` and `sockjs-client` (+ `@types/sockjs-client`), and remove `socket.io-client` if FE-101 has not already.
 - `lib/realtime/stompClient.ts`: a singleton `getStompClient()`. `webSocketFactory` builds `new SockJS(\`${NEXT_PUBLIC_WS_URL}/ws-notifications?access_token=${freshToken}\`)` on each (re)connect, and uses `reconnectDelay` backoff. `subscribe(dest, cb) → unsubscribe` is ref-counted, and `deactivate()` runs on logout. FE-101's `useAuctionSocket` must use this client.
-- `types/api/notification.api.ts`: `NotificationDto`, `NotificationType` (a union mirroring the backend enum), `NotificationListParams`, `UnreadCountDto`, and `UserQueueMessage = { type: 'NOTIFICATION'; notification: NotificationDto; unreadCount: number } | { type: 'UNREAD_COUNT'; unreadCount: number }`.
+- `types/api/notification.api.ts`: `NotificationDto`, `NotificationType` (a union mirroring the backend enum), `NotificationListParams`, `UnreadCountDto`, and `UserQueueMessage = { type: 'NOTIFICATION'; notification: NotificationDto; unreadCount: number }`.
 - `types/mappers/notification.mapper.ts`: DTO → `types/ui/notification.ui.ts` `Notification`. Extend the UI `NotificationType` to cover the backend types, with an icon/colour map.
 - `services/notification.service.ts`: list, unreadCount, get, markRead, markUnread, markAllRead, delete, deleteAll, deleteRead (via `lib/apiClient.ts`).
 - `store/notificationStore.ts`: rewrite to be server-backed:
   - `recent` (10), `unreadCount`, `loadRecent()`, `refreshCount()`
   - optimistic `markRead`/`markAllRead`/`remove` that roll back on error
   - `applyPush(msg)`, which dedupes by `id`
-- `hooks/useUserNotifications.ts`: when authenticated, `loadRecent` + `refreshCount`, subscribe to `/user/queue/notifications` → `applyPush`, and show a toast for `NOTIFICATION` of types BID_OUTBID/AUCTION_WON/PAYMENT_REQUIRED/AUCTION_ENDING_SOON. Mounted once in the dashboard layout.
+- `hooks/useUserNotifications.ts`: when authenticated, `loadRecent` + `refreshCount` (again on window focus, to resync the badge after changes made in another tab), subscribe to `/user/queue/notifications` → `applyPush`, and show a toast for `NOTIFICATION` of types BID_OUTBID/AUCTION_WON/PAYMENT_REQUIRED/AUCTION_ENDING_SOON. Mounted once in the dashboard layout.
 - `components/notification/NotificationBell.tsx`, `NotificationPanel.tsx`, `NotificationToast.tsx`: wire to the store; add item click → markRead + `router.push(actionUrl)`; add "Mark all as read" and "View all".
 - `components/notification/NotificationItem.tsx` (new, shared by panel and page) and `lib/formatTimeAgo.ts` (just now / 5 min ago / 2 hours ago / yesterday / date), with a unit test.
 - `app/(dashboard)/notifications/page.tsx`:
@@ -375,10 +375,10 @@ Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI 
 **Tasks:**
 - [ ] **8.1 STOMP client.** Unit test with a mocked `Client`: two subscribers to the same destination → one STOMP subscription; the last unsubscribe → STOMP unsubscribe; a fresh token is read on every reconnect.
 - [ ] **8.2 Types + service + mapper.** Mapper tests for every backend type → icon/colour, and unknown → `system`.
-- [ ] **8.3 Store.** Tests: `applyPush` NOTIFICATION prepends and sets the count from the server value (not +1); duplicate ID ignored; `UNREAD_COUNT` only updates the count; failed `markRead` rolls back.
+- [ ] **8.3 Store.** Tests: `applyPush` NOTIFICATION prepends and sets the count from the server value (not +1); duplicate ID ignored; failed `markRead` rolls back.
 - [ ] **8.4 Bell + panel + toast.** Follow the frontend-ui-engineering skill and `docs/design-system.md` tokens. Keyboard accessible dropdown (Esc closes, focus returns to the bell).
 - [ ] **8.5 Full page.** Filters live in URL search params so the page can be shared and restored.
-- [ ] **8.6** `npm run lint && npm run build`. Manual E2E: two browsers; A is outbid → the bell increments live and a toast shows; marking read in tab 1 updates the count in tab 2 (via the `UNREAD_COUNT` push); a 375 px viewport renders correctly.
+- [ ] **8.6** `npm run lint && npm run build`. Manual E2E: two browsers; A is outbid → the bell increments live and a toast shows; marking read in tab 1 updates the count in tab 2 once tab 2 regains focus; a 375 px viewport renders correctly.
 
 ---
 

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 /**
  * Single entry point for delivering notifications. Inside the transaction: idempotent insert (one row per
- * user and dedup key) and unread count. After commit: email and live push. Duplicates produce nothing.
+ * user and dedup key). After commit: unread count, email and live push. Duplicates produce nothing.
  */
 @Slf4j
 @Service
@@ -37,6 +37,7 @@ public class NotificationDispatcher {
     private final TemplateResolver templateResolver;
     private final EmailService emailService;
     private final UserNotificationPushPublisher pushPublisher;
+    private final UnreadCounter unreadCounter;
     private final Clock clock;
 
     @Transactional
@@ -53,7 +54,7 @@ public class NotificationDispatcher {
                 log.debug("Duplicate notification {} for user {} ignored", intent.dedupKey(), intent.userId());
                 continue;
             }
-            deliveries.add(new Delivery(intent, toResponse(row), inboxRepository.countUnread(intent.userId())));
+            deliveries.add(new Delivery(intent, NotificationResponse.from(row)));
         }
         if (!deliveries.isEmpty()) {
             AfterCommit.run(() -> deliver(deliveries));
@@ -78,7 +79,8 @@ public class NotificationDispatcher {
             UUID userId = delivery.intent().userId();
             try {
                 try {
-                    pushPublisher.publish(userId, UserNotificationMessage.notification(delivery.notification(), delivery.unreadCount()));
+                    long unreadCount = unreadCounter.count(userId);
+                    pushPublisher.publish(userId, UserNotificationMessage.notification(delivery.notification(), unreadCount));
                 } catch (RuntimeException ex) {
                     log.warn("Push for notification {} failed: {}", delivery.notification().getId(), ex.getMessage());
                 }
@@ -128,20 +130,6 @@ public class NotificationDispatcher {
         return row;
     }
 
-    private static NotificationResponse toResponse(Notification row) {
-        return NotificationResponse.builder()
-                .id(row.getId())
-                .type(row.getType().name())
-                .title(row.getTitle())
-                .message(row.getMessage())
-                .actionUrl(row.getActionUrl())
-                .auctionId(row.getAuctionId())
-                .metadata(row.getMetadata())
-                .read(false)
-                .createdAt(row.getCreatedAt())
-                .build();
-    }
-
-    private record Delivery(NotificationIntent intent, NotificationResponse notification, long unreadCount) {
+    private record Delivery(NotificationIntent intent, NotificationResponse notification) {
     }
 }

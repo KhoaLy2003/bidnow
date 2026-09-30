@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Profile("dev")
 @RestController
-@RequestMapping("/api/v1/notifications/test")
+@RequestMapping("/api/v1/internal/notifications/test")
 @RequiredArgsConstructor
 @Tag(name = "Test Endpoints", description = "Endpoints for internal testing and verification")
 public class TestController {
