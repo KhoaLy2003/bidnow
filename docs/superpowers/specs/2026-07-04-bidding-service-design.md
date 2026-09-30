@@ -1,7 +1,7 @@
 # Bidding Service — Bid Placement & Real-Time Auction Bidding (Design)
 
 **Epic:** [KhoaLy2003/bidnow#120](https://github.com/KhoaLy2003/bidnow/issues/120)
-**Status:** Draft (2026-09-29). Supersedes the design implied by the original story texts #121–#125 where noted.
+**Status:** Approved and implemented (2026-09-30) on `feature/bidding` — Stories 1–7; per-story plans are linked from `docs/superpowers/plans/2026-09-29-bidding-epic-roadmap.md` (*Delivery*). Drafted 2026-09-29. Supersedes the design implied by the original story texts #121–#125 where noted.
 **Related:** WALLET-303 deposit lock (`2026-09-28-wallet-deposit-lock-design.md`), auction closure (`2026-06-21-auction-closure-design.md`), diagram `docs/diagrams/03-bidding-antisniping-flow.md`.
 
 ---
@@ -147,7 +147,7 @@ Redis keys (bidding-service):
   - `AUCTION_CANCELLED`: `{ reason }`
 - The outbid alert (`OUTBID`: `{ auctionTitle, currentPrice, newLeaderName }`) goes to `/user/{previousHighestBidderId}/queue/notifications`. This needs a STOMP `Principal` from the `X-User-Id` header injected by the gateway.
 - Gateway: a single route `/ws-notifications/**` → `lb://media-service`, auto-upgraded to WebSocket for upgrade requests (covers the SockJS HTTP fallback too).
-- Frontend: `useAuctionSocket` replaces socket.io-client with `@stomp/stompjs` + `sockjs-client` and maps the message types onto the existing `auctionStore` actions.
+- Frontend (as built, FE-101): `useAuctionSocket` replaces socket.io-client with `@stomp/stompjs` over the raw WebSocket transport (`/ws-notifications/websocket`, no `sockjs-client`), passes the JWT as `access_token` (refreshed on every connect), and feeds the messages through monotonic reducers into `auctionStore`; the page re-fetches the auction and first history page on every (re)connect.
 
 ## 7. Failure modes
 

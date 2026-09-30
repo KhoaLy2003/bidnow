@@ -6,7 +6,7 @@
 
 **Architecture:** auction-service is the single source of truth for price, winner and end time, via one row-locked internal `apply-bid` command that also performs anti-snipe extension. bidding-service owns the `bids` ledger, orchestrates validation → wallet deposit lock → apply-bid, and publishes `BidPlacedEvent`. media-service turns Kafka events into STOMP messages on `/topic/auctions/{id}`. The frontend submits bids over REST and listens over STOMP.
 
-**Tech Stack:** Java 17, Spring Boot 3.2.4, Spring Cloud 2023.0.0 (OpenFeign, Gateway, Eureka), PostgreSQL + Liquibase, Redis (spring-data-redis), Kafka, JobRunr, STOMP/SockJS. Frontend: Next.js 14 + TypeScript, Zustand, `@stomp/stompjs`, `sockjs-client`. Tests: JUnit 5, Mockito, AssertJ, standalone MockMvc, Cucumber (auction-service BDD).
+**Tech Stack:** Java 17, Spring Boot 3.2.4, Spring Cloud 2023.0.0 (OpenFeign, Gateway, Eureka), PostgreSQL + Liquibase, Redis (spring-data-redis), Kafka, JobRunr, STOMP/SockJS. Frontend: Next.js 16 + TypeScript, Zustand, `@stomp/stompjs` (native WebSocket). Tests: JUnit 5, Mockito, AssertJ, standalone MockMvc, Cucumber (auction-service BDD).
 
 **Spec:** `docs/superpowers/specs/2026-07-04-bidding-service-design.md`. Read §2 (why apply-bid is synchronous) and §8 (how each GitHub story changes) first.
 
@@ -49,6 +49,19 @@
 ```
 
 Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
+
+### Delivery (per-story plans and commits on `feature/bidding`)
+
+| # | Story | Detailed plan | Commit |
+|---|---|---|---|
+| 1 | AUC-BID | `docs/superpowers/plans/2026-09-29-auction-apply-bid.md` | `a478691` |
+| 2 | BID-101 | `docs/superpowers/plans/2026-09-29-bidding-core.md` | `cd1394c` |
+| 3 | BID-102 | `docs/superpowers/plans/2026-09-30-bidding-place-bid.md` | `db4c428` |
+| 4 | BID-104 | `docs/superpowers/plans/2026-09-30-bidding-anti-snipe.md` | `88e065d` |
+| 5 | BID-103 | `docs/superpowers/plans/2026-09-30-bidding-history.md` | `682700f` (merged `1fdc70e`) |
+| 6 | RT-101 | `docs/superpowers/plans/2026-09-30-realtime-auction-stomp.md` | `a88ad98` (+ gateway fix `ca81180`, merged `7572cb7`) |
+| 7 | FE-101 | `docs/superpowers/plans/2026-09-30-frontend-bidding.md` | `37a4894` |
+| 8 | DOC | this roadmap (Story 8 section) | — |
 
 **Branching:** All stories are on one branch, `feature/bidding`, cut from `feature/wallet-deposit-lock` (WALLET-303..307 are not yet on `main`). Commit per story with conventional commits.
 
@@ -294,10 +307,11 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 
 ## Story 8 — Documentation (epic DoD)
 
-- [ ] `docs/architecture.md`: bidding-service responsibilities, the apply-bid synchronous call, new topics (`auction-extended-topic`), and the STOMP destinations.
-- [ ] `docs/diagrams/03-bidding-antisniping-flow.md`: redraw per spec §3. Deposit lock replaces "Check Registration", apply-bid includes the extension, and the notification participant is media-service.
-- [ ] `docs/functional.md` / `docs/business-clarifications.md`: first-bid minimum = starting price; the anti-snipe window is strictly less than 120s and extends by 300s.
-- [ ] Mark the spec status as Approved and link the per-story plans from this roadmap.
+- [x] `docs/architecture.md`: bidding-service responsibilities, the apply-bid synchronous call, new topics (`auction-extended-topic`), and the STOMP destinations.
+- [x] `docs/diagrams/03-bidding-antisniping-flow.md`: redraw per spec §3. Deposit lock replaces "Check Registration", apply-bid includes the extension, and the notification participant is media-service.
+- [x] `docs/functional.md` / `docs/business-clarifications.md`: first-bid minimum = starting price; the anti-snipe window is strictly less than 120s and extends by 300s.
+- [x] Mark the spec status as Approved and link the per-story plans from this roadmap (see *Delivery* above).
+- [ ] Regenerate `docs/diagrams/03-bidding-antisniping-flow.svg` from the updated Mermaid source (the committed SVG still shows the old flow).
 
 ---
 

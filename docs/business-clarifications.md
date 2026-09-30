@@ -8,12 +8,13 @@ This document tracks the key business decisions and clarifications made during t
 - **Buy It Now:** Supported. Users can purchase the item immediately at a fixed price, terminating the auction.
 
 ## 2. Bidding Features
-- **Bid Extension (Anti-Sniping):** If a bid is placed within the final minutes of an auction, the end time will be automatically extended to allow others to respond.
+- **Minimum bid:** The first bid may equal the starting price; each later bid must be at least the current price plus the bid increment.
+- **Bid Extension (Anti-Sniping):** An accepted bid placed with strictly less than 120 seconds left extends the end time by 300 seconds (from the current end time, not from the bid time), with no limit on repeated extensions. The window and extension are configurable (`auction.anti-snipe.window-seconds` / `extension-seconds`).
 - **Auto-bidding:** Users can set a maximum bid, and the system will automatically outbid others on their behalf up to that limit.
 
 ## 3. Financials & Wallet
 - **Wallet:** Simple internal wallet system for users.
-- **Deposit Mechanism:** Mandatory deposit is required to participate in an auction.
+- **Deposit Mechanism:** Mandatory deposit is required to participate in an auction. It is locked automatically on the bidder's first bid (implicit registration); if that first bid is then rejected (e.g. outbid in the same instant), the deposit stays locked as the registration and is refunded at auction end.
 - **Refund Policy:** Deposits are returned to the wallets of losing bidders immediately after the auction ends.
 - **Winning Flow:**
     - The winner has a designated timeframe to complete the full payment.

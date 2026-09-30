@@ -40,8 +40,8 @@
    - `/api/v1/**/internal/**` paths are rejected with `403` by `AuthenticationFilter`; they are only reachable service-to-service (Feign via Eureka).
 2. **Identity Service**: Manages user registration (including email OTP verification), login, and JWT token issuance/validation.
 3. **User Service**: Manages user profiles, preferences, and account metadata.
-4. **Auction Service**: Handles the lifecycle of auction listings (Creation, Active, Closure). Manage "Buy It Now" logic.
-5. **Bidding Service**: The high-performance engine for placing bids, calculating auto-bids, and managing the "Anti-sniping" time extensions.
+4. **Auction Service**: Handles the lifecycle of auction listings (Creation, Active, Closure). Manage "Buy It Now" logic. It is the **source of truth for price**: the internal apply-bid call row-locks the auction, accepts or rejects the bid, and applies the anti-sniping extension in the same transaction.
+5. **Bidding Service**: Owns bid placement and bid history. It pre-validates against a Redis-cached auction context, locks the bidder's deposit on their first bid (wallet-service), records the bid and applies it synchronously through auction-service, then publishes `BidPlacedEvent`. Auto-bidding is not implemented yet (Phase 2).
 6. **Wallet & Payment Service**: Manages the internal wallet, escrow (deposits), and final transaction processing.
 7. **Media Service**: Handles email notifications, templates, media assets, and audit log storage.
 
@@ -59,7 +59,7 @@
 
 ### Real-time Communication
 
-Real-time auction updates use STOMP over WebSocket (SockJS fallback) served by media-service at `/ws-notifications`, reached through the gateway (`/ws-notifications/**` → `lb://media-service`, auto-upgraded to `ws`).
+Real-time auction updates use STOMP over WebSocket (SockJS fallback) served by media-service at `/ws-notifications`, reached through the gateway (`/ws-notifications/**` → `lb://media-service`, auto-upgraded to `ws`). The web frontend connects with `@stomp/stompjs` over the raw WebSocket transport at `/ws-notifications/websocket` (JWT as `access_token`, refreshed on every connect) and re-fetches the auction and first history page on every (re)connect.
 
 - **Public auction topic** `/topic/auctions/{auctionId}` — messages `{type, auctionId, payload}` with `type` ∈ `BID_PLACED` `{bidId, bidderId, bidderName, amount, placedAt, totalBids, endTime, antiSnipingTriggered}`, `AUCTION_EXTENDED` `{previousEndTime, newEndTime, extensionCount}`, `AUCTION_ENDED` `{winnerId, finalPrice, endedAt}`, `AUCTION_CANCELLED` `{reason}`. Anonymous viewers may subscribe.
 - **Private queue** `/user/queue/notifications` — `OUTBID` `{auctionTitle, currentPrice, newLeaderName}` to the previous leader. Requires an identified session.
@@ -201,7 +201,7 @@ graph TD
 
 ## Performance & Scalability
 
-- **Bidding Performance:** The Bidding Service uses **Redis** to keep the "current highest bid" in memory for lightning-fast validation.
+- **Bidding Performance:** The Bidding Service caches each auction's bid context in **Redis** for fast pre-validation (rejecting obviously low bids without a round-trip); the authoritative check is auction-service's row-locked apply-bid, so concurrent bids and closure can never both win.
 - **Horizontal Scaling:** Each service can be scaled independently. The Notification service can have multiple instances to handle thousands of WebSocket connections.
 
 ---
