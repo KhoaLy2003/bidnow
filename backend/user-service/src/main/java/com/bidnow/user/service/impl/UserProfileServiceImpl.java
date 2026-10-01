@@ -31,7 +31,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -102,12 +106,19 @@ public class UserProfileServiceImpl implements UserProfileService {
     @Override
     @Transactional(readOnly = true)
     public List<UserNotificationPreferenceResponse> getNotificationPreferences(List<UUID> userIds) {
-        return userPreferencesRepository.findByUserIdIn(new LinkedHashSet<>(userIds)).stream()
-                .map(preferences -> UserNotificationPreferenceResponse.builder()
-                        .userId(preferences.getUserId())
-                        .language(preferences.getLanguage())
-                        .emailNotifications(preferences.getEmailNotifications())
-                        .build())
+        Set<UUID> ids = new LinkedHashSet<>(userIds);
+        Map<UUID, UserPreferences> preferences = userPreferencesRepository.findByUserIdIn(ids).stream()
+                .collect(Collectors.toMap(UserPreferences::getUserId, Function.identity(), (first, second) -> first));
+        return userProfileRepository.findByUserIdIn(ids).stream()
+                .map(profile -> {
+                    UserPreferences preference = preferences.get(profile.getUserId());
+                    return UserNotificationPreferenceResponse.builder()
+                            .userId(profile.getUserId())
+                            .displayName(profile.getDisplayName())
+                            .language(preference == null ? null : preference.getLanguage())
+                            .emailNotifications(preference == null ? null : preference.getEmailNotifications())
+                            .build();
+                })
                 .toList();
     }
 

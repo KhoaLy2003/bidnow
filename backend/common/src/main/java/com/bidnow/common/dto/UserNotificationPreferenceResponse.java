@@ -26,4 +26,7 @@ public class UserNotificationPreferenceResponse {
 
     @Schema(description = "Whether the user accepts non-transactional emails")
     private Boolean emailNotifications;
+
+    @Schema(description = "Display name, used to greet the user in emails")
+    private String displayName;
 }

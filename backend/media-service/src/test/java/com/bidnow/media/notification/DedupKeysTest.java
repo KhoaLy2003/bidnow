@@ -21,6 +21,7 @@ class DedupKeysTest {
         assertThat(DedupKeys.payment("REQUIRED", A)).isEqualTo("PAYMENT_REQUIRED:" + A);
         assertThat(DedupKeys.refund(A)).isEqualTo("DEPOSIT_REFUNDED:" + A);
         assertThat(DedupKeys.cancelled(A)).isEqualTo("AUCTION_CANCELLED:" + A);
+        assertThat(DedupKeys.unsold(A)).isEqualTo("AUCTION_UNSOLD:" + A);
         assertThat(DedupKeys.firstBid(A)).isEqualTo("FIRST_BID:" + A);
         assertThat(DedupKeys.endingSoon(A, 15)).isEqualTo("ENDING_SOON:" + A + ":15");
         assertThat(DedupKeys.batch(NotificationType.BID_OUTBID, A, Instant.ofEpochMilli(1_700_000_000_123L)))

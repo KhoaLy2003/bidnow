@@ -29,7 +29,7 @@
 5. **user-service owns preferences.** `user_preferences.language` ("en"/"vi") and `emailNotifications` are read through user-service's internal profile batch endpoint. `media_user_preferences` is left unused, and is not dropped (no destructive migration). Transactional emails (OTP, payment reminders, payment result, won) ignore `emailNotifications=false`. Engagement emails (auction created, lost, refund) respect it.
 6. **Idempotency by unique key, not a 1-minute hash window.** `UNIQUE (user_id, dedup_key)` on `media_notifications`, and email logs link to `notification_id`. Kafka redelivery is a no-op. Key formats are fixed in Story 1.
 7. **Ending-soon thresholds are a platform default, not set by the seller.** Every auction uses the same thresholds from config (`auction.ending-soon.thresholds-minutes: [60, 15]`). There is no DB column, no create/edit form field and no per-user settings page. JobRunr jobs in auction-service fire them and reschedule themselves on extension (the closure-job pattern). Seller-configurable thresholds and per-user defaults from #19 are **out of scope**.
-8. **Recipients of ending-soon, extension and cancellation notifications** are the bidders in `media_auction_participants` plus the seller for extension/cancellation. Extension notifications are in-app only, coalesced to at most one per user per auction per 5 minutes (`dedup_key` includes a 5-minute bucket).
+8. **Recipients of ending-soon, extension and cancellation notifications** are the bidders in `media_auction_participants` plus the seller for extension/cancellation. Extension notifications are in-app only, one per extension per user (`dedup_key` = 5-minute bucket of the new end time; with the default 300 s extension every extension notifies).
 9. **No `POST /api/v1/internal/notifications/send`.** All triggers are events (AGENTS.md event-driven rule, YAGNI).
 10. **The ephemeral per-bid `OUTBID` user-queue push is removed** once Story 5 lands. The auction page derives "you were outbid" from `BID_PLACED` on the auction topic. The notification center receives only `NOTIFICATION` messages, so no double toasts. The bidding roadmap's FE-101 task 7.5 must subscribe to `/user/queue/notifications` for `NOTIFICATION` only.
 11. **Out of scope:** SMS/push channels, rate limiting, desktop browser notifications, sounds, per-connection delivery logging, template versioning, seller-configurable ending-soon thresholds, and **all of NOTIF-103** (the #16 gaps): automatic email retry (+5 min/+15 min), admin manual/bulk retry, delivery stats and the admin email-log UI changes. An email is sent once. If it fails, it is logged as `FAILED` in `media_email_logs` (current behaviour), and the in-app notification is still created.
@@ -198,7 +198,7 @@ Inbox edits do not push anything (decided 2026-10-01: multi-tab badge sync is no
 
 ## Story 3 — NOTIF-103: removed (out of scope)
 
-Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI are out of scope (Decision 11). Template language resolution moved to Story 1 (`TemplateResolver`). The new templates moved to Story 4 (`PAYMENT_REQUIRED`, `PAYMENT_FAILED`, `AUCTION_CANCELLED`) and Story 6 (`PAYMENT_REMINDER_24H`). `EmailServiceImpl.retryEmail` keeps throwing `UnsupportedOperationException`.
+Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI are out of scope (Decision 11). Template language resolution moved to Story 1 (`TemplateResolver`). The new templates moved to Story 4 (`AUCTION_CANCELLED`, `PAYMENT_FAILED`, `SALE_PAYMENT_RECEIVED`), and Story 6 reuses the seeded `PAYMENT_REMINDER_2`. `EmailServiceImpl.retryEmail` keeps throwing `UnsupportedOperationException`.
 
 ---
 
@@ -215,11 +215,13 @@ Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI 
 | `auction-ended-topic` (winner) | winner | `AUCTION_WON` | ✅ | — (email comes from PAYMENT REQUIRED, Decision 3) |
 | `auction-ended-topic` | participants − winner | `AUCTION_LOST` | ✅ | `AUCTION_LOST` |
 | `auction-ended-topic` (no winner) | seller | `AUCTION_UNSOLD` (new) | ✅ | — |
-| `auction-cancelled-topic` | participants | `AUCTION_CANCELLED` | ✅ | `AUCTION_CANCELLED` |
-| `payment-event-topic` REQUIRED | winner | `PAYMENT_REQUIRED` | ✅ | `PAYMENT_REQUIRED` (transactional) |
-| `payment-event-topic` COMPLETED | winner, seller | `PAYMENT_RECEIVED` | ✅ | `PAYMENT_SUCCESSFUL` (winner) |
+| `auction-cancelled-topic` | participants (+ seller in-app) | `AUCTION_CANCELLED` | ✅ | `AUCTION_CANCELLED` |
+| `payment-event-topic` REQUIRED | winner | `PAYMENT_REQUIRED` | ✅ | `AUCTION_WON` (transactional; the seeded "you won, pay by…" template) |
+| `payment-event-topic` COMPLETED | winner, seller | `PAYMENT_RECEIVED` | ✅ | `PAYMENT_SUCCESSFUL` (winner) + `SALE_PAYMENT_RECEIVED` (seller), both transactional |
 | `payment-event-topic` FAILED | winner | `PAYMENT_FAILED` | ✅ | `PAYMENT_FAILED` (transactional) |
-| `deposit-refunded-topic` | user | `DEPOSIT_REFUNDED` | ✅ | `DEPOSIT_REFUNDED` |
+| `deposit-refunded-topic` | user | `DEPOSIT_REFUNDED` | ✅ | `DEPOSIT_REFUNDED` (only for reason `AUCTION_LOST`) |
+
+Extension notifications are keyed on the new end time (`DedupKeys.extended(auctionId, newEndTime)`): one per extension per user, redelivery-safe.
 
 **Files:**
 - media-service:
@@ -229,27 +231,27 @@ Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI 
     - `PaymentNotificationHandler` (payment + refund)
   - `NotificationKafkaConsumer`: add `deposit-refunded-topic`, `auction-cancelled-topic` and `auction-extended-topic` listeners (shared group), and delegate to handlers. `NotificationServiceImpl` stubs are deleted, and the interface shrinks to OTP + welcome.
   - `NotificationType`: add `AUCTION_UNSOLD`
-  - `src/main/resources/db/changelog/migrations/07-event-templates.sql` (+ master changelog): `PAYMENT_REQUIRED_{EN,VI}` (= reminder #1 / won; variables `userName, auctionTitle, amount, remaining, paymentDeadline, actionUrl, insufficientFundsNote`), `PAYMENT_FAILED_{EN,VI}` (deposit forfeited), `AUCTION_CANCELLED_{EN,VI}`. List each template's variables in a comment at the top of the file, because task 4.4 checks them.
-  - `notification/Messages.java`: in-app title/message builders, one per type, EN only, code-side (not templated) for MVP. VI in-app copy waits for `IN_APP` templates (post-MVP).
+  - `07-event-templates.sql`: `AUCTION_CANCELLED_{EN,VI}`, `PAYMENT_FAILED_{EN,VI}` and `SALE_PAYMENT_RECEIVED_{EN,VI}` only. The winner email reuses the seeded `AUCTION_WON`.
+  - In-app copy (EN) lives in each handler; `projection/AuctionLookup` resolves titles, sellers and participants; `NotificationFormats`/`NotificationLinks` format money, deadlines and links. The dispatcher fills `{userName}` from `Recipient.displayName`, which comes from the user-service notification-preferences endpoint (now profile-based, adding `displayName`).
   - Action URLs are built from `app.frontend.base-url`: `/auctions/{id}`, payments → `/wallet`, refund → `/wallet`.
   - Titles come from `media_auctions` when the event lacks them (`PaymentEvent.auctionTitle` is null today, and `DepositRefundedEvent` has no title).
 
 **Tasks:**
-- [ ] **4.1 `AuctionNotificationHandler`.** Tests:
+- [x] **4.1 `AuctionNotificationHandler`.** Tests:
   - ended with a winner and 3 participants → 1 WON + 2 LOST intents with the correct dedup keys
   - ended without a winner → 1 UNSOLD to the seller
   - cancelled with 0 participants → no intents
   - extended twice within 5 minutes → both intents share a dedup key
   - created → seller intent with email
-- [ ] **4.2 `BidNotificationHandler` (first bid only).** `totalBids==1` → FIRST_BID to the seller; `totalBids>1` → nothing (until Story 5).
-- [ ] **4.3 `PaymentNotificationHandler`.** Tests:
+- [x] **4.2 `BidNotificationHandler` (first bid only).** `totalBids==1` → FIRST_BID to the seller; `totalBids>1` → nothing (until Story 5).
+- [x] **4.3 `PaymentNotificationHandler`.** Tests:
   - REQUIRED with `insufficientFunds=true` adds the top-up note variable
   - COMPLETED → winner email + seller in-app
   - FAILED → transactional email
   - an unknown `paymentType` → WARN, no intent
   - refund → user intent with the title looked up from the projection (a missing title falls back to "your auction")
-- [ ] **4.4 Template-variable coverage test.** For each (handler, template) pair, render against the seeded template and assert that no `{…}` placeholder is left.
-- [ ] **4.5 Consumer wiring.** One test per new listener verifying the delegation. Manual smoke with docker-compose: close an auction with 2 bidders → rows appear for both, and Mailtrap receives LOST + PAYMENT_REQUIRED.
+- [x] **4.4 Template-variable coverage test.** For each (handler, template) pair, render against the seeded template and assert that no `{…}` placeholder is left.
+- [x] **4.5 Consumer wiring.** One test per new listener verifying the delegation. Manual smoke with docker-compose: close an auction with 2 bidders → rows appear for both, and Mailtrap receives AUCTION_LOST + AUCTION_WON (payment required). (manual smoke handed to the user)
 
 ---
 
@@ -306,8 +308,8 @@ Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI 
   - `PaymentService.sendPaymentReminder(UUID auctionId)` (`@Transactional`, re-checks the status under `findByAuctionIdForUpdate`, sets `reminder_sent_at`, and publishes `PaymentEvent{paymentType="REMINDER_24H", deadline, remaining}` afterCommit)
   - `application.yml` `wallet.payment.reminder-after-hours: 24`
 - media-service:
-  - `PaymentNotificationHandler` maps `REMINDER_24H` → `PAYMENT_REMINDER` type + `PAYMENT_REMINDER_24H` template, transactional, with `DedupKeys.payment("REMINDER_24H", a)`
-  - `08-payment-reminder-template.sql` (+ master changelog): `PAYMENT_REMINDER_24H_{EN,VI}` (variables `userName, auctionTitle, remaining, paymentDeadline, actionUrl`)
+  - `PaymentNotificationHandler` maps `REMINDER_24H` → `PAYMENT_REMINDER` type + `PAYMENT_REMINDER_2` template, transactional, with `DedupKeys.payment("REMINDER_24H", a)`
+  - reuse the seeded `PAYMENT_REMINDER_2_{EN,VI}` template (variables `userName, auctionTitle, bidAmount, paymentDeadline, actionUrl`); no new migration
 
 **Tasks:**
 - [ ] **6.1 Migration + repository query.** Test: a hold at 23h59m is not due; one at 24h00m is due; one already reminded is not due; COMPLETED/FORFEITED holds are not due.
@@ -408,3 +410,5 @@ Email retry, admin manual/bulk retry, delivery stats and the admin email-log UI 
 - **Smoke run is a merge gate for NOTIF-101.** No automated test exercises the REQUIRES_NEW proxy from afterCommit, the @Transactional boundary on replay, or STOMP delivery. Before merging verify: (a) a `media_email_logs` row with `notification_id` set after a welcome; (b) replaying the same `user-registered-topic` record creates no second row, email or push; (c) a frame arrives on `/user/queue/notifications` for a connected user.
 - **JobRunr job growth.** One ending-soon job per configured threshold (2 by default) per auction per extension. Stale jobs are no-ops but remain in JobRunr's succeeded list until its retention cleanup runs.
 - **In-app copy is EN only** (Decision in Story 4). VI in-app copy needs `IN_APP` templates, which are post-MVP.
+- **Synchronous delivery blocks production rollout.** Story 4 made auction-ended/cancelled fan out to every bidder, so the Story 4 prerequisite above (TransactionTemplate around the email-log save only + bounded async delivery) must land before production; today hundreds of sequential SMTP sends on a listener thread can exceed max.poll.interval.ms and lose unsent emails on rebalance.
+- **New subscriptions replay history.** media-service-group uses auto-offset-reset earliest and gained auction-cancelled, auction-extended and deposit-refunded listeners in Story 4, so the first deploy to a long-lived environment re-sends historical notifications. Before that deploy, pre-commit offsets for those topics (kafka-consumer-groups --reset-offsets --to-latest) or accept the replay.

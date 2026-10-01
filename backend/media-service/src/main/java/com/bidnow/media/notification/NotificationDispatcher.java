@@ -13,10 +13,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -105,11 +107,19 @@ public class NotificationDispatcher {
         }
         templateResolver.resolve(spec.templateBaseName(), recipient.language()).ifPresent(template -> {
             try {
-                emailService.sendTemplateEmail(delivery.notification().getId(), recipient.email(), template, spec.variables());
+                emailService.sendTemplateEmail(delivery.notification().getId(), recipient.email(), template,
+                        withUserName(spec.variables(), recipient));
             } catch (RuntimeException ex) {
                 log.error("Email {} for user {} failed: {}", template.getName(), recipient.userId(), ex.getMessage());
             }
         });
+    }
+
+    /** Templates greet {userName}; handlers rarely know it, so it is filled from the recipient's display name. */
+    private static Map<String, Object> withUserName(Map<String, Object> variables, Recipient recipient) {
+        Map<String, Object> merged = new HashMap<>(variables == null ? Map.of() : variables);
+        merged.putIfAbsent("userName", StringUtils.hasText(recipient.displayName()) ? recipient.displayName() : "there");
+        return merged;
     }
 
     private Notification toRow(NotificationIntent intent) {

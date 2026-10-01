@@ -164,23 +164,33 @@ class UserProfileServiceImplTest {
     // -------------------------------------------------------
 
     @Test
-    void getNotificationPreferences_returnsExistingPreferencesWithOneQuery() {
+    void getNotificationPreferences_joinsProfilesWithPreferences() {
         UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
         UUID unknown = UUID.randomUUID();
+        when(userProfileRepository.findByUserIdIn(any())).thenReturn(List.of(
+                UserProfile.builder().userId(alice).displayName("Alice").build(),
+                UserProfile.builder().userId(bob).displayName("Bob").build()));
         when(userPreferencesRepository.findByUserIdIn(any())).thenReturn(List.of(
                 UserPreferences.builder().userId(alice).language("vi").emailNotifications(false).build()));
 
         List<UserNotificationPreferenceResponse> result =
-                userProfileService.getNotificationPreferences(List.of(alice, unknown, alice));
+                userProfileService.getNotificationPreferences(List.of(alice, bob, unknown, alice));
 
-        assertThat(result).singleElement().satisfies(p -> {
-            assertThat(p.getUserId()).isEqualTo(alice);
+        assertThat(result).extracting(UserNotificationPreferenceResponse::getUserId).containsExactlyInAnyOrder(alice, bob);
+        assertThat(result).filteredOn(p -> p.getUserId().equals(alice)).singleElement().satisfies(p -> {
+            assertThat(p.getDisplayName()).isEqualTo("Alice");
             assertThat(p.getLanguage()).isEqualTo("vi");
             assertThat(p.getEmailNotifications()).isFalse();
         });
+        assertThat(result).filteredOn(p -> p.getUserId().equals(bob)).singleElement().satisfies(p -> {
+            assertThat(p.getDisplayName()).isEqualTo("Bob");
+            assertThat(p.getLanguage()).isNull();
+            assertThat(p.getEmailNotifications()).isNull();
+        });
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
-        verify(userPreferencesRepository).findByUserIdIn(ids.capture());
-        assertThat(ids.getValue()).containsExactlyInAnyOrder(alice, unknown);
+        ArgumentCaptor<Collection<UUID>> profileIds = ArgumentCaptor.forClass(Collection.class);
+        verify(userProfileRepository).findByUserIdIn(profileIds.capture());
+        assertThat(profileIds.getValue()).containsExactlyInAnyOrder(alice, bob, unknown);
     }
 }

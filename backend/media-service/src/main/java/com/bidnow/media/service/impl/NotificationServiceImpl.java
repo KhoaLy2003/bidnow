@@ -1,10 +1,6 @@
 package com.bidnow.media.service.impl;
 
 import com.bidnow.common.annotation.Loggable;
-import com.bidnow.common.dto.event.AuctionCreatedEvent;
-import com.bidnow.common.dto.event.AuctionEndedEvent;
-import com.bidnow.common.dto.event.BidPlacedEvent;
-import com.bidnow.common.dto.event.PaymentEvent;
 import com.bidnow.common.dto.event.UserRegisteredEvent;
 import com.bidnow.common.dto.event.UserVerificationRequestedEvent;
 import com.bidnow.media.domain.enums.NotificationLanguage;
@@ -71,34 +67,6 @@ public class NotificationServiceImpl implements NotificationService {
                 new NotificationIntent.EmailSpec("WELCOME_EMAIL",
                         Map.of("userName", userName, "actionUrl", frontendBaseUrl + "/auctions"),
                         false)));
-    }
-
-    // -------------------------------------------------------------------------
-    // Remaining handlers (stubs — implemented in later issues)
-    // -------------------------------------------------------------------------
-
-    @Override
-    public void handleAuctionCreated(AuctionCreatedEvent event) {
-        log.info("Handling AuctionCreatedEvent for auction: {}", event.getAuctionId());
-        // TODO: Implement in issue #29 (Seller Auction Management)
-    }
-
-    @Override
-    public void handleBidPlaced(BidPlacedEvent event) {
-        log.info("Handling BidPlacedEvent for auction: {}", event.getAuctionId());
-        // TODO: Implement real-time broadcast and smart batching in issue #19
-    }
-
-    @Override
-    public void handleAuctionEnded(AuctionEndedEvent event) {
-        log.info("Handling AuctionEndedEvent for auction: {}", event.getAuctionId());
-        // TODO: Implement winner/loser emails in issue #19
-    }
-
-    @Override
-    public void handlePaymentEvent(PaymentEvent event) {
-        log.info("Handling PaymentEvent for auction: {}, type: {}", event.getAuctionId(), event.getPaymentType());
-        // TODO: Implement payment emails in issue #19
     }
 
     // -------------------------------------------------------------------------

@@ -50,7 +50,8 @@ public class RecipientDirectory {
                     id,
                     emails.get(id),
                     NotificationLanguage.fromCode(preference == null ? null : preference.getLanguage()),
-                    preference == null || !Boolean.FALSE.equals(preference.getEmailNotifications())));
+                    preference == null || !Boolean.FALSE.equals(preference.getEmailNotifications()),
+                    preference == null ? null : preference.getDisplayName()));
         }
         return recipients;
     }

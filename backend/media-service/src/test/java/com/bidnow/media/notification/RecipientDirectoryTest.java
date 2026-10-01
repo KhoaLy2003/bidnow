@@ -46,6 +46,16 @@ class RecipientDirectoryTest {
     }
 
     @Test
+    void resolve_carriesDisplayName() {
+        when(identityServiceClient.getEmailsByUserIds(anyList()))
+                .thenReturn(BaseResponse.success(Map.of(ALICE, "alice@example.com")));
+        when(userServiceClient.getNotificationPreferences(any())).thenReturn(BaseResponse.success(List.of(
+                UserNotificationPreferenceResponse.builder().userId(ALICE).displayName("Alice").build())));
+
+        assertThat(directory.resolve(List.of(ALICE)).get(ALICE).displayName()).isEqualTo("Alice");
+    }
+
+    @Test
     void resolve_combinesEmailsAndPreferences() {
         when(identityServiceClient.getEmailsByUserIds(anyList()))
                 .thenReturn(BaseResponse.success(Map.of(ALICE, "alice@example.com", BOB, "bob@example.com")));

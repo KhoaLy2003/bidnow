@@ -278,4 +278,40 @@ class NotificationDispatcherTest {
         verifyNoInteractions(templateResolver, emailService);
         verify(pushPublisher).publish(eq(ALICE), any());
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void dispatch_emailWithoutUserName_greetsRecipientByDisplayName() {
+        when(inboxRepository.insertIfAbsent(any())).thenReturn(true);
+        when(recipientDirectory.resolve(any())).thenReturn(Map.of(ALICE,
+                new Recipient(ALICE, "alice@example.com", NotificationLanguage.EN, true, "Alice Smith")));
+        when(templateResolver.resolve(anyString(), any())).thenReturn(Optional.of(template));
+        NotificationIntent.EmailSpec spec = new NotificationIntent.EmailSpec("AUCTION_LOST", Map.of("auctionTitle", "Watch"), false);
+
+        dispatcher.dispatch(intent(ALICE, spec));
+        commit();
+
+        ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.forClass(Map.class);
+        verify(emailService).sendTemplateEmail(any(UUID.class), eq("alice@example.com"), eq(template), variables.capture());
+        assertThat(variables.getValue())
+                .containsEntry("userName", "Alice Smith")
+                .containsEntry("auctionTitle", "Watch");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void dispatch_unknownDisplayName_greetsThere() {
+        when(inboxRepository.insertIfAbsent(any())).thenReturn(true);
+        when(recipientDirectory.resolve(any())).thenReturn(Map.of(ALICE,
+                new Recipient(ALICE, "alice@example.com", NotificationLanguage.EN, true)));
+        when(templateResolver.resolve(anyString(), any())).thenReturn(Optional.of(template));
+        NotificationIntent.EmailSpec spec = new NotificationIntent.EmailSpec("AUCTION_LOST", Map.of("auctionTitle", "Watch"), false);
+
+        dispatcher.dispatch(intent(ALICE, spec));
+        commit();
+
+        ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.forClass(Map.class);
+        verify(emailService).sendTemplateEmail(any(UUID.class), eq("alice@example.com"), eq(template), variables.capture());
+        assertThat(variables.getValue()).containsEntry("userName", "there");
+    }
 }

@@ -32,6 +32,10 @@ public final class DedupKeys {
         return "AUCTION_LOST:" + auctionId;
     }
 
+    public static String unsold(UUID auctionId) {
+        return "AUCTION_UNSOLD:" + auctionId;
+    }
+
     public static String payment(String paymentType, UUID auctionId) {
         return "PAYMENT_" + paymentType + ":" + auctionId;
     }
@@ -44,7 +48,10 @@ public final class DedupKeys {
         return "AUCTION_CANCELLED:" + auctionId;
     }
 
-    /** Extensions within the same 5-minute bucket collapse into one notification per user. */
+    /**
+     * One notification per extension; extensions whose new end times fall in the same 5-minute bucket collapse into
+     * one (only possible when the configured extension is shorter than 5 minutes).
+     */
     public static String extended(UUID auctionId, Instant at) {
         return "AUCTION_EXTENDED:" + auctionId + ":" + Math.floorDiv(at.getEpochSecond(), EXTENSION_BUCKET_SECONDS);
     }
