@@ -77,7 +77,7 @@ sequenceDiagram
     par Live updates
         MQ-->>MS: bid-placed-topic / auction-extended-topic
         MS-->>App: /topic/auctions/{id}: BID_PLACED, AUCTION_EXTENDED (all viewers)
-        MS-->>App: /user/queue/notifications: OUTBID (previous leader only)
+        MS-->>App: /user/queue/notifications: NOTIFICATION BID_OUTBID (previous leader; batched per 5 min)
         App->>Bidder: Price, history and countdown update without reload
     end
 

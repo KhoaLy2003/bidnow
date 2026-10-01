@@ -64,6 +64,11 @@ public final class DedupKeys {
         return type.name() + ":" + auctionId + ":" + windowStart.toEpochMilli();
     }
 
+    /** The immediate (window-opening) outbid / new-bid alert: one per bid, so a redelivered bid is a no-op. */
+    public static String bidAlert(NotificationType type, UUID bidId) {
+        return type.name() + ":BID:" + bidId;
+    }
+
     public static String endingSoon(UUID auctionId, int thresholdMinutes) {
         return "ENDING_SOON:" + auctionId + ":" + thresholdMinutes;
     }

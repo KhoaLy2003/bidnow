@@ -26,6 +26,7 @@ class DedupKeysTest {
         assertThat(DedupKeys.endingSoon(A, 15)).isEqualTo("ENDING_SOON:" + A + ":15");
         assertThat(DedupKeys.batch(NotificationType.BID_OUTBID, A, Instant.ofEpochMilli(1_700_000_000_123L)))
                 .isEqualTo("BID_OUTBID:" + A + ":1700000000123");
+        assertThat(DedupKeys.bidAlert(NotificationType.BID_OUTBID, A)).isEqualTo("BID_OUTBID:BID:" + A);
     }
 
     @Test
@@ -42,5 +43,6 @@ class DedupKeysTest {
     @Test
     void keysFitTheColumn() {
         assertThat(DedupKeys.batch(NotificationType.BID_OUTBID, A, Instant.now()).length()).isLessThanOrEqualTo(200);
+        assertThat(DedupKeys.bidAlert(NotificationType.BID_OUTBID, A).length()).isLessThanOrEqualTo(200);
     }
 }

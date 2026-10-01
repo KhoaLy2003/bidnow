@@ -300,7 +300,7 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 - [x] **7.2 Types + `bid.service` + mapper**, with tests for the mapper.
 - [x] **7.3 `BidForm` submit.** Success → optimistic `setBid`. `BID_INSUFFICIENT_BALANCE` → inline message with a "Top up wallet" link to the wallet page, showing `required`/`availableBalance`. `BID_TOO_LOW` → refresh the minimum from `errors.minimumBid`. `AUCTION_NOT_OPEN` → disable the form. 503 → "Bidding temporarily unavailable, try again". 401 → login redirect.
 - [x] **7.4 History.** Wire the page and "load more" to the real API, and add a "My bids" tab if the design has one.
-- [x] **7.5 STOMP hook.** Subscribe to `/topic/auctions/{id}` and `/user/queue/notifications`. Map `BID_PLACED` → `setBid` + `addBidToHistory` + `setEndTime`, `AUCTION_EXTENDED` → `setEndTime` + a toast, and `AUCTION_ENDED`/`CANCELLED` → `setStatus(Closed)`. Reconnect with backoff, and unsubscribe on unmount.
+- [x] **7.5 STOMP hook.** Subscribe to `/topic/auctions/{id}` and `/user/queue/notifications`. Map `BID_PLACED` → `setBid` + `addBidToHistory` + `setEndTime`, `AUCTION_EXTENDED` → `setEndTime` + a toast, and `AUCTION_ENDED`/`CANCELLED` → `setStatus(Closed)`. Reconnect with backoff, and unsubscribe on unmount. *(NOTIF-105: the per-bid `OUTBID` user push is gone; the hook toasts `NOTIFICATION` messages of type `BID_OUTBID` from `/user/queue/notifications` instead.)*
 - [ ] **7.6** `npm run lint && npm run build`. Manual E2E: two users bid against each other, one of them in the final two minutes, then top-up flow with an empty wallet.
 
 ---

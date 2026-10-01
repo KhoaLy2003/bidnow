@@ -151,10 +151,6 @@ export function applyAuctionCancelled(s: LiveAuctionState): LiveAuctionState {
   return { ...s, status: AuctionStatus.Closed, winnerId: undefined }
 }
 
-export function applyOutbid(s: LiveAuctionState): LiveAuctionState {
-  return { ...s, isOutbid: true }
-}
-
 export function appendOlderBids(s: LiveAuctionState, older: BidEntry[]): LiveAuctionState {
   return { ...s, bids: upsertBids(s.bids, older) }
 }

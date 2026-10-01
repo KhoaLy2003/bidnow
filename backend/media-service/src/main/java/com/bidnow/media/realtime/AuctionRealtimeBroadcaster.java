@@ -21,8 +21,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuctionRealtimeBroadcaster {
 
-    static final String USER_QUEUE = "/queue/notifications";
-
     private final SimpMessagingTemplate messagingTemplate;
 
     static String auctionTopic(UUID auctionId) {
@@ -39,12 +37,6 @@ public class AuctionRealtimeBroadcaster {
                 event.getTotalBids(),
                 event.getEndTime(),
                 event.isAntiSnipingTriggered()));
-
-        UUID previous = event.getPreviousHighestBidderId();
-        if (previous != null && !previous.equals(event.getBidderId())) {
-            sendToUser(previous, new AuctionRealtimeMessage(AuctionRealtimeMessage.OUTBID, event.getAuctionId(),
-                    new RealtimePayloads.Outbid(event.getAuctionTitle(), event.getBidAmount(), event.getBidderName())));
-        }
     }
 
     public void auctionExtended(AuctionExtendedEvent event) {
@@ -67,14 +59,6 @@ public class AuctionRealtimeBroadcaster {
             messagingTemplate.convertAndSend(auctionTopic(auctionId), new AuctionRealtimeMessage(type, auctionId, payload));
         } catch (RuntimeException ex) {
             log.warn("Real-time {} broadcast failed for auction {}: {}", type, auctionId, ex.getMessage());
-        }
-    }
-
-    private void sendToUser(UUID userId, AuctionRealtimeMessage message) {
-        try {
-            messagingTemplate.convertAndSendToUser(userId.toString(), USER_QUEUE, message);
-        } catch (RuntimeException ex) {
-            log.warn("Real-time {} notification failed for user {}: {}", message.type(), userId, ex.getMessage());
         }
     }
 }

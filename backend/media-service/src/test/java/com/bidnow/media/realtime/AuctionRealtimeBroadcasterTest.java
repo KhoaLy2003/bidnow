@@ -85,31 +85,8 @@ class AuctionRealtimeBroadcasterTest {
     }
 
     @Test
-    void bidPlaced_notifiesOutbidPreviousLeader() {
+    void bidPlaced_sendsNoUserQueueMessage() {
         broadcaster.bidPlaced(bidPlaced(PREVIOUS));
-
-        ArgumentCaptor<Object> message = ArgumentCaptor.forClass(Object.class);
-        verify(messagingTemplate).convertAndSendToUser(eq(PREVIOUS.toString()),
-                eq(AuctionRealtimeBroadcaster.USER_QUEUE), message.capture());
-        AuctionRealtimeMessage outbid = (AuctionRealtimeMessage) message.getValue();
-        assertThat(outbid.type()).isEqualTo(AuctionRealtimeMessage.OUTBID);
-        assertThat(outbid.auctionId()).isEqualTo(AUCTION_ID);
-        RealtimePayloads.Outbid payload = (RealtimePayloads.Outbid) outbid.payload();
-        assertThat(payload.auctionTitle()).isEqualTo("Vintage Watch");
-        assertThat(payload.currentPrice()).isEqualByComparingTo("105.00");
-        assertThat(payload.newLeaderName()).isEqualTo("Bob");
-    }
-
-    @Test
-    void bidPlaced_noPreviousLeader_sendsNoOutbid() {
-        broadcaster.bidPlaced(bidPlaced(null));
-
-        verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
-    }
-
-    @Test
-    void bidPlaced_leaderRaisingOwnBid_sendsNoOutbid() {
-        broadcaster.bidPlaced(bidPlaced(BIDDER));
 
         verify(messagingTemplate, never()).convertAndSendToUser(anyString(), anyString(), any());
     }

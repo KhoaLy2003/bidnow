@@ -260,12 +260,12 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 **Deliverable:** A user outbid 3 times in 5 minutes receives 1 immediate notification plus 1 "outbid 2 more times, current price $Y" at window close. The seller's per-bid alerts are batched the same way. Duplicate toasts are gone.
 
 **Algorithm** (Redis, per `(kind, userId, auctionId)`, where kind ∈ {BID_OUTBID, NEW_BID}):
-- Key `notif:batch:{kind}:{userId}:{auctionId}`, a hash `{windowStart, count, latestAmount, latestBidder, auctionTitle}`, TTL = window + 60 s.
+- Key `notif:batch:{kind}:{userId}:{auctionId}`, a hash `{windowStart, count, latestAmount, auctionTitle, kind, userId, auctionId}` plus per-bid `bid:{bidId}` outcome fields, TTL = window + 60 s.
 - On event: `HSETNX windowStart now`.
   - If it was set (no open window), **dispatch immediately** (count 1), leave `count=0`, and `ZADD notif:batch:due (now+window) key`.
   - Otherwise `HINCRBY count 1` + `HSET latest…`.
   - All of this runs in one Lua script so it is atomic.
-- `BatchFlushScheduler` (`fixedDelay 15s`): `ZRANGEBYSCORE due -inf now LIMIT 100`. For each key, `ZREM` (only the instance that removes the key proceeds), read the hash, `DEL` it, and if `count>0` dispatch one batched intent with `DedupKeys.batch(kind, auctionId, windowStart)`.
+- `BatchFlushScheduler` (`fixedDelay 15s`): `ZRANGEBYSCORE due -inf now LIMIT 100`. Each key is claimed by one Lua script: `ZSCORE<=now` guard, then `ZREM` (only the instance that removes the key proceeds), `HGETALL`, `DEL`; if `count>0` dispatch one batched intent with `DedupKeys.batch(kind, auctionId, windowStart)`.
 - If Redis is down, dispatch every event immediately (degrade to noisy, never silent), with a WARN.
 
 **Files:**
@@ -276,22 +276,25 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
   - `scheduler/BatchFlushScheduler.java`
   - `BidNotificationHandler`: previous winner → `BID_OUTBID` batch; seller → `NEW_BID` batch (skipped when `totalBids==1`, because that is FIRST_BID)
   - `realtime/AuctionRealtimeBroadcaster.bidPlaced`: remove the `sendToUser(previous, OUTBID…)` branch and the `Outbid` payload. Update `AuctionRealtimeBroadcasterTest` and `RealtimeMessageJsonTest`.
+- `frontend/hooks/useAuctionSocket.ts` (plus `lib/realtime/dispatch.ts`, `types/api/realtime.api.ts`): the auction page shows the outbid toast from the `BID_OUTBID` NOTIFICATION push (`onUserMessage`).
 - repo root `docker-compose.yml`: `REDIS_HOST` for media-service.
 - docs: note Decision 10 in the bidding roadmap, FE-101 task 7.5.
 
 **Tasks:**
-- [ ] **5.1 Lua + `BidBatcher`** (Testcontainers Redis or embedded):
+- [x] **5.1 Lua + `BidBatcher`** (Testcontainers Redis or embedded):
   - first event → returns `IMMEDIATE`
   - 2nd/3rd within the window → `BATCHED`, `count=2`
   - an event after the key is flushed → `IMMEDIATE` again
   - separate auctions/users are independent
-- [ ] **5.2 Flush scheduler.** Tests:
+- [x] **5.2 Flush scheduler.** Tests:
   - due key with `count=2` → one intent whose message says 2 more times and carries the latest price
   - `count=0` → no intent
   - two schedulers racing → exactly one dispatch (the `ZREM` result gates it)
-- [ ] **5.3 Redis-down fallback.** `RedisConnectionFailureException` → immediate dispatch plus a WARN.
-- [ ] **5.4 Handler + broadcaster change.** The bidder never gets BID_OUTBID for outbidding themselves (`previous == bidderId`). The broadcaster sends no user-queue message on BID_PLACED any more.
-- [ ] **5.5 Manual smoke:** three quick bids by B, C and D over A → A's socket receives 1 NOTIFICATION immediately and 1 about 5 minutes later. For a faster smoke, set `batch-window-seconds: 30` locally.
+- [x] **5.3 Redis-down fallback.** `RedisConnectionFailureException` → immediate dispatch plus a WARN.
+- [x] **5.4 Handler + broadcaster change.** The bidder never gets BID_OUTBID for outbidding themselves (`previous == bidderId`). The broadcaster sends no user-queue message on BID_PLACED any more.
+- [ ] **5.5 Manual smoke (manual smoke handed to the user):** three quick bids by B, C and D over A → A's socket receives 1 NOTIFICATION immediately and 1 about 5 minutes later. For a faster smoke, set `batch-window-seconds: 30` locally.
+
+**Refinements (implemented):** immediate alerts are keyed per bid (`DedupKeys.bidAlert` = `{TYPE}:BID:{bidId}`), batched ones per window (`DedupKeys.batch`); the record script remembers each bid's outcome so a redelivered immediate bid re-dispatches (DB dedup absorbs it) and a redelivered batched bid is not counted twice; claim is one Lua script (ZREM + HGETALL + DEL) so a bid arriving during a flush is never lost; alerts are in-app only; the auction page's outbid toast now comes from the `BID_OUTBID` NOTIFICATION push (Story 8 must take it over to avoid double toasts).
 
 ---
 
@@ -373,6 +376,7 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
   - bulk select → mark read / delete (confirm dialog)
   - empty and loading states, responsive layout
 - `.env.example`: `NEXT_PUBLIC_WS_URL`.
+- `hooks/useAuctionSocket.ts`: remove the interim `BID_OUTBID` toast (`onUserMessage`, NOTIF-105) once the global notification toasts land, so outbids are not toasted twice.
 
 **Tasks:**
 - [ ] **8.1 STOMP client.** Unit test with a mocked `Client`: two subscribers to the same destination → one STOMP subscription; the last unsubscribe → STOMP unsubscribe; a fresh token is read on every reconnect.
@@ -409,6 +413,7 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 - **Metadata serialisation failure fails a whole batch.** `NotificationInboxRepository` throws on unserialisable metadata, rolling back the entire `dispatchAll`. Before Story 4 batch handlers: validate metadata when building intents, or skip only the offending intent.
 - **Smoke run is a merge gate for NOTIF-101.** No automated test exercises the REQUIRES_NEW proxy from afterCommit, the @Transactional boundary on replay, or STOMP delivery. Before merging verify: (a) a `media_email_logs` row with `notification_id` set after a welcome; (b) replaying the same `user-registered-topic` record creates no second row, email or push; (c) a frame arrives on `/user/queue/notifications` for a connected user.
 - **JobRunr job growth.** One ending-soon job per configured threshold (2 by default) per auction per extension. Stale jobs are no-ops but remain in JobRunr's succeeded list until its retention cleanup runs.
+- **Batched alerts are single-node Redis only.** The record/claim scripts touch a batch hash and the shared due set, which live in different hash slots; Redis Cluster would reject them. Use hash tags (`{notif}`) before moving to a cluster. A batched alert can also land up to one window after the auction ended, and a dispatch failure after a claim loses that one batch (ERROR log).
 - **In-app copy is EN only** (Decision in Story 4). VI in-app copy needs `IN_APP` templates, which are post-MVP.
 - **Synchronous delivery blocks production rollout.** Story 4 made auction-ended/cancelled fan out to every bidder, so the Story 4 prerequisite above (TransactionTemplate around the email-log save only + bounded async delivery) must land before production; today hundreds of sequential SMTP sends on a listener thread can exceed max.poll.interval.ms and lose unsent emails on rebalance.
 - **New subscriptions replay history.** media-service-group uses auto-offset-reset earliest and gained auction-cancelled, auction-extended and deposit-refunded listeners in Story 4, so the first deploy to a long-lived environment re-sends historical notifications. Before that deploy, pre-commit offsets for those topics (kafka-consumer-groups --reset-offsets --to-latest) or accept the replay.
