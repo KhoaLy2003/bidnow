@@ -6,6 +6,8 @@ import com.bidnow.media.domain.enums.NotificationType;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,12 +39,22 @@ class NotificationResponseTest {
         assertThat(response.getActionUrl()).isEqualTo("/auctions/x");
         assertThat(response.getAuctionId()).isEqualTo(n.getAuctionId());
         assertThat(response.getMetadata()).containsEntry("amount", "105.00");
-        assertThat(response.getCreatedAt()).isEqualTo(LocalDateTime.of(2026, 10, 1, 10, 0));
+        assertThat(response.getCreatedAt().toLocalDateTime()).isEqualTo(LocalDateTime.of(2026, 10, 1, 10, 0));
         assertThat(response.isRead()).isFalse();
     }
 
     @Test
     void from_readAtSet_isRead() {
         assertThat(NotificationResponse.from(notification(LocalDateTime.of(2026, 10, 1, 11, 0))).isRead()).isTrue();
+    }
+
+    @Test
+    void from_givesCreatedAtTheServerZoneOffset() {
+        LocalDateTime stored = LocalDateTime.of(2026, 10, 1, 10, 0);
+
+        OffsetDateTime createdAt = NotificationResponse.from(notification(null)).getCreatedAt();
+
+        assertThat(createdAt.toLocalDateTime()).isEqualTo(stored);
+        assertThat(createdAt.getOffset()).isEqualTo(ZoneId.systemDefault().getRules().getOffset(stored));
     }
 }

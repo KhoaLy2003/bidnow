@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { dispatchRealtimeMessage, parseRealtimeMessage, parseUserNotification, type RealtimeHandlers } from './dispatch'
+import { dispatchRealtimeMessage, parseRealtimeMessage, parseUserNotificationMessage, type RealtimeHandlers } from './dispatch'
 
 const notification = {
   id: 'n-1',
@@ -13,18 +13,19 @@ const notification = {
   createdAt: '2026-10-01T10:00:00',
 }
 
-describe('parseUserNotification', () => {
-  it('returns the notification from a NOTIFICATION envelope', () => {
+describe('parseUserNotificationMessage', () => {
+  it('returns the envelope with the server unread count', () => {
     const body = JSON.stringify({ type: 'NOTIFICATION', notification, unreadCount: 3 })
 
-    expect(parseUserNotification(body)).toEqual(notification)
+    expect(parseUserNotificationMessage(body)).toEqual({ type: 'NOTIFICATION', notification, unreadCount: 3 })
   })
 
-  it('rejects other envelopes, malformed JSON and incomplete notifications', () => {
-    expect(parseUserNotification(JSON.stringify({ type: 'OUTBID', auctionId: 'a-1', payload: {} }))).toBeNull()
-    expect(parseUserNotification('not json')).toBeNull()
-    expect(parseUserNotification(JSON.stringify({ type: 'NOTIFICATION' }))).toBeNull()
-    expect(parseUserNotification(JSON.stringify({ type: 'NOTIFICATION', notification: { id: 'n-1' } }))).toBeNull()
+  it('rejects other envelopes, malformed JSON, incomplete notifications and a missing count', () => {
+    expect(parseUserNotificationMessage(JSON.stringify({ type: 'OUTBID', auctionId: 'a-1', payload: {} }))).toBeNull()
+    expect(parseUserNotificationMessage('not json')).toBeNull()
+    expect(parseUserNotificationMessage(JSON.stringify({ type: 'NOTIFICATION', unreadCount: 1 }))).toBeNull()
+    expect(parseUserNotificationMessage(JSON.stringify({ type: 'NOTIFICATION', notification: { id: 'n-1' }, unreadCount: 1 }))).toBeNull()
+    expect(parseUserNotificationMessage(JSON.stringify({ type: 'NOTIFICATION', notification }))).toBeNull()
   })
 })
 

@@ -6,17 +6,14 @@ import { toast } from 'sonner'
 import { useAuctionStore } from '@/store/auctionStore'
 import { useAuthStore } from '@/store/authStore'
 import { getFreshAccessToken } from '@/lib/apiClient'
-import { dispatchRealtimeMessage, parseRealtimeMessage, parseUserNotification, type RealtimeHandlers } from '@/lib/realtime/dispatch'
+import { dispatchRealtimeMessage, parseRealtimeMessage, type RealtimeHandlers } from '@/lib/realtime/dispatch'
 import { resolveWsEndpoint, withAccessToken } from '@/lib/realtime/ws-url'
 
-const USER_QUEUE = '/user/queue/notifications'
-
 /**
- * Live auction updates over STOMP (spec §6). Subscribes to the auction topic and, when logged in,
- * the private notification queue (outbid toasts). Reconnects with exponential backoff; each (re)connect fetches a
+ * Live auction updates over STOMP (spec §6). Subscribes to the auction topic; personal notifications
+ * (incl. outbid toasts) come from `useUserNotifications`. Reconnects with exponential backoff; each (re)connect fetches a
  * fresh token, and every (re)connect calls `onResync` to recover events missed before the subscription.
- * Re-runs (disconnects and reconnects) when the auction or the logged-in user changes, so logout
- * drops the private queue.
+ * Re-runs (disconnects and reconnects) when the auction or the logged-in user changes.
  */
 export function useAuctionSocket(auctionId: string, onResync?: () => void): void {
   const userId = useAuthStore((s) => s.user?.id ?? null)
@@ -54,14 +51,6 @@ export function useAuctionSocket(auctionId: string, onResync?: () => void): void
       if (parsed) dispatchRealtimeMessage(parsed, auctionId, handlers)
     }
 
-    // Outbid alerts are stored notifications (batched per 5 minutes by media-service). Story 8's notification
-    // center takes this toast over; until then the auction page shows it.
-    const onUserMessage = (message: IMessage) => {
-      const n = parseUserNotification(message.body)
-      if (n?.type !== 'BID_OUTBID' || !n.auctionId) return
-      toast.warning(n.message)
-    }
-
     const client = new Client({
       reconnectDelay:    1_000,
       maxReconnectDelay: 30_000,
@@ -74,7 +63,6 @@ export function useAuctionSocket(auctionId: string, onResync?: () => void): void
       },
       onConnect: () => {
         client.subscribe(`/topic/auctions/${auctionId}`, onMessage)
-        if (userId) client.subscribe(USER_QUEUE, onUserMessage)
         onResyncRef.current?.()
       },
     })

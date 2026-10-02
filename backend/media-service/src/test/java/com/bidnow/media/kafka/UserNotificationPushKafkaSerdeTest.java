@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ class UserNotificationPushKafkaSerdeTest {
                 .auctionId(UUID.randomUUID())
                 .metadata(Map.of("k", "v", "other", "x"))
                 .read(false)
-                .createdAt(LocalDateTime.of(2026, 9, 30, 12, 34, 56, 123_000_000))
+                .createdAt(OffsetDateTime.of(2026, 9, 30, 12, 34, 56, 123_000_000, ZoneOffset.UTC))
                 .build();
         UserNotificationPush original = new UserNotificationPush(userId, UserNotificationMessage.notification(notification, 3));
 

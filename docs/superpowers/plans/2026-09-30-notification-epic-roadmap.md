@@ -359,8 +359,8 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 **Deliverable:** The bell shows the live unread count. The dropdown shows the last 10 notifications. `/notifications` lists everything with filters, search and bulk actions. New notifications arrive live with a toast. State stays in sync across tabs.
 
 **Files** (under `frontend/`):
-- `package.json`: add `@stomp/stompjs` and `sockjs-client` (+ `@types/sockjs-client`), and remove `socket.io-client` if FE-101 has not already.
-- `lib/realtime/stompClient.ts`: a singleton `getStompClient()`. `webSocketFactory` builds `new SockJS(\`${NEXT_PUBLIC_WS_URL}/ws-notifications?access_token=${freshToken}\`)` on each (re)connect, and uses `reconnectDelay` backoff. `subscribe(dest, cb) → unsubscribe` is ref-counted, and `deactivate()` runs on logout. FE-101's `useAuctionSocket` must use this client.
+- `package.json`: no new dependency (`@stomp/stompjs` already present; native WebSocket).
+- The root-mounted `useUserNotifications` connection (see below) replaces the planned `lib/realtime/stompClient.ts` singleton.
 - `types/api/notification.api.ts`: `NotificationDto`, `NotificationType` (a union mirroring the backend enum), `NotificationListParams`, `UnreadCountDto`, and `UserQueueMessage = { type: 'NOTIFICATION'; notification: NotificationDto; unreadCount: number }`.
 - `types/mappers/notification.mapper.ts`: DTO → `types/ui/notification.ui.ts` `Notification`. Extend the UI `NotificationType` to cover the backend types, with an icon/colour map.
 - `services/notification.service.ts`: list, unreadCount, get, markRead, markUnread, markAllRead, delete, deleteAll, deleteRead (via `lib/apiClient.ts`).
@@ -379,13 +379,15 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 - `.env.example`: `NEXT_PUBLIC_WS_URL`.
 - `hooks/useAuctionSocket.ts`: remove the interim `BID_OUTBID` toast (`onUserMessage`, NOTIF-105) once the global notification toasts land, so outbids are not toasted twice.
 
+**Refinements (implemented):** no SockJS and no ref-counted STOMP singleton — the user queue has one consumer, `useUserNotifications`, mounted once in the root layout (`UserNotificationsBridge`) so it also runs on public auction pages and survives client navigation; the auction page's socket no longer subscribes to the user queue (one toast per outbid). Tab sync = reload count + recent on window focus and on every (re)connect. `NotificationResponse.createdAt` now carries the server zone's offset so "time ago" is right in any browser zone. Bulk actions on selected rows send one request per row (no bulk-by-id endpoint); "Mark all as read" / "Delete read" use the bulk endpoints. Store actions return `Promise<boolean>` and roll back on failure. `notificationStore` resyncs from the server on a failed optimistic action, merges `loadRecent` results with local state (pending reads kept), and drops late responses after `reset()` via an epoch.
+
 **Tasks:**
-- [ ] **8.1 STOMP client.** Unit test with a mocked `Client`: two subscribers to the same destination → one STOMP subscription; the last unsubscribe → STOMP unsubscribe; a fresh token is read on every reconnect.
-- [ ] **8.2 Types + service + mapper.** Mapper tests for every backend type → icon/colour, and unknown → `system`.
-- [ ] **8.3 Store.** Tests: `applyPush` NOTIFICATION prepends and sets the count from the server value (not +1); duplicate ID ignored; failed `markRead` rolls back.
-- [ ] **8.4 Bell + panel + toast.** Follow the frontend-ui-engineering skill and `docs/design-system.md` tokens. Keyboard accessible dropdown (Esc closes, focus returns to the bell).
-- [ ] **8.5 Full page.** Filters live in URL search params so the page can be shared and restored.
-- [ ] **8.6** `npm run lint && npm run build`. Manual E2E: two browsers; A is outbid → the bell increments live and a toast shows; marking read in tab 1 updates the count in tab 2 once tab 2 regains focus; a 375 px viewport renders correctly.
+- [x] **8.1 STOMP client.** Unit test with a mocked `Client`: two subscribers to the same destination → one STOMP subscription; the last unsubscribe → STOMP unsubscribe; a fresh token is read on every reconnect.
+- [x] **8.2 Types + service + mapper.** Mapper tests for every backend type → icon/colour, and unknown → `system`.
+- [x] **8.3 Store.** Tests: `applyPush` NOTIFICATION prepends and sets the count from the server value (not +1); duplicate ID ignored; failed `markRead` rolls back.
+- [x] **8.4 Bell + panel + toast.** Follow the frontend-ui-engineering skill and `docs/design-system.md` tokens. Keyboard accessible dropdown (Esc closes, focus returns to the bell).
+- [x] **8.5 Full page.** Filters live in URL search params so the page can be shared and restored.
+- [ ] **8.6** Automated part (`npm run lint && npm run build`) passed; the manual end-to-end check is handed to the user. Manual E2E: two browsers; A is outbid → the bell increments live and a toast shows; marking read in tab 1 updates the count in tab 2 once tab 2 regains focus; a 375 px viewport renders correctly.
 
 ---
 

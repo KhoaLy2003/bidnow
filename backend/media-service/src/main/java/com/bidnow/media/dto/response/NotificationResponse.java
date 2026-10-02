@@ -6,7 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,9 +24,13 @@ public class NotificationResponse {
     private UUID auctionId;
     private Map<String, Object> metadata;
     private boolean read;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
-    /** Maps a stored notification; {@code read} is derived from {@code readAt}. */
+    /**
+     * Maps a stored notification; {@code read} is derived from {@code readAt}. {@code createdAt} is stored as
+     * server-local LocalDateTime (BaseEntity); it is sent with the server zone's offset so browsers compute the
+     * right instant.
+     */
     public static NotificationResponse from(Notification notification) {
         return NotificationResponse.builder()
                 .id(notification.getId())
@@ -36,7 +41,8 @@ public class NotificationResponse {
                 .auctionId(notification.getAuctionId())
                 .metadata(notification.getMetadata())
                 .read(notification.getReadAt() != null)
-                .createdAt(notification.getCreatedAt())
+                .createdAt(notification.getCreatedAt() == null ? null
+                        : notification.getCreatedAt().atZone(ZoneId.systemDefault()).toOffsetDateTime())
                 .build();
     }
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono, DM_Sans } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
+import { UserNotificationsBridge } from '@/components/notification/UserNotificationsBridge'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import './globals.css'
 
@@ -42,6 +43,7 @@ export default function RootLayout({
           <TooltipProvider>
             {children}
           </TooltipProvider>
+          <UserNotificationsBridge />
           <Toaster position="bottom-right" />
         </ThemeProvider>
       </body>

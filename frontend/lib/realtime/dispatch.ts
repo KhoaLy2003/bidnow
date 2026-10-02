@@ -6,7 +6,7 @@ import {
   type AuctionRealtimeMessage,
   type BidPlacedPayload,
 } from '@/types/api/realtime.api'
-import type { NotificationDto } from '@/types/api/notification.api'
+import type { UserNotificationMessage } from '@/types/api/notification.api'
 
 export interface RealtimeHandlers {
   bidPlaced(p: BidPlacedPayload): void
@@ -37,13 +37,14 @@ export function parseRealtimeMessage(body: string): AuctionRealtimeMessage | nul
   return parsed as unknown as AuctionRealtimeMessage
 }
 
-/** The stored notification inside a `/user/queue/notifications` NOTIFICATION envelope, or null. */
-export function parseUserNotification(body: string): NotificationDto | null {
+/** A `/user/queue/notifications` NOTIFICATION envelope (notification + server unread count), or null. */
+export function parseUserNotificationMessage(body: string): UserNotificationMessage | null {
   const parsed = parseJson(body)
   if (!isRecord(parsed) || parsed.type !== 'NOTIFICATION' || !isRecord(parsed.notification)) return null
+  if (typeof parsed.unreadCount !== 'number') return null
   const n = parsed.notification
   if (typeof n.id !== 'string' || typeof n.type !== 'string' || typeof n.message !== 'string') return null
-  return n as unknown as NotificationDto
+  return parsed as unknown as UserNotificationMessage
 }
 
 /** Returns true when a handler ran. Messages for another auction are ignored. */
