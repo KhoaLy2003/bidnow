@@ -3,6 +3,7 @@ package com.bidnow.media.kafka;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionEndingSoonEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.dto.event.BidPlacedEvent;
 import com.bidnow.common.dto.event.DepositRefundedEvent;
@@ -54,6 +55,7 @@ class NotificationKafkaConsumerTest {
         AuctionEndedEvent ended = AuctionEndedEvent.builder().auctionId(id).build();
         AuctionCancelledEvent cancelled = AuctionCancelledEvent.builder().auctionId(id).build();
         AuctionExtendedEvent extended = AuctionExtendedEvent.builder().auctionId(id).build();
+        AuctionEndingSoonEvent endingSoon = AuctionEndingSoonEvent.builder().auctionId(id).build();
         PaymentEvent payment = PaymentEvent.builder().auctionId(id).build();
         DepositRefundedEvent refunded = DepositRefundedEvent.builder().auctionId(id).build();
 
@@ -64,6 +66,7 @@ class NotificationKafkaConsumerTest {
         consumer.consumeAuctionEnded(ended);
         consumer.consumeAuctionCancelled(cancelled);
         consumer.consumeAuctionExtended(extended);
+        consumer.consumeAuctionEndingSoon(endingSoon);
         consumer.consumePaymentEvent(payment);
         consumer.consumeDepositRefunded(refunded);
 
@@ -74,6 +77,7 @@ class NotificationKafkaConsumerTest {
         verify(auctionHandler).auctionEnded(ended);
         verify(auctionHandler).auctionCancelled(cancelled);
         verify(auctionHandler).auctionExtended(extended);
+        verify(auctionHandler).endingSoon(endingSoon);
         verify(paymentHandler).paymentEvent(payment);
         verify(paymentHandler).depositRefunded(refunded);
     }
@@ -84,7 +88,7 @@ class NotificationKafkaConsumerTest {
                 .filter(m -> m.isAnnotationPresent(KafkaListener.class))
                 .collect(Collectors.toMap(Method::getName, m -> m.getAnnotation(KafkaListener.class)));
 
-        assertThat(listeners).hasSize(9);
+        assertThat(listeners).hasSize(10);
         assertThat(listeners.get("consumeUserVerificationRequested").topics()).containsExactly("user-verification-requested-topic");
         assertThat(listeners.get("consumeUserRegistered").topics()).containsExactly("user-registered-topic");
         assertThat(listeners.get("consumeAuctionCreated").topics()).containsExactly("auction-created-topic");
@@ -92,6 +96,7 @@ class NotificationKafkaConsumerTest {
         assertThat(listeners.get("consumeAuctionEnded").topics()).containsExactly("auction-ended-topic");
         assertThat(listeners.get("consumeAuctionCancelled").topics()).containsExactly("auction-cancelled-topic");
         assertThat(listeners.get("consumeAuctionExtended").topics()).containsExactly("auction-extended-topic");
+        assertThat(listeners.get("consumeAuctionEndingSoon").topics()).containsExactly("auction-ending-soon-topic");
         assertThat(listeners.get("consumePaymentEvent").topics()).containsExactly("payment-event-topic");
         assertThat(listeners.get("consumeDepositRefunded").topics()).containsExactly("deposit-refunded-topic");
         listeners.values().forEach(l -> assertThat(l.groupId()).isEqualTo("${spring.kafka.consumer.group-id}"));

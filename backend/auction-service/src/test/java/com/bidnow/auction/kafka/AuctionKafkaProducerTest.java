@@ -3,6 +3,7 @@ package com.bidnow.auction.kafka;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.bidnow.common.dto.event.AuctionEndingSoonEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,6 +66,39 @@ class AuctionKafkaProducerTest {
             assertThatCode(() -> producer.publishAuctionExtended(event)).doesNotThrowAnyException();
 
             assertThat(appender.list).anyMatch(e -> e.getFormattedMessage().startsWith("CRITICAL: Failed to publish AuctionExtendedEvent")
+                    && e.getThrowableProxy() != null);
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
+    void publishEndingSoon_sendsToEndingSoonTopicKeyedByAuction() {
+        AuctionEndingSoonEvent event = AuctionEndingSoonEvent.builder()
+                .auctionId(UUID.randomUUID()).thresholdMinutes(15).build();
+        when(kafkaTemplate.send("auction-ending-soon-topic", event.getAuctionId().toString(), event))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        producer.publishEndingSoon(event);
+
+        verify(kafkaTemplate).send("auction-ending-soon-topic", event.getAuctionId().toString(), event);
+    }
+
+    @Test
+    void publishEndingSoon_asyncFailureIsLoggedNotThrown() {
+        Logger logger = (Logger) LoggerFactory.getLogger(AuctionKafkaProducer.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            AuctionEndingSoonEvent event = AuctionEndingSoonEvent.builder()
+                    .auctionId(UUID.randomUUID()).thresholdMinutes(15).build();
+            CompletableFuture<SendResult<String, Object>> failed = CompletableFuture.failedFuture(new KafkaException("down"));
+            when(kafkaTemplate.send("auction-ending-soon-topic", event.getAuctionId().toString(), event)).thenReturn(failed);
+
+            assertThatCode(() -> producer.publishEndingSoon(event)).doesNotThrowAnyException();
+
+            assertThat(appender.list).anyMatch(e -> e.getFormattedMessage().startsWith("Failed to publish AuctionEndingSoonEvent")
                     && e.getThrowableProxy() != null);
         } finally {
             logger.detachAppender(appender);

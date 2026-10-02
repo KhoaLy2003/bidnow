@@ -96,6 +96,7 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 | `bid-placed-topic` | publishes (after commit, key = auctionId) | `BidPlacedEvent` incl. `bidId`, `totalBids`, `endTime`, `previousHighestBidderId` |
 | `auction-ended-topic`, `auction-cancelled-topic`, `auction-extended-topic` | consumes (`bidding-service-group`) | Evict `bidding:auction:{id}:context` |
 | `auction-extended-topic` | published by auction-service (after commit, key = auctionId) | `AuctionExtendedEvent {auctionId, auctionTitle, previousEndTime, newEndTime, extensionCount, triggeredByBidId, triggeredByUserId}` |
+| `auction-ending-soon-topic` | published by auction-service (after commit, key = auctionId) | `AuctionEndingSoonEvent {auctionId, auctionTitle, sellerId, endTime, thresholdMinutes}` — one per configured threshold (`auction.ending-soon.thresholds-minutes`, default 60 and 15) before the current end time; JobRunr jobs reschedule themselves after anti-sniping extensions. media-service turns it into an in-app `AUCTION_ENDING_SOON` for every bidder. |
 
 ### Wallet Events (Kafka)
 

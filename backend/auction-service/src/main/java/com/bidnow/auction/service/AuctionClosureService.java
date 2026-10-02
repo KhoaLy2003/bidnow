@@ -34,6 +34,7 @@ public class AuctionClosureService {
     private final AuctionKafkaProducer kafkaProducer;
     private final ClosureProperties closureProperties;
     private final Clock clock;
+    private final AuctionEndingSoonService endingSoonService;
 
     /**
      * Deterministic, name-based closure job ID per (auction, close time). JobRunr ignores a second
@@ -145,6 +146,9 @@ public class AuctionClosureService {
      * job ID is derived deterministically from the auction ID and end time so repeated calls are
      * idempotent.
      * <p>
+     * Also schedules the auction's "ending soon" alert jobs for the same end time
+     * ({@link AuctionEndingSoonService#scheduleAll}).
+     * <p>
      * <b>Must be called within an active Spring transaction.</b> Calling this method without an
      * active transaction synchronization will throw {@link IllegalStateException}.
      *
@@ -166,5 +170,9 @@ public class AuctionClosureService {
                 log.info("Scheduled closure job {} for auction {} (ends {}) at {}", jobId, auctionId, closeAt, fireAt);
             }
         });
+
+        // Ending-soon alerts share the closure's end time: every path that schedules a closure (create, publish,
+        // activation, startup recovery, closure deferral) schedules them too (NOTIF-107).
+        endingSoonService.scheduleAll(auctionId, closeAt);
     }
 }

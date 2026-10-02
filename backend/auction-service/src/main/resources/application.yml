@@ -76,3 +76,6 @@ auction:
   closure:
     # Must exceed JobRunr's background-job-server poll interval (15 s default) so a closure job never runs before end_time.
     grace-seconds: 20
+  ending-soon:
+    # Minutes before the end time at which bidders get an in-app "ending soon" alert (NOTIF-107). [] disables.
+    thresholds-minutes: [60, 15]

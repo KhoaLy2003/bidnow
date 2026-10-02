@@ -3,6 +3,7 @@ package com.bidnow.auction.kafka;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionEndingSoonEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.dto.event.AuctionRejectedEvent;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class AuctionKafkaProducer {
     private static final String AUCTION_REJECTED_TOPIC = "auction-rejected-topic";
     private static final String AUCTION_ENDED_TOPIC = "auction-ended-topic";
     private static final String AUCTION_EXTENDED_TOPIC = "auction-extended-topic";
+    private static final String AUCTION_ENDING_SOON_TOPIC = "auction-ending-soon-topic";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -61,6 +63,19 @@ public class AuctionKafkaProducer {
                     } else {
                         log.info("Published AuctionExtendedEvent for auction {} (new end {})",
                                 event.getAuctionId(), event.getNewEndTime());
+                    }
+                });
+    }
+
+    public void publishEndingSoon(AuctionEndingSoonEvent event) {
+        kafkaTemplate.send(AUCTION_ENDING_SOON_TOPIC, event.getAuctionId().toString(), event)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish AuctionEndingSoonEvent for auction {} ({} min) - bidders get no alert",
+                                event.getAuctionId(), event.getThresholdMinutes(), ex);
+                    } else {
+                        log.info("Published AuctionEndingSoonEvent for auction {} ({} min)",
+                                event.getAuctionId(), event.getThresholdMinutes());
                     }
                 });
     }

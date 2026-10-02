@@ -18,7 +18,7 @@
 | #16 Email + templates (closed) | **Partial.** Send + `media_email_logs` logging works. Admin template CRUD, test and group send exist. Templates exist for WELCOME, AUCTION_CREATED, AUCTION_WON, AUCTION_LOST, PAYMENT_SUCCESSFUL, DEPOSIT_REFUNDED, OTP (EN/VI). **Missing:** retry (`retryEmail` throws `UnsupportedOperationException`, no rendered body is persisted), delivery stats, payment reminder #1/#2 templates, language resolution (`resolveLanguage()` hard-codes EN). |
 | #17 User APIs (open, assigned to you) | Not started. No gateway route for `/api/v1/notifications/**`. |
 | #18 Real-time + UI (open) | Backend push mechanism exists (RT-101), but only for ephemeral `OUTBID`. Frontend `NotificationBell/Panel/Toast` + `notificationStore` are local-only (no API, no socket). `socket.io-client` is still installed, and the bidding epic's FE-101 has not yet moved to STOMP. |
-| #19 Smart features (open) | Not started. `NotificationServiceImpl.handleBidPlaced/AuctionEnded/PaymentEvent/AuctionCreated` are TODO stubs. `AuctionEndedEvent.loserIds` is always empty. wallet emits `PaymentEvent` REQUIRED/COMPLETED/FAILED but no REMINDER_24H. No ending-soon anywhere. |
+| #19 Smart features (open) | Not started. `NotificationServiceImpl.handleBidPlaced/AuctionEnded/PaymentEvent/AuctionCreated` are TODO stubs. `AuctionEndedEvent.loserIds` is always empty. wallet emits `PaymentEvent` REQUIRED/COMPLETED/FAILED but no REMINDER_24H. No ending-soon anywhere (added in NOTIF-107). |
 
 ## Decisions (conflict resolution; treat as spec)
 
@@ -329,29 +329,28 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 **Deliverable:** For every auction, at each default threshold (60 and 15 minutes) before the *current* end time, every bidder gets an in-app "Auction X ends in 15 minutes". Extensions are handled. Sellers configure nothing, and nothing changes in the frontend or the auction schema.
 
 **Files:**
-- common: `dto/event/AuctionEndingSoonEvent.java` (`auctionId, auctionTitle, sellerId, endTime (OffsetDateTime), thresholdMinutes`).
+- common: `dto/event/AuctionEndingSoonEvent.java` (`auctionId, auctionTitle, sellerId, endTime (Instant), thresholdMinutes`).
 - auction-service:
-  - `config/EndingSoonProperties.java` (`@ConfigurationProperties("auction.ending-soon")`: `thresholds-minutes: [60, 15]`, validated to be positive and distinct) + `application.yml`
-  - `service/EndingSoonScheduler.java`:
-    - `scheduleAll(auction)` on activation, edit (end time changed) and startup recovery: one JobRunr job per configured threshold with deterministic ID `nameUUID(auctionId+":"+minutes+":"+endTime.toEpochMilli())`, skipping thresholds already in the past
-    - `job/EndingSoonJob.fire(auctionId, minutes, expectedEndTime)`, which runs in its own transaction and loads the auction
-      - if the status is not ACTIVE → no-op
-      - if `endTime != expectedEndTime` (extended) → schedule for the new end time and return
-      - otherwise publish `AuctionEndingSoonEvent` afterCommit
-  - `AuctionBidService.applyBid` extension branch: call `endingSoonScheduler.scheduleAll` for the new end time. Old jobs self-cancel via the `expectedEndTime` check.
+  - `config/EndingSoonProperties.java` (`auction.ending-soon.thresholds-minutes`, default `[60, 15]`; an empty list disables; values must be positive and distinct, otherwise startup fails) + `application.yml`
+  - `service/AuctionEndingSoonService.java`:
+    - `scheduleAll(auctionId, endTime)`: registers one JobRunr job per future threshold after commit, with ID `nameUUID("auction-ending-soon:" + auctionId + ":" + minutes + ":" + endMillis)`
+    - `fire(auctionId, minutes, expectedEndEpochMilli)`: auction not ACTIVE, gone or past its end → nothing; end time moved → reschedule that threshold; otherwise publish `AuctionEndingSoonEvent` after commit
+  - `job/AuctionEndingSoonJob.notifyEndingSoon(UUID, int, long)`
   - `AuctionKafkaProducer.publishEndingSoon` (`auction-ending-soon-topic`)
+  - a single hook in `AuctionClosureService.scheduleClosureJob`; **no** `applyBid` change
 - media-service:
-  - `NotificationKafkaConsumer` + `auction-ending-soon-topic`
-  - `AuctionNotificationHandler.endingSoon` → participants, type `AUCTION_ENDING_SOON`, in-app only, `DedupKeys.endingSoon(a, minutes)`, message with a humanised threshold (e.g. "1 hour", "15 minutes", derived from the minutes)
-  - optionally also push `ENDING_SOON` on `/topic/auctions/{id}` via `AuctionRealtimeConsumer`, for the countdown highlight (cheap: one listener + one broadcaster method)
+  - `NotificationKafkaConsumer.consumeAuctionEndingSoon` (`auction-ending-soon-topic`)
+  - `AuctionNotificationHandler.endingSoon`: notifies bidders only, in-app, with `DedupKeys.endingSoon` and a humanised threshold label ("1 hour", "15 minutes"). There is no STOMP broadcast.
 
 **Tasks:**
-- [ ] **7.1 `EndingSoonProperties`.** Tests: binds `[60, 15]` by default; an empty list disables scheduling platform-wide; duplicate or non-positive values fail startup validation.
-- [ ] **7.2 `EndingSoonScheduler.scheduleAll`.** Tests with a fixed `Clock`: `endTime = now+50m` with thresholds `[60,15]` → only the 15-minute job (the 60-minute threshold is already past); job IDs are deterministic; rescheduling for the same end time does not duplicate (same ID).
-- [ ] **7.3 `EndingSoonJob`.** Tests: ACTIVE with matching end → event afterCommit; extended → rescheduled for the new end and no event; CANCELLED/COMPLETED → no-op.
-- [ ] **7.4 Extension hook.** `applyBid` extended → `scheduleAll` called with the new end time (extend the existing anti-snipe tests).
-- [ ] **7.5 media handler.** Participants only (not the seller); the same event redelivered → one row per user.
-- [ ] **7.6 Manual smoke.** Create an auction ending in 20 minutes and bid as another user. About 5 minutes later the bidder gets the 15-minute notification, and the 60-minute one is never sent because it was already past.
+- [x] **7.1 `EndingSoonProperties`.** Tests: binds `[60, 15]` by default; an empty list disables scheduling platform-wide; duplicate or non-positive values fail startup validation.
+- [x] **7.2 `EndingSoonScheduler.scheduleAll`.** Tests with a fixed `Clock`: `endTime = now+50m` with thresholds `[60,15]` → only the 15-minute job (the 60-minute threshold is already past); job IDs are deterministic; rescheduling for the same end time does not duplicate (same ID).
+- [x] **7.3 `EndingSoonJob`.** Tests: ACTIVE with matching end → event afterCommit; extended → rescheduled for the new end and no event; CANCELLED/COMPLETED → no-op.
+- [ ] **7.4 Extension hook.** (dropped — see Refinements) `applyBid` extended → `scheduleAll` called with the new end time (extend the existing anti-snipe tests).
+- [x] **7.5 media handler.** Participants only (not the seller); the same event redelivered → one row per user.
+- [ ] **7.6 Manual smoke.** (manual smoke handed to the user) Create an auction ending in 20 minutes and bid as another user. About 5 minutes later the bidder gets the 15-minute notification, and the 60-minute one is never sent because it was already past.
+
+**Refinements (implemented):** one hook point — `AuctionClosureService.scheduleClosureJob` calls `AuctionEndingSoonService.scheduleAll`, so create/publish/activation/closure deferral all schedule the alerts (activation, which startup recovery uses for overdue SCHEDULED auctions, goes through `scheduleClosureJob`; restarts need no recovery because JobRunr persists jobs); no `applyBid` hook (7.4 dropped): an extension only happens inside the 2-minute snipe window, after every threshold job ≥ 2 min has fired, and a job that fires after an extension reschedules its threshold for the new end. The job's expected end time is epoch millis and compared in millis (Postgres keeps microseconds). Jobs that run after the end time publish nothing. `AuctionEndingSoonEvent.endTime` is an `Instant` (like `AuctionExtendedEvent`). No `ENDING_SOON` STOMP broadcast (optional, YAGNI).
 
 ---
 
@@ -414,9 +413,10 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 - **Welcome email depends on identity-service.** The dispatcher resolves the address via RecipientDirectory even though `UserRegisteredEvent` carries it; during an identity outage the welcome email is skipped. Fix when convenient: optional fallback email on `EmailSpec`, used when the lookup returns none.
 - **Metadata serialisation failure fails a whole batch.** `NotificationInboxRepository` throws on unserialisable metadata, rolling back the entire `dispatchAll`. Before Story 4 batch handlers: validate metadata when building intents, or skip only the offending intent.
 - **Smoke run is a merge gate for NOTIF-101.** No automated test exercises the REQUIRES_NEW proxy from afterCommit, the @Transactional boundary on replay, or STOMP delivery. Before merging verify: (a) a `media_email_logs` row with `notification_id` set after a welcome; (b) replaying the same `user-registered-topic` record creates no second row, email or push; (c) a frame arrives on `/user/queue/notifications` for a connected user.
-- **JobRunr job growth.** One ending-soon job per configured threshold (2 by default) per auction per extension. Stale jobs are no-ops but remain in JobRunr's succeeded list until its retention cleanup runs.
+- **Ending-soon rollout gap.** Auctions already ACTIVE when NOTIF-107 is deployed have no ending-soon jobs (they were scheduled before the hook existed), so their bidders get no alerts; there is no backfill. Acceptable in dev; for a long-lived environment, run a one-off that calls `scheduleAll` for each ACTIVE auction inside a transaction.
+- **JobRunr job growth.** One ending-soon job per configured threshold (2 by default) per auction, plus a rescheduled job only when a threshold job fires after an extension (in practice only thresholds shorter than the 2-minute snipe window). Stale jobs are no-ops but remain in JobRunr's succeeded list until its retention cleanup runs.
 - **Batched alerts are single-node Redis only.** The record/claim scripts touch a batch hash and the shared due set, which live in different hash slots; Redis Cluster would reject them. Use hash tags (`{notif}`) before moving to a cluster. A batched alert can also land up to one window after the auction ended, and a dispatch failure after a claim loses that one batch (ERROR log).
 - **In-app copy is EN only** (Decision in Story 4). VI in-app copy needs `IN_APP` templates, which are post-MVP.
-- **Payment events are at-most-once.** `WalletEventPublisher` sends after commit and only logs a Kafka failure; for REMINDER_24H `reminder_sent_at` is already stamped, so a broker outage at that moment loses reminder #2 for good (same as REQUIRED/COMPLETED/FAILED today). A transactional outbox would fix all of them; out of MVP scope.
+- **Payment events are at-most-once.** `WalletEventPublisher` sends after commit and only logs a Kafka failure; for REMINDER_24H `reminder_sent_at` is already stamped, so a broker outage at that moment loses reminder #2 for good (same as REQUIRED/COMPLETED/FAILED today). A transactional outbox would fix all of them; out of MVP scope. auction-service's ending-soon alerts behave the same way: `AfterCommit` swallows a failed Kafka publish or JobRunr reschedule, so the job ends SUCCEEDED, `@Job(retries = 3)` only covers failures before commit, and a failed alert is lost.
 - **Synchronous delivery blocks production rollout.** Story 4 made auction-ended/cancelled fan out to every bidder, so the Story 4 prerequisite above (TransactionTemplate around the email-log save only + bounded async delivery) must land before production; today hundreds of sequential SMTP sends on a listener thread can exceed max.poll.interval.ms and lose unsent emails on rebalance.
 - **New subscriptions replay history.** media-service-group uses auto-offset-reset earliest and gained auction-cancelled, auction-extended and deposit-refunded listeners in Story 4, so the first deploy to a long-lived environment re-sends historical notifications. Before that deploy, pre-commit offsets for those topics (kafka-consumer-groups --reset-offsets --to-latest) or accept the replay.

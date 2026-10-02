@@ -4,6 +4,7 @@ import com.bidnow.common.annotation.Loggable;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionEndingSoonEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.dto.event.BidPlacedEvent;
 import com.bidnow.common.dto.event.DepositRefundedEvent;
@@ -71,6 +72,12 @@ public class NotificationKafkaConsumer {
     public void consumeAuctionExtended(AuctionExtendedEvent event) {
         log.info("Received AuctionExtendedEvent for auction: {}", event.getAuctionId());
         auctionHandler.auctionExtended(event);
+    }
+
+    @KafkaListener(topics = "auction-ending-soon-topic", groupId = "${spring.kafka.consumer.group-id}")
+    public void consumeAuctionEndingSoon(AuctionEndingSoonEvent event) {
+        log.info("Received AuctionEndingSoonEvent for auction: {} ({} min)", event.getAuctionId(), event.getThresholdMinutes());
+        auctionHandler.endingSoon(event);
     }
 
     @KafkaListener(topics = "payment-event-topic", groupId = "${spring.kafka.consumer.group-id}")

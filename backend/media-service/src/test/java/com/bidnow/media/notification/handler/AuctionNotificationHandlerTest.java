@@ -3,6 +3,7 @@ package com.bidnow.media.notification.handler;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionEndingSoonEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.media.domain.enums.NotificationType;
 import com.bidnow.media.notification.DedupKeys;
@@ -226,5 +227,60 @@ class AuctionNotificationHandlerTest {
         handler.auctionCreated(AuctionCreatedEvent.builder().auctionId(AUCTION).title("Vintage Watch").build());
 
         verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void endingSoon_notifiesEveryBidderInAppButNotTheSeller() {
+        when(auctions.title(AUCTION, "Vintage Watch")).thenReturn("Vintage Watch");
+        when(auctions.participants(AUCTION)).thenReturn(List.of(LOSER1, LOSER2));
+
+        handler.endingSoon(AuctionEndingSoonEvent.builder().auctionId(AUCTION).auctionTitle("Vintage Watch")
+                .sellerId(SELLER).endTime(Instant.parse("2026-10-02T12:15:00Z")).thresholdMinutes(15).build());
+
+        List<NotificationIntent> intents = dispatchedBatch();
+        assertThat(intents).extracting(NotificationIntent::userId).containsExactly(LOSER1, LOSER2);
+        NotificationIntent intent = intents.get(0);
+        assertThat(intent.type()).isEqualTo(NotificationType.AUCTION_ENDING_SOON);
+        assertThat(intent.dedupKey()).isEqualTo(DedupKeys.endingSoon(AUCTION, 15));
+        assertThat(intent.title()).isEqualTo("Auction ending soon");
+        assertThat(intent.message()).isEqualTo("\"Vintage Watch\" ends in 15 minutes.");
+        assertThat(intent.actionUrl()).isEqualTo("/auctions/" + AUCTION);
+        assertThat(intent.email()).isNull();
+    }
+
+    @Test
+    void endingSoon_humanisesWholeHours() {
+        when(auctions.title(AUCTION, null)).thenReturn("Vintage Watch");
+        when(auctions.participants(AUCTION)).thenReturn(List.of(LOSER1));
+
+        handler.endingSoon(AuctionEndingSoonEvent.builder().auctionId(AUCTION).thresholdMinutes(60).build());
+
+        assertThat(dispatchedBatch().get(0).message()).isEqualTo("\"Vintage Watch\" ends in 1 hour.");
+    }
+
+    @Test
+    void thresholdLabel_coversSingularAndPlural() {
+        assertThat(AuctionNotificationHandler.thresholdLabel(1)).isEqualTo("1 minute");
+        assertThat(AuctionNotificationHandler.thresholdLabel(15)).isEqualTo("15 minutes");
+        assertThat(AuctionNotificationHandler.thresholdLabel(60)).isEqualTo("1 hour");
+        assertThat(AuctionNotificationHandler.thresholdLabel(120)).isEqualTo("2 hours");
+        assertThat(AuctionNotificationHandler.thresholdLabel(90)).isEqualTo("90 minutes");
+    }
+
+    @Test
+    void endingSoon_withoutBidders_dispatchesNothing() {
+        when(auctions.title(AUCTION, null)).thenReturn("Vintage Watch");
+        when(auctions.participants(AUCTION)).thenReturn(List.of());
+
+        handler.endingSoon(AuctionEndingSoonEvent.builder().auctionId(AUCTION).thresholdMinutes(15).build());
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void endingSoon_withoutThreshold_isSkipped() {
+        handler.endingSoon(AuctionEndingSoonEvent.builder().auctionId(AUCTION).build());
+
+        verifyNoInteractions(dispatcher, auctions);
     }
 }

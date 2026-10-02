@@ -3,6 +3,7 @@ package com.bidnow.media.notification.handler;
 import com.bidnow.common.dto.event.AuctionCancelledEvent;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import com.bidnow.common.dto.event.AuctionEndedEvent;
+import com.bidnow.common.dto.event.AuctionEndingSoonEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.media.domain.enums.NotificationType;
 import com.bidnow.media.notification.DedupKeys;
@@ -125,6 +126,34 @@ public class AuctionNotificationHandler {
                     "Auction extended", message, NotificationLinks.auctionPath(auctionId), null, null));
         }
         dispatchIfAny(intents);
+    }
+
+    /** Ending-soon (platform-default thresholds, Decision 7): every bidder, in-app only; one per auction per threshold. */
+    public void endingSoon(AuctionEndingSoonEvent event) {
+        UUID auctionId = event.getAuctionId();
+        Integer minutes = event.getThresholdMinutes();
+        if (minutes == null || minutes <= 0) {
+            log.warn("AuctionEndingSoonEvent for auction {} has no threshold - notification skipped", auctionId);
+            return;
+        }
+        String title = auctions.title(auctionId, event.getAuctionTitle());
+        String message = "\"" + title + "\" ends in " + thresholdLabel(minutes) + ".";
+        String dedupKey = DedupKeys.endingSoon(auctionId, minutes);
+        List<NotificationIntent> intents = new ArrayList<>();
+        for (UUID bidder : auctions.participants(auctionId)) {
+            intents.add(new NotificationIntent(bidder, NotificationType.AUCTION_ENDING_SOON, dedupKey, auctionId,
+                    "Auction ending soon", message, NotificationLinks.auctionPath(auctionId), null, null));
+        }
+        dispatchIfAny(intents);
+    }
+
+    /** "1 minute", "15 minutes", "1 hour", "2 hours" (whole hours only; 90 -> "90 minutes"). */
+    static String thresholdLabel(int minutes) {
+        if (minutes % 60 == 0) {
+            int hours = minutes / 60;
+            return hours + (hours == 1 ? " hour" : " hours");
+        }
+        return minutes + (minutes == 1 ? " minute" : " minutes");
     }
 
     private void dispatchIfAny(List<NotificationIntent> intents) {
