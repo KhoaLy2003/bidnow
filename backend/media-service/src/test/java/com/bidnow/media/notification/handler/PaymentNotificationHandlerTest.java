@@ -132,9 +132,52 @@ class PaymentNotificationHandlerTest {
 
     @Test
     void unknownPaymentType_dispatchesNothing() {
-        handler.paymentEvent(payment("REMINDER_24H").build());
+        handler.paymentEvent(payment("REFUNDED").build());
 
         verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void reminder_sendsTransactionalFinalNoticeEmail() {
+        when(auctions.title(AUCTION, null)).thenReturn("Vintage Watch");
+
+        handler.paymentEvent(payment("REMINDER_24H").insufficientFunds(false).build());
+
+        NotificationIntent intent = dispatchedSingle();
+        assertThat(intent.userId()).isEqualTo(WINNER);
+        assertThat(intent.type()).isEqualTo(NotificationType.PAYMENT_REMINDER);
+        assertThat(intent.dedupKey()).isEqualTo(DedupKeys.payment("REMINDER_24H", AUCTION));
+        assertThat(intent.title()).isEqualTo("Payment reminder");
+        assertThat(intent.actionUrl()).isEqualTo("/wallet");
+        assertThat(intent.message()).isEqualTo("You still need to pay for \"Vintage Watch\". Please complete your "
+                + "payment of $1,350.00 by 2026-10-03 10:00 UTC. Unpaid wins are cancelled after the deadline.");
+        assertThat(intent.email().templateBaseName()).isEqualTo("PAYMENT_REMINDER_2");
+        assertThat(intent.email().transactional()).isTrue();
+        assertThat(intent.email().variables())
+                .containsEntry("auctionTitle", "Vintage Watch")
+                .containsEntry("bidAmount", "$1,350.00")
+                .containsEntry("paymentDeadline", "2026-10-03 10:00 UTC")
+                .containsEntry("actionUrl", "http://localhost:3000/wallet");
+    }
+
+    @Test
+    void reminder_withZeroRemaining_billsTheTotalAndAsksToConfirm() {
+        when(auctions.title(AUCTION, null)).thenReturn("Vintage Watch");
+
+        handler.paymentEvent(payment("REMINDER_24H").remaining(BigDecimal.ZERO).insufficientFunds(false).build());
+
+        NotificationIntent intent = dispatchedSingle();
+        assertThat(intent.message()).contains("Please confirm your payment of $1,500.00 by 2026-10-03 10:00 UTC.");
+        assertThat(intent.email().variables()).containsEntry("bidAmount", "$1,500.00");
+    }
+
+    @Test
+    void reminder_withInsufficientFunds_asksToTopUp() {
+        when(auctions.title(AUCTION, null)).thenReturn("Vintage Watch");
+
+        handler.paymentEvent(payment("REMINDER_24H").insufficientFunds(true).build());
+
+        assertThat(dispatchedSingle().message()).contains("Please top up your wallet and pay $1,350.00");
     }
 
     @Test

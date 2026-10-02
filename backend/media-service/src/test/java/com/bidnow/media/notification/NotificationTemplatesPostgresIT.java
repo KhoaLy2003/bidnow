@@ -86,7 +86,7 @@ class NotificationTemplatesPostgresIT {
         auctionHandler.auctionEnded(AuctionEndedEvent.builder().auctionId(AUCTION).sellerId(SELLER).winnerId(WINNER)
                 .winningBidAmount(new BigDecimal("150")).build());
         auctionHandler.auctionCancelled(AuctionCancelledEvent.builder().auctionId(AUCTION).build());
-        for (String type : List.of("REQUIRED", "COMPLETED", "FAILED")) {
+        for (String type : List.of("REQUIRED", "REMINDER_24H", "COMPLETED", "FAILED")) {
             paymentHandler.paymentEvent(PaymentEvent.builder().auctionId(AUCTION).userId(WINNER).sellerId(SELLER)
                     .paymentType(type).amount(new BigDecimal("1500")).depositAmount(new BigDecimal("150"))
                     .remaining(new BigDecimal("1350")).deadline(Instant.parse("2026-10-03T10:00:00Z")).build());
@@ -110,7 +110,8 @@ class NotificationTemplatesPostgresIT {
         List<NotificationIntent.EmailSpec> specs = emailSpecsFromAllHandlers();
         assertThat(specs).extracting(NotificationIntent.EmailSpec::templateBaseName)
                 .contains("WELCOME_EMAIL", "AUCTION_CREATED", "AUCTION_LOST", "AUCTION_CANCELLED",
-                        "AUCTION_WON", "PAYMENT_SUCCESSFUL", "PAYMENT_FAILED", "SALE_PAYMENT_RECEIVED", "DEPOSIT_REFUNDED");
+                        "AUCTION_WON", "PAYMENT_SUCCESSFUL", "PAYMENT_FAILED", "SALE_PAYMENT_RECEIVED", "DEPOSIT_REFUNDED",
+                        "PAYMENT_REMINDER_2");
 
         for (NotificationIntent.EmailSpec spec : specs) {
             Map<String, String> variables = new HashMap<>();

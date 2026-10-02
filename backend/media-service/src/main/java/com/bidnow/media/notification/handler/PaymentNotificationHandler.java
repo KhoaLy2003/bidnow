@@ -42,6 +42,7 @@ public class PaymentNotificationHandler {
         }
         switch (String.valueOf(event.getPaymentType())) {
             case "REQUIRED" -> paymentRequired(event);
+            case "REMINDER_24H" -> paymentReminder(event);
             case "COMPLETED" -> paymentCompleted(event);
             case "FAILED" -> paymentFailed(event);
             default -> log.debug("PaymentEvent {} for auction {} has no notification",
@@ -70,27 +71,45 @@ public class PaymentNotificationHandler {
     private void paymentRequired(PaymentEvent event) {
         UUID auctionId = event.getAuctionId();
         String title = auctions.title(auctionId, event.getAuctionTitle());
-        String due = deadline(event.getDeadline());
-        String byDeadline = event.getDeadline() == null ? "" : " by " + due;
-        String message;
-        if (isZero(event.getRemaining())) {
-            message = "You won \"" + title + "\". Please confirm your payment of " + money(event.getAmount())
-                    + byDeadline + ".";
-        } else if (Boolean.TRUE.equals(event.getInsufficientFunds())) {
-            message = "You won \"" + title + "\". Please top up your wallet and pay " + money(event.getRemaining())
-                    + byDeadline + ".";
-        } else {
-            message = "You won \"" + title + "\". Please complete your payment of " + money(event.getRemaining())
-                    + byDeadline + ".";
-        }
         dispatcher.dispatch(new NotificationIntent(event.getUserId(), NotificationType.PAYMENT_REQUIRED,
-                DedupKeys.payment("REQUIRED", auctionId), auctionId, "Payment required", message,
+                DedupKeys.payment("REQUIRED", auctionId), auctionId, "Payment required",
+                "You won \"" + title + "\". " + payInstruction(event),
                 NotificationLinks.WALLET_PATH, null,
                 new EmailSpec("AUCTION_WON", Map.of(
                         "auctionTitle", title,
                         "bidAmount", money(event.getAmount()),
-                        "paymentDeadline", due,
+                        "paymentDeadline", deadline(event.getDeadline()),
                         "actionUrl", links.absolute(NotificationLinks.WALLET_PATH)), true)));
+    }
+
+    /** Payment reminder #2 (wallet sends it once, 24h before the deadline): the "final notice" email. */
+    private void paymentReminder(PaymentEvent event) {
+        UUID auctionId = event.getAuctionId();
+        String title = auctions.title(auctionId, event.getAuctionTitle());
+        // The template says "your payment of {bidAmount}": what is still owed, or the total when only a confirm is left
+        BigDecimal owed = isZero(event.getRemaining()) ? event.getAmount() : event.getRemaining();
+        dispatcher.dispatch(new NotificationIntent(event.getUserId(), NotificationType.PAYMENT_REMINDER,
+                DedupKeys.payment("REMINDER_24H", auctionId), auctionId, "Payment reminder",
+                "You still need to pay for \"" + title + "\". " + payInstruction(event)
+                        + " Unpaid wins are cancelled after the deadline.",
+                NotificationLinks.WALLET_PATH, null,
+                new EmailSpec("PAYMENT_REMINDER_2", Map.of(
+                        "auctionTitle", title,
+                        "bidAmount", money(owed),
+                        "paymentDeadline", deadline(event.getDeadline()),
+                        "actionUrl", links.absolute(NotificationLinks.WALLET_PATH)), true)));
+    }
+
+    /** What the winner has to do, ending with a period: confirm, top up and pay, or pay the remainder (by the deadline). */
+    private static String payInstruction(PaymentEvent event) {
+        String byDeadline = event.getDeadline() == null ? "" : " by " + deadline(event.getDeadline());
+        if (isZero(event.getRemaining())) {
+            return "Please confirm your payment of " + money(event.getAmount()) + byDeadline + ".";
+        }
+        if (Boolean.TRUE.equals(event.getInsufficientFunds())) {
+            return "Please top up your wallet and pay " + money(event.getRemaining()) + byDeadline + ".";
+        }
+        return "Please complete your payment of " + money(event.getRemaining()) + byDeadline + ".";
     }
 
     private void paymentCompleted(PaymentEvent event) {

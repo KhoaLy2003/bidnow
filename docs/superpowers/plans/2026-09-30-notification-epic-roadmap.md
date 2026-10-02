@@ -300,25 +300,27 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 
 ## Story 6 — NOTIF-106: payment reminder #2 (#19 §3)
 
-**Deliverable:** 24 h after the payment hold is created, an unpaid winner receives reminder #2 exactly once. After 48 h the existing forfeit emits FAILED, and Story 4 already handles that.
+**Deliverable:** when 24 h are left before the payment deadline (= 24 h after the hold is created with the default 48 h deadline), an unpaid winner receives reminder #2 exactly once. After 48 h the existing forfeit emits FAILED, and Story 4 already handles that.
 
 **Files:**
 - wallet-service:
   - `07-payment-hold-reminder.sql`: `payment_holds.reminder_sent_at TIMESTAMP`
   - `PaymentHold.reminderSentAt`
-  - `PaymentHoldRepository.findDueForReminder(status, cutoff, pageable)` (`created_at <= cutoff AND reminder_sent_at IS NULL AND status='PENDING_PAYMENT'`)
+  - `PaymentHoldRepository.findDueForReminderAuctionIds(status, now, remindBefore, page)` (`deadline > now AND deadline <= now + 24h AND reminder_sent_at IS NULL`)
   - `scheduler/PaymentReminderScheduler.java` (mirrors `ForfeitScheduler`: `fixedDelay` 5 min, batch 100)
-  - `PaymentService.sendPaymentReminder(UUID auctionId)` (`@Transactional`, re-checks the status under `findByAuctionIdForUpdate`, sets `reminder_sent_at`, and publishes `PaymentEvent{paymentType="REMINDER_24H", deadline, remaining}` afterCommit)
-  - `application.yml` `wallet.payment.reminder-after-hours: 24`
+  - `PaymentService.sendPaymentReminder(UUID auctionId)` (`@Transactional`, locks with `findByAuctionIdForUpdateSkipLocked`, re-checks status / not reminded / still inside the window, sets `reminder_sent_at`, and publishes a `PaymentApplicationEvent` that `WalletEventPublisher` sends to Kafka after commit as `PaymentEvent{paymentType="REMINDER_24H", deadline, remaining}`)
+  - `application.yml` `wallet.payment.reminder-before-deadline-hours: 24`
 - media-service:
   - `PaymentNotificationHandler` maps `REMINDER_24H` → `PAYMENT_REMINDER` type + `PAYMENT_REMINDER_2` template, transactional, with `DedupKeys.payment("REMINDER_24H", a)`
   - reuse the seeded `PAYMENT_REMINDER_2_{EN,VI}` template (variables `userName, auctionTitle, bidAmount, paymentDeadline, actionUrl`); no new migration
 
 **Tasks:**
-- [ ] **6.1 Migration + repository query.** Test: a hold at 23h59m is not due; one at 24h00m is due; one already reminded is not due; COMPLETED/FORFEITED holds are not due.
-- [ ] **6.2 `sendPaymentReminder`.** Tests: the reminder is sent once (a second call is a no-op); a hold that became COMPLETED between the query and the lock → no event; the event is published only after commit.
-- [ ] **6.3 Scheduler.** One failure does not stop the batch (same test shape as `ForfeitSchedulerTest`).
-- [ ] **6.4 media handler + template.** REMINDER_24H → intent with the `paymentDeadline` variable formatted in the recipient's language. Rendering the seeded template leaves no `{…}` placeholder (same check as 4.4).
+- [x] **6.1 Migration + repository query.** Test: a hold at 23h59m is not due; one at 24h00m is due; one already reminded is not due; COMPLETED/FORFEITED holds are not due.
+- [x] **6.2 `sendPaymentReminder`.** Tests: the reminder is sent once (a second call is a no-op); a hold that became COMPLETED between the query and the lock → no event; the event is published only after commit.
+- [x] **6.3 Scheduler.** One failure does not stop the batch (same test shape as `ForfeitSchedulerTest`).
+- [x] **6.4 media handler + template.** REMINDER_24H → intent with the `paymentDeadline` variable formatted in the recipient's language. Rendering the seeded template leaves no `{…}` placeholder (same check as 4.4).
+
+**Refinements (implemented):** due-ness is measured from the deadline (`deadline <= now + 24h`, not yet expired) rather than `created_at` — identical with the 48h deadline, but keeps "24 hours left" true if `deadline-hours` changes and reuses the `(status, deadline)` index; the service re-checks status / not-reminded / window under `SKIP LOCKED` (paid-in-between and racing instances are no-ops); the email's `{bidAmount}` is the amount still owed (the total when only a confirmation is left); REQUIRED and REMINDER_24H share one "please confirm / top up / pay" sentence. Wallet's repository query has a real-Postgres `@DataJpaTest` IT (`PaymentHoldReminderQueryPostgresIT`, explicit run).
 
 ---
 
@@ -415,5 +417,6 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 - **JobRunr job growth.** One ending-soon job per configured threshold (2 by default) per auction per extension. Stale jobs are no-ops but remain in JobRunr's succeeded list until its retention cleanup runs.
 - **Batched alerts are single-node Redis only.** The record/claim scripts touch a batch hash and the shared due set, which live in different hash slots; Redis Cluster would reject them. Use hash tags (`{notif}`) before moving to a cluster. A batched alert can also land up to one window after the auction ended, and a dispatch failure after a claim loses that one batch (ERROR log).
 - **In-app copy is EN only** (Decision in Story 4). VI in-app copy needs `IN_APP` templates, which are post-MVP.
+- **Payment events are at-most-once.** `WalletEventPublisher` sends after commit and only logs a Kafka failure; for REMINDER_24H `reminder_sent_at` is already stamped, so a broker outage at that moment loses reminder #2 for good (same as REQUIRED/COMPLETED/FAILED today). A transactional outbox would fix all of them; out of MVP scope.
 - **Synchronous delivery blocks production rollout.** Story 4 made auction-ended/cancelled fan out to every bidder, so the Story 4 prerequisite above (TransactionTemplate around the email-log save only + bounded async delivery) must land before production; today hundreds of sequential SMTP sends on a listener thread can exceed max.poll.interval.ms and lose unsent emails on rebalance.
 - **New subscriptions replay history.** media-service-group uses auto-offset-reset earliest and gained auction-cancelled, auction-extended and deposit-refunded listeners in Story 4, so the first deploy to a long-lived environment re-sends historical notifications. Before that deploy, pre-commit offsets for those topics (kafka-consumer-groups --reset-offsets --to-latest) or accept the replay.

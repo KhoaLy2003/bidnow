@@ -981,4 +981,100 @@ class PaymentServiceImplTest {
         verify(paymentHoldRepository, never()).save(any());
         verifyNoInteractions(walletRepository, transactionRepository);
     }
+
+    // ── sendPaymentReminder ───────────────────────────────────────────────────
+
+    private PaymentHold stubReminderHold(LocalDateTime deadline, PaymentHoldStatus status, boolean fundsHeld) {
+        PaymentHold h = hold("500.00", "50.00", "450.00", fundsHeld, null, deadline, status);
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.of(h));
+        return h;
+    }
+
+    private void assertNoReminder(PaymentHold h) {
+        assertThat(h.getReminderSentAt()).isNull();
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void sendPaymentReminder_dueHold_marksRemindedAndPublishesReminderAfterCommit() {
+        LocalDateTime deadline = LocalDateTime.now().plusHours(23);
+        PaymentHold h = stubReminderHold(deadline, PaymentHoldStatus.PENDING_PAYMENT, true);
+        LocalDateTime before = LocalDateTime.now();
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        assertThat(h.getReminderSentAt()).isBetween(before, LocalDateTime.now());
+        verify(paymentHoldRepository).save(h);
+        // Published as an application event: WalletEventPublisher sends it to Kafka only after commit
+        PaymentEvent event = capturedEvent();
+        assertThat(event.getPaymentType()).isEqualTo("REMINDER_24H");
+        assertThat(event.getAuctionId()).isEqualTo(auctionId);
+        assertThat(event.getUserId()).isEqualTo(winnerUserId);
+        assertThat(event.getSellerId()).isEqualTo(sellerUserId);
+        assertThat(event.getAmount()).isEqualByComparingTo("500.00");
+        assertThat(event.getDepositAmount()).isEqualByComparingTo("50.00");
+        assertThat(event.getRemaining()).isEqualByComparingTo("450.00");
+        assertThat(event.getDeadline()).isEqualTo(deadline.atZone(java.time.ZoneId.systemDefault()).toInstant());
+        assertThat(event.getInsufficientFunds()).isFalse();
+    }
+
+    @Test
+    void sendPaymentReminder_fundsNotHeld_flagsInsufficientFunds() {
+        stubReminderHold(LocalDateTime.now().plusHours(23), PaymentHoldStatus.PENDING_PAYMENT, false);
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        assertThat(capturedEvent().getInsufficientFunds()).isTrue();
+    }
+
+    @Test
+    void sendPaymentReminder_alreadyReminded_isNoOp() {
+        PaymentHold h = stubReminderHold(LocalDateTime.now().plusHours(23), PaymentHoldStatus.PENDING_PAYMENT, true);
+        LocalDateTime earlier = LocalDateTime.now().minusHours(1);
+        h.setReminderSentAt(earlier);
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        assertThat(h.getReminderSentAt()).isEqualTo(earlier);
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void sendPaymentReminder_paidBetweenQueryAndLock_isNoOp() {
+        PaymentHold h = stubReminderHold(LocalDateTime.now().plusHours(23), PaymentHoldStatus.COMPLETED, true);
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        assertNoReminder(h);
+    }
+
+    @Test
+    void sendPaymentReminder_notYetInsideTheWindow_isNoOp() {
+        PaymentHold h = stubReminderHold(LocalDateTime.now().plusHours(25), PaymentHoldStatus.PENDING_PAYMENT, true);
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        assertNoReminder(h);
+    }
+
+    @Test
+    void sendPaymentReminder_deadlinePassed_isNoOp() {
+        PaymentHold h = stubReminderHold(LocalDateTime.now().minusMinutes(1), PaymentHoldStatus.PENDING_PAYMENT, true);
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        assertNoReminder(h);
+    }
+
+    @Test
+    void sendPaymentReminder_lockedByAnotherInstance_isNoOp() {
+        when(paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId)).thenReturn(Optional.empty());
+
+        paymentService.sendPaymentReminder(auctionId);
+
+        verify(paymentHoldRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
 }
