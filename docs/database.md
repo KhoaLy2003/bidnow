@@ -121,21 +121,49 @@ This document describes the database schema for the BidNow auction system. Follo
 | amount | DECIMAL(19,4) | NOT NULL | Amount being held |
 | status | VARCHAR(20) | NOT NULL | HELD, REFUNDED, FORFEITED |
 
+### payment_holds
+Winner payment hold created when an auction ends with a winner (48 h deadline by default).
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | |
+| auction_id | UUID | NOT NULL, UNIQUE (`uq_payment_holds_auction`) | One hold per auction |
+| winner_wallet_id | UUID | NOT NULL, FK -> wallets(id) | |
+| winner_user_id | UUID | NOT NULL | |
+| seller_user_id | UUID | NOT NULL | |
+| total_amount | NUMERIC(19,4) | NOT NULL | Winning price |
+| deposit_applied | NUMERIC(19,4) | NOT NULL | Deposit counted toward the price |
+| deposit_lock_id | UUID | FK -> deposit_locks(id) | |
+| remaining_amount | NUMERIC(19,4) | NOT NULL | Still owed; CHECK `deposit_applied + remaining_amount = total_amount` |
+| funds_held | BOOLEAN | NOT NULL | |
+| status | VARCHAR(20) | NOT NULL | PENDING_PAYMENT, COMPLETED, CANCELLED, FORFEITED |
+| deadline | TIMESTAMP | NOT NULL | Payment deadline |
+| completed_at | TIMESTAMP | | |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | |
+| reminder_sent_at | TIMESTAMP | NULL | Set when payment reminder #2 is sent (NOTIF-106); NULL = not yet reminded |
+
+Indexes: `idx_payment_holds_winner_status` (`winner_user_id`, `status`), `idx_payment_holds_status_deadline` (`status`, `deadline`).
+
+Other wallet tables (`deposit_locks`, `auction_cancellations`) are defined in `backend/wallet-service/src/main/resources/db/changelog/migrations/`.
+
 ---
 
 ## 5. Media Service (`media_`)
-**Purpose:** History of user notifications.
+**Purpose:** In-app notifications, email logs and templates, the auction/bidder projection used to address notifications, media assets and audit logs. Tables were renamed from `notif_` to `media_` in migration 04.
 
-### notification_notifications
-| Column | Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| id | UUID | PRIMARY KEY | |
-| user_id | UUID | NOT NULL | Logical FK |
-| title | VARCHAR(255) | NOT NULL | |
-| content | TEXT | | |
-| type | VARCHAR(50) | | BID_OUTBID, AUCTION_WON, etc. |
-| is_read | BOOLEAN | DEFAULT FALSE | |
-| created_at | TIMESTAMP | DEFAULT NOW() | |
+| Table | Purpose |
+| :--- | :--- |
+| `media_notifications` | In-app notifications. Idempotent per `(user_id, dedup_key)`; `read_at` is the read flag; `deleted_at` is a soft delete |
+| `media_email_logs` | One row per email send attempt (`SENT` or `FAILED`, no retry), linked to `notification_id` when sent by the dispatcher |
+| `media_notification_templates` | Email templates named `{BASE}_{EN\|VI}` |
+| `media_user_preferences` | Unused; preferences live in user-service |
+| `media_auctions` | media-owned projection of auctions (title, seller, end time) |
+| `media_auction_participants` | media-owned projection of bidders per auction (latest bid) |
+| `media_assets` | Uploaded files and metadata |
+| `media_audit_logs` | Audit trail |
+
+Full schema: [notification-service.schema.md](database/notification-service.schema.md)
 
 ---
 

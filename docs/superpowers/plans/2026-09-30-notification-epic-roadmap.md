@@ -1,5 +1,7 @@
 # Epic #14 — Notification Service MVP: Implementation Plan (Roadmap)
 
+**Status (2026-10-02):** implemented on `feature/notification` (NOTIF-101…109); manual smoke tests and api-docs regeneration pending; GitHub issues not updated.
+
 > **For agentic workers:** This is the **epic-level** plan. It fixes the story order, the contracts between stories, and the task breakdown of each story. Before a story starts, expand it into its own detailed TDD plan at `docs/superpowers/plans/YYYY-MM-DD-<story>.md`, following the BID-10x plans (full code, one checkbox per step). Then execute that plan with superpowers:subagent-driven-development or superpowers:executing-plans.
 
 **Goal:** Every user-relevant auction, bid and payment event becomes a persisted in-app notification pushed live to the user, and/or a templated EN/VI email. Users manage their notifications from a bell and a full page.
@@ -10,7 +12,7 @@
 
 **Spec / sources:** `docs/epics/notification/notification-service-mvp.md` (scope), `docs/epics/notification/issue-9..13.md` (= GitHub #15–#19), `docs/diagrams/07-notification-delivery-flow.md`. No separate design spec exists. The **Decisions** section below records how this roadmap resolves conflicts between those sources, and serves as the spec for the stories.
 
-## Current state (2026-09-30, branch `feature/bidding`)
+## Current state (2026-09-30, branch `feature/bidding`; baseline before the epic, now implemented — see Delivery)
 
 | Area | State |
 |---|---|
@@ -84,6 +86,22 @@ Story numbers and NOTIF IDs are kept stable after removing Story 3, so they stil
 - File NOTIF-101 as a sub-issue of #14.
 - Amend #19 with Decisions 1–3 and 7–8: 5-minute window, and fixed ending-soon thresholds with no seller settings.
 - Amend #18 with Decision 10.
+
+---
+
+## Delivery
+
+| # | Story | Plan | Commit | Delivery status |
+|---|---|---|---|---|
+| 1 | NOTIF-101 | [pipeline foundation](2026-09-30-notif-101-pipeline-foundation.md) | `5d9cd4f` feat(notification): add notification pipeline foundation (NOTIF-101) | done (manual smoke pending) |
+| 2 | NOTIF-102 | [user notification APIs](2026-09-30-notif-102-user-notification-apis.md) | `fc90c6e` feat(notification): add user notification inbox APIs (NOTIF-102) | done (manual smoke pending; api-docs.json regeneration pending) |
+| 3 | NOTIF-103 | none | none | removed — out of scope |
+| 4 | NOTIF-104 | [event notifications](2026-10-01-notif-104-event-notifications.md) | `6229396` feat(notification): turn domain events into notifications (NOTIF-104) | done (manual smoke pending) |
+| 5 | NOTIF-105 | [bid batching](2026-10-01-notif-105-bid-batching.md) | `b2e1e9f` feat(notification): batch outbid and new-bid alerts (NOTIF-105) | done (manual smoke pending) |
+| 6 | NOTIF-106 | [payment reminder](2026-10-02-notif-106-payment-reminder.md) | `12830b1` feat(notification): send payment reminder #2 (NOTIF-106) | done (manual smoke pending) |
+| 7 | NOTIF-107 | [ending soon](2026-10-02-notif-107-ending-soon.md) | `765f2d4` feat(notification): notify bidders when an auction is ending soon (NOTIF-107) | done (manual smoke pending) |
+| 8 | NOTIF-108 | [notification center](2026-10-02-notif-108-notification-center.md) | `a064191` feat(notification): frontend notification center (NOTIF-108) | done (manual E2E smoke pending) |
+| 9 | NOTIF-109 | [docs and closure](2026-10-02-notif-109-docs-and-closure.md) | this commit | docs done; SVG and api-docs.json regeneration pending; GitHub closure not done |
 
 ---
 
@@ -393,12 +411,14 @@ Extension notifications are keyed on the new end time (`DedupKeys.extended(aucti
 
 ## Story 9 — Documentation & closure (epic DoD)
 
-- [ ] `docs/architecture.md`: the media-service notification pipeline (dispatcher, projection, push topic), new topics (`user-notification-push-topic`, `auction-ending-soon-topic`), and wallet/auction schedulers as event sources.
-- [ ] `docs/diagrams/07-notification-delivery-flow.md` (+ `.svg`): Kafka instead of RabbitMQ, STOMP instead of Socket.io, Mailtrap/SMTP, the dispatcher + dedup step, and the Redis 5-minute batch window. Email failure is logged only; there is no retry.
-- [ ] `docs/database/notification-service.schema.md`: `media_` table names, new columns, projection tables. `docs/database.md`: wallet `reminder_sent_at`.
-- [ ] `docs/functional.md` / `docs/business-clarifications.md` §5: Decisions 1–3, 5, 7 and 11.
-- [ ] `docs/epics/notification/notification-service-mvp.md`: mark as superseded by this roadmap where they differ (window, endpoints, won email).
-- [ ] Link the per-story plans from this roadmap. Close #17–#19 and the epic.
+- [x] `docs/architecture.md`: the media-service notification pipeline (dispatcher, projection, push topic), new topics (`user-notification-push-topic`, `auction-ending-soon-topic`), and wallet/auction schedulers as event sources.
+- [x] (Mermaid source; SVG not regenerated) `docs/diagrams/07-notification-delivery-flow.md` (+ `.svg`): Kafka instead of RabbitMQ, STOMP instead of Socket.io, Mailtrap/SMTP, the dispatcher + dedup step, and the Redis 5-minute batch window. Email failure is logged only; there is no retry.
+- [x] `docs/database/notification-service.schema.md`: `media_` table names, new columns, projection tables. `docs/database.md`: wallet `reminder_sent_at`.
+- [x] `docs/functional.md` / `docs/business-clarifications.md` §5: Decisions 1–3, 5, 7 and 11.
+- [x] `docs/epics/notification/notification-service-mvp.md`: mark as superseded by this roadmap where they differ (window, endpoints, won email).
+- [x] Link the per-story plans from this roadmap (see Delivery).
+- [ ] Regenerate `backend/media-service/api-docs.json` (handed to the user): from `backend/` with media-service running, `curl -s http://localhost:8086/api/v1/media/v3/api-docs -o media-service/api-docs.json`.
+- [ ] Close #17–#19 and the epic (not done — user decision).
 
 ---
 

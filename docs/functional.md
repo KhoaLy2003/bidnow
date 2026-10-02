@@ -51,8 +51,30 @@ Describe all roles that interact with the system.
 - If payment is not made, the system marks the auction as "Failed" and deducts the deposit.
 
 ### 6. Notifications
-- Real-time in-app notifications for: Outbid alerts, Auction ending soon, Auction Won/Lost.
-- Email notifications for: Registration, Successful Listing, Winning an Auction, Payment Reminders.
+- **In-app (real-time):**
+    - Welcome (on registration).
+    - Outbid (batched: the first immediately, then one "outbid N more times" per 5 minutes).
+    - New bid on your auction (seller, batched the same way; the first bid is immediate).
+    - Auction ending soon (60 and 15 minutes before the current end, to bidders; platform default, not seller-configurable).
+    - Anti-sniping extension.
+    - Auction won, lost, unsold and cancelled.
+    - Payment required, reminder, completed and failed.
+    - Deposit refunded.
+- **Email:**
+    - Welcome.
+    - Auction live.
+    - Won, pay within 48 h (sent once, with payment-required).
+    - Payment reminder #2 (24 h left).
+    - Payment successful.
+    - Sale payment received (seller).
+    - Payment failed (forfeit).
+    - Auction lost.
+    - Auction cancelled.
+    - Deposit refunded after a loss.
+
+  Payment emails are transactional. Engagement emails respect the user's email opt-out.
+- **Inbox:** list with filters, search and paging; read/unread; mark all; delete (soft) and bulk.
+- **Out of scope:** SMS, push, sound and desktop notifications, email retry, seller-configurable thresholds, per-user notification settings UI.
 
 ---
 

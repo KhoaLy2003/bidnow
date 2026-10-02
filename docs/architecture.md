@@ -9,7 +9,7 @@
 - **Microservices Orchestration:** Spring Cloud (Gateway, Service Discovery, Config Server)
 - **ORM:** Spring Data JPA / Hibernate
 - **Build Tool:** Maven
-- **Messaging:** RabbitMQ or Apache Kafka (for inter-service communication)
+- **Messaging:** Apache Kafka (for inter-service communication)
 
 ### Database
 
@@ -21,12 +21,12 @@
 - **Framework:** Next.js (TypeScript)
 - **Styling:** Tailwind CSS
 - **State Management:** Zustand or React Context
-- **Real-time:** Socket.io-client or Native WebSockets
+- **Real-time:** `@stomp/stompjs` over native WebSocket (STOMP)
 
 ### External Services
 
 - **Cloud Storage:** Cloudinary (Product images and user avatars)
-- **Email:** SendGrid or AWS SES
+- **Email:** SMTP via JavaMail (any SMTP provider; Mailpit in dev)
 - **Payment Gateway:** Stripe or VNPay (Planned for payment phase)
 
 ---
@@ -43,7 +43,7 @@
 4. **Auction Service**: Handles the lifecycle of auction listings (Creation, Active, Closure). Manage "Buy It Now" logic. It is the **source of truth for price**: the internal apply-bid call row-locks the auction, accepts or rejects the bid, and applies the anti-sniping extension in the same transaction.
 5. **Bidding Service**: Owns bid placement and bid history. It pre-validates against a Redis-cached auction context, locks the bidder's deposit on their first bid (wallet-service), records the bid and applies it synchronously through auction-service, then publishes `BidPlacedEvent`. Auto-bidding is not implemented yet (Phase 2).
 6. **Wallet & Payment Service**: Manages the internal wallet, escrow (deposits), and final transaction processing.
-7. **Media Service**: Handles email notifications, templates, media assets, and audit log storage.
+7. **Media Service**: The only notification owner. Kafka handlers turn domain events into idempotent `media_notifications` rows (one per user and dedup key, so a redelivery is a no-op), push each new row live through `user-notification-push-topic` to STOMP `/user/queue/notifications`, and send EN/VI template emails: transactional types (payment emails) ignore the user's email opt-out, every send is logged in `media_email_logs`, and a failed email is not retried. It keeps its own auction/bidder projection (`media_auctions`, `media_auction_participants`) so recipients never need a cross-service call, and batches outbid/new-bid alerts in Redis (5-minute window). It also handles media assets and audit log storage. See [notification-service.schema.md](database/notification-service.schema.md) and the [delivery flow](diagrams/07-notification-delivery-flow.md).
 
 ---
 
@@ -55,7 +55,7 @@
 2. **Gateway** → Validates JWT (via Identity Service) and routes to the target microservice.
 3. **Microservice** → Executes business logic and persists data to its local **PostgreSQL** instance.
 4. **Events** → Service emits an event (e.g., `BID_PLACED`) to the **Message Broker**.
-5. **Consumers** → **Media Service** picks up the event and broadcasts it via **WebSocket**.
+5. **Consumers** → **Media Service** picks up the event and pushes it over **STOMP** (auction topics, and `user-notification-push-topic` for user notifications).
 
 ### Real-time Communication
 
@@ -125,6 +125,30 @@ Each refund is its own DB transaction. The retry/DLT policy applies to **all** w
 
 Admin actions are audited (`@Audit` → `audit-events` topic).
 
+### Notification Events (Kafka)
+
+media-service is the only notification owner. Domain events are consumed in the shared `media-service-group` (default offset `earliest`); live pushes use per-instance groups. Source of truth for group names: `NotificationKafkaConsumer`, `AuctionProjectionConsumer`, `UserNotificationPushConsumer`.
+
+| Topic | Producer | Consumer group(s) | Purpose |
+|---|---|---|---|
+| `user-registered-topic` | identity-service | `media-service-group` | Welcome notification and email |
+| `auction-created-topic` | auction-service | `media-service-group`; `media-projection-group` | Seller notification and email; projection upsert |
+| `auction-ended-topic` | auction-service | `media-service-group` | Won (winner), lost (other bidders), unsold (seller) |
+| `auction-cancelled-topic` | auction-service | `media-service-group` | Cancellation to bidders and seller |
+| `auction-extended-topic` | auction-service | `media-service-group`; `media-projection-group` | Anti-sniping extension to bidders and seller; projection `end_time` update |
+| `bid-placed-topic` | bidding-service | `media-service-group`; `media-projection-group` | First-bid, outbid and new-bid alerts (Redis batching); projection title and participant upsert |
+| `payment-event-topic` | wallet-service | `media-service-group` | Payment required, reminder #2, completed and failed |
+| `deposit-refunded-topic` | wallet-service | `media-service-group` | Deposit refunded notification (email only after a loss) |
+| `auction-ending-soon-topic` | auction-service (JobRunr jobs, 60 and 15 min before the current end) | `media-service-group` | In-app "ending soon" for bidders |
+| `user-verification-requested-topic` | identity-service | `media-service-group` | OTP verification email (no in-app row) |
+| `user-notification-push-topic` | media-service (after commit, key `userId`) | per-instance `media-push-<uuid>`, latest offsets | Push `{type: NOTIFICATION, notification, unreadCount}` to `/user/queue/notifications` on the instance holding the socket |
+
+`media-realtime-<uuid>` (`AuctionRealtimeConsumer`, per instance) carries auction-topic broadcasts, not notifications, while `media-push-<uuid>` carries notification pushes.
+
+`media-projection-group` is a separate stable group because sharing `media-service-group` on the same topics would split partitions between the notification handlers and the projection.
+
+Scheduled sources stay in their own domain and emit events: wallet `PaymentReminderScheduler` (every 5 min, emits `REMINDER_24H`), wallet `ForfeitScheduler` (emits `FAILED`), and the auction ending-soon jobs (`auction-ending-soon-topic`).
+
 ---
 
 ## High-Level Diagram
@@ -150,7 +174,7 @@ graph TD
     end
 
     subgraph Infrastructure [Shared Infrastructure]
-        Broker[Message Broker - RabbitMQ/Kafka]
+        Broker[Message Broker - Kafka]
         Cache[Redis - Caching/Real-time]
     end
 
@@ -204,7 +228,7 @@ graph TD
 ## Performance & Scalability
 
 - **Bidding Performance:** The Bidding Service caches each auction's bid context in **Redis** for fast pre-validation (rejecting obviously low bids without a round-trip); the authoritative check is auction-service's row-locked apply-bid, so concurrent bids and closure can never both win.
-- **Horizontal Scaling:** Each service can be scaled independently. The Notification service can have multiple instances to handle thousands of WebSocket connections.
+- **Horizontal Scaling:** Each service can be scaled independently. media-service can have multiple instances to handle thousands of STOMP connections.
 
 ---
 
@@ -213,3 +237,6 @@ graph TD
 - [Functional Requirements](functional.md)
 - [Non-Functional Requirements](non-functional.md)
 - [Business Clarifications](business-clarifications.md)
+- [Notification schema](database/notification-service.schema.md)
+- [Notification delivery flow](diagrams/07-notification-delivery-flow.md)
+- [Notification epic roadmap](superpowers/plans/2026-09-30-notification-epic-roadmap.md)

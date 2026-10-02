@@ -30,7 +30,14 @@ This document tracks the key business decisions and clarifications made during t
 ## 5. Notifications
 - **Channels (MVP):**
     - Real-time Web/In-app notifications.
-    - Email notifications for critical updates (outbid, winning, payment reminders).
+    - Email notifications for critical updates (winning, payment reminders, payment results).
+- **Decisions:**
+    1. The outbid/new-bid batch window is 5 minutes. The first alert is immediate, and later ones are summed.
+    2. The first bid on an auction is sent immediately; later seller alerts are batched.
+    3. The winner gets one email, at payment-required. The auction-ended event is in-app only.
+    4. Language and email opt-out come from user-service preferences, and payment emails ignore the opt-out.
+    5. The ending-soon thresholds are a platform default (60 and 15 min), with no per-seller setting.
+    6. Emails are sent once. A failure is logged with no retry, and the in-app notification is still created.
 
 ## 6. User Registration & Verification
 - **Verification Method:** Email OTP (One-Time Password).
