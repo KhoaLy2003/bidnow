@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   appendOlderBids, applyAuctionCancelled, applyAuctionEnded, applyAuctionExtended,
-  applyBidPlaced, applyOutbid, applyOwnBid, mergeSnapshot, seedLiveState,
+  applyBidPlaced, applyOwnBid, mergeSnapshot, seedLiveState,
   type LiveAuctionState,
 } from '@/lib/realtime/auction-live'
 import type { AuctionDetail, BidEntry } from '@/types/ui/auction.ui'
@@ -18,7 +18,6 @@ interface AuctionState {
   extended:        (auctionId: string, p: AuctionExtendedPayload) => void
   ended:           (auctionId: string, p: AuctionEndedPayload) => void
   cancelled:       (auctionId: string) => void
-  outbid:          (auctionId: string) => void
   appendOlderBids: (auctionId: string, bids: BidEntry[]) => void
   reset:           () => void
 }
@@ -43,7 +42,6 @@ export const useAuctionStore = create<AuctionState>((set) => {
     extended:        (id, p) => update(id, (live) => applyAuctionExtended(live, p)),
     ended:           (id, p) => update(id, (live) => applyAuctionEnded(live, p)),
     cancelled:       (id) => update(id, applyAuctionCancelled),
-    outbid:          (id) => update(id, applyOutbid),
     appendOlderBids: (id, bids) => update(id, (live) => appendOlderBids(live, bids)),
     reset:           () => set({ live: null }),
   }

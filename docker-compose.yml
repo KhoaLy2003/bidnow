@@ -176,6 +176,7 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MAIL_HOST=mailpit
       - MAIL_PORT=1025
+      - REDIS_HOST=redis
     depends_on:
       db:
         condition: service_healthy
@@ -183,6 +184,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      redis:
+        condition: service_healthy
 
   # --- FRONTEND ---
   frontend:

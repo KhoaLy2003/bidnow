@@ -41,12 +41,12 @@ See `.env.example` for all configuration options.
 Four Zustand stores in `store/`:
 - `authStore` — JWT tokens + user, persisted to `localStorage` via `zustand/middleware/persist` (key: `auth-storage`)
 - `auctionStore` — live state (`LiveAuctionState`) of the auction detail page being viewed, updated only through the monotonic reducers in `lib/realtime/auction-live.ts`; reset on unmount
-- `notificationStore` — notification list and unread count
+- `notificationStore` — server-backed recent notifications (10) and unread count; live pushes via `applyPush`; optimistic read/delete with rollback
 - `walletStore` — balance and transaction history
 
 ### Real-time (WebSocket)
 
-`hooks/useAuctionSocket.ts` connects with `@stomp/stompjs` over native WebSocket to `/ws-notifications/websocket` through the gateway (JWT as `access_token`, refreshed on every connect), subscribes to `/topic/auctions/{id}` (`BID_PLACED`, `AUCTION_EXTENDED`, `AUCTION_ENDED`, `AUCTION_CANCELLED`) and, when logged in, `/user/queue/notifications` (`OUTBID`). Messages are parsed/routed by `lib/realtime/dispatch.ts`; `AuctionLiveBridge` hydrates the store and resyncs (re-fetches the auction + first history page) on every (re)connect, including the first, to recover events missed before the subscription; components read through `useLiveAuction`. Clients are receive-only.
+`hooks/useAuctionSocket.ts` connects with `@stomp/stompjs` over native WebSocket to `/ws-notifications/websocket` through the gateway (JWT as `access_token`, refreshed on every connect), subscribes to `/topic/auctions/{id}` (`BID_PLACED`, `AUCTION_EXTENDED`, `AUCTION_ENDED`, `AUCTION_CANCELLED`). Personal notifications use a separate connection owned by `hooks/useUserNotifications` (mounted once via `UserNotificationsBridge` in the root layout), which subscribes to `/user/queue/notifications` (`NOTIFICATION` envelopes), feeds `notificationStore`, toasts outbid/won/payment/ending-soon, and resyncs the badge on reconnect and window focus. Messages are parsed/routed by `lib/realtime/dispatch.ts`; `AuctionLiveBridge` hydrates the store and resyncs (re-fetches the auction + first history page) on every (re)connect, including the first, to recover events missed before the subscription; components read through `useLiveAuction`. Clients are receive-only.
 
 ### API & Types
 

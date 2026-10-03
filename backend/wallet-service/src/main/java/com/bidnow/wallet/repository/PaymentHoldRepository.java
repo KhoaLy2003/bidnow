@@ -32,6 +32,16 @@ public interface PaymentHoldRepository extends JpaRepository<PaymentHold, UUID> 
     List<UUID> findExpiredAuctionIds(@Param("status") PaymentHoldStatus status,
                                      @Param("now") LocalDateTime now, Pageable page);
 
+    /**
+     * Auction ids of holds in {@code status}, not yet reminded, whose deadline is after {@code now} and at or before
+     * {@code remindBefore} — i.e. inside the reminder window and not yet expired. Earliest deadline first.
+     */
+    @Query("SELECT h.auctionId FROM PaymentHold h WHERE h.status = :status AND h.reminderSentAt IS NULL"
+            + " AND h.deadline > :now AND h.deadline <= :remindBefore ORDER BY h.deadline ASC")
+    List<UUID> findDueForReminderAuctionIds(@Param("status") PaymentHoldStatus status,
+                                            @Param("now") LocalDateTime now,
+                                            @Param("remindBefore") LocalDateTime remindBefore, Pageable page);
+
     /** SELECT ... FOR UPDATE SKIP LOCKED (Hibernate lock timeout -2): a hold locked by another instance is skipped. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2"))

@@ -23,7 +23,4 @@ public final class RealtimePayloads {
 
     public record AuctionCancelled(String reason) {
     }
-
-    public record Outbid(String auctionTitle, BigDecimal currentPrice, String newLeaderName) {
-    }
 }

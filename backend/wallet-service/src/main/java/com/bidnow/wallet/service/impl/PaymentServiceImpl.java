@@ -54,6 +54,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${wallet.payment.deadline-hours:48}")
     private long deadlineHours = 48;
 
+    @Value("${wallet.payment.reminder-before-deadline-hours:24}")
+    private long reminderBeforeDeadlineHours = 24;
+
     @Value("${wallet.platform-user-id}")
     private String platformUserId;
 
@@ -394,6 +397,43 @@ public class PaymentServiceImpl implements PaymentService {
 
         log.info("Payment hold forfeited for auctionId={}, winner={}, forfeited={}",
                 auctionId, hold.getWinnerUserId(), forfeited);
+    }
+
+    @Override
+    @Transactional
+    public void sendPaymentReminder(UUID auctionId) {
+        // Skipped if another instance (or a payment confirmation) holds the row; the next run retries.
+        Optional<PaymentHold> maybeHold = paymentHoldRepository.findByAuctionIdForUpdateSkipLocked(auctionId);
+        if (maybeHold.isEmpty()) {
+            return;
+        }
+        PaymentHold hold = maybeHold.get();
+        LocalDateTime now = LocalDateTime.now();
+        boolean due = hold.getStatus() == PaymentHoldStatus.PENDING_PAYMENT
+                && hold.getReminderSentAt() == null
+                && now.isBefore(hold.getDeadline())
+                && !hold.getDeadline().isAfter(now.plusHours(reminderBeforeDeadlineHours));
+        if (!due) {
+            return;
+        }
+
+        hold.setReminderSentAt(now);
+        paymentHoldRepository.save(hold);
+
+        eventPublisher.publishEvent(new PaymentApplicationEvent(this, PaymentEvent.builder()
+                .auctionId(auctionId)
+                .userId(hold.getWinnerUserId())
+                .sellerId(hold.getSellerUserId())
+                .amount(hold.getTotalAmount())
+                .depositAmount(hold.getDepositApplied())
+                .remaining(hold.getRemainingAmount())
+                .deadline(hold.getDeadline().atZone(ZoneId.systemDefault()).toInstant())
+                .insufficientFunds(!hold.isFundsHeld())
+                .paymentType("REMINDER_24H")
+                .build()));
+
+        log.info("Payment reminder sent for auctionId={}, winner={}, deadline={}",
+                auctionId, hold.getWinnerUserId(), hold.getDeadline());
     }
 
     private Wallet lockWallet(UUID walletId) {

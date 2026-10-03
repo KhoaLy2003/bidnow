@@ -18,4 +18,7 @@ public interface PaymentService {
     ConfirmPaymentResponse confirmPayment(UUID callerUserId, UUID auctionId);
 
     void forfeitExpiredHold(UUID auctionId);
+
+    /** Sends payment reminder #2 for an unpaid hold inside the reminder window; a no-op otherwise. */
+    void sendPaymentReminder(UUID auctionId);
 }

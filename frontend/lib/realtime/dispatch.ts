@@ -5,29 +5,31 @@ import {
   type AuctionExtendedPayload,
   type AuctionRealtimeMessage,
   type BidPlacedPayload,
-  type OutbidPayload,
 } from '@/types/api/realtime.api'
+import type { UserNotificationMessage } from '@/types/api/notification.api'
 
 export interface RealtimeHandlers {
   bidPlaced(p: BidPlacedPayload): void
   extended(p: AuctionExtendedPayload): void
   ended(p: AuctionEndedPayload): void
   cancelled(p: AuctionCancelledPayload): void
-  outbid(auctionId: string, p: OutbidPayload): void
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-/** Validates the envelope only; payload fields are trusted per the media-service contract (spec §6). */
-export function parseRealtimeMessage(body: string): AuctionRealtimeMessage | null {
-  let parsed: unknown
+function parseJson(body: string): unknown {
   try {
-    parsed = JSON.parse(body)
+    return JSON.parse(body)
   } catch {
     return null
   }
+}
+
+/** Validates the envelope only; payload fields are trusted per the media-service contract (spec §6). */
+export function parseRealtimeMessage(body: string): AuctionRealtimeMessage | null {
+  const parsed = parseJson(body)
   if (!isRecord(parsed)) return null
   const { type, auctionId, payload } = parsed
   if (typeof type !== 'string' || typeof auctionId !== 'string' || !isRecord(payload)) return null
@@ -35,16 +37,22 @@ export function parseRealtimeMessage(body: string): AuctionRealtimeMessage | nul
   return parsed as unknown as AuctionRealtimeMessage
 }
 
-/** Returns true when a handler ran. OUTBID arrives on the user queue for any auction. */
+/** A `/user/queue/notifications` NOTIFICATION envelope (notification + server unread count), or null. */
+export function parseUserNotificationMessage(body: string): UserNotificationMessage | null {
+  const parsed = parseJson(body)
+  if (!isRecord(parsed) || parsed.type !== 'NOTIFICATION' || !isRecord(parsed.notification)) return null
+  if (typeof parsed.unreadCount !== 'number') return null
+  const n = parsed.notification
+  if (typeof n.id !== 'string' || typeof n.type !== 'string' || typeof n.message !== 'string') return null
+  return parsed as unknown as UserNotificationMessage
+}
+
+/** Returns true when a handler ran. Messages for another auction are ignored. */
 export function dispatchRealtimeMessage(
   msg: AuctionRealtimeMessage,
   auctionId: string,
   h: RealtimeHandlers,
 ): boolean {
-  if (msg.type === 'OUTBID') {
-    h.outbid(msg.auctionId, msg.payload)
-    return true
-  }
   if (msg.auctionId !== auctionId) return false
   switch (msg.type) {
     case 'BID_PLACED':        h.bidPlaced(msg.payload); return true

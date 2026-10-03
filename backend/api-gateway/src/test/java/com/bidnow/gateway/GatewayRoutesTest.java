@@ -76,4 +76,13 @@ class GatewayRoutesTest {
         assertThat(ws.getFilters())
                 .anyMatch(f -> f.toString().toLowerCase().contains("deduperesponseheader"));
     }
+
+    @Test
+    void mediaRouteServesUserNotifications() {
+        Route media = routes().stream()
+                .filter(r -> r.getId().equals("media-service"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(media.getPredicate().toString()).contains("/api/v1/notifications/**");
+    }
 }

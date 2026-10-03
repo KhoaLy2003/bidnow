@@ -11,5 +11,6 @@
     <include file="db/changelog/migrations/04-init-payment-holds.sql"/>
     <include file="db/changelog/migrations/05-init-auction-cancellations.sql"/>
     <include file="db/changelog/migrations/06-index-refund-reference.sql"/>
+    <include file="db/changelog/migrations/07-payment-hold-reminder.sql"/>
 
 </databaseChangeLog>

@@ -26,6 +26,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -66,6 +68,16 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public EmailLog sendTemplateEmail(String to, NotificationTemplate template, Map<String, Object> variables) {
+        return sendTemplateEmail(null, to, template, variables);
+    }
+
+    // REQUIRES_NEW: the notification dispatcher calls this from afterCommit, where the outer transaction is
+    // already committed and a joined save would never be flushed. Self-calls above bypass the proxy - fine,
+    // those callers are not in an after-commit hook.
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public EmailLog sendTemplateEmail(UUID notificationId, String to, NotificationTemplate template,
+                                      Map<String, Object> variables) {
         log.info("Sending template email '{}' to: {}", template.getName(), to);
 
         String subject = templateService.processSubject(template, variables);
@@ -73,6 +85,7 @@ public class EmailServiceImpl implements EmailService {
         String textBody = templateService.processTextBody(template, variables);
 
         EmailLog emailLog = EmailLog.builder()
+                .notificationId(notificationId)
                 .recipientEmail(to)
                 .subject(subject)
                 .templateName(template.getName())

@@ -46,6 +46,10 @@ wallet:
     forfeit-interval-ms: 300000
     forfeit-batch-size: 100
     forfeit-initial-delay-ms: 60000
+    reminder-before-deadline-hours: 24   # reminder #2 is sent when this much time is left (NOTIF-106); must be < deadline-hours, else it fires right after the REQUIRED email
+    reminder-interval-ms: 300000
+    reminder-batch-size: 100
+    reminder-initial-delay-ms: 60000
 
 eureka:
   instance:

@@ -76,13 +76,4 @@ class RealtimeMessageJsonTest {
 
         assertThat(keys(p)).containsExactly("reason");
     }
-
-    @Test
-    void outbid() throws Exception {
-        JsonNode p = json(AuctionRealtimeMessage.OUTBID,
-                new RealtimePayloads.Outbid("Vase", new BigDecimal("120"), "Bob"));
-
-        assertThat(keys(p)).containsExactlyInAnyOrder("auctionTitle", "currentPrice", "newLeaderName");
-        assertThat(p.get("currentPrice").isNumber()).isTrue();
-    }
 }

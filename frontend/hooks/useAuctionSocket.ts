@@ -6,18 +6,14 @@ import { toast } from 'sonner'
 import { useAuctionStore } from '@/store/auctionStore'
 import { useAuthStore } from '@/store/authStore'
 import { getFreshAccessToken } from '@/lib/apiClient'
-import { formatCurrency } from '@/lib/format'
 import { dispatchRealtimeMessage, parseRealtimeMessage, type RealtimeHandlers } from '@/lib/realtime/dispatch'
 import { resolveWsEndpoint, withAccessToken } from '@/lib/realtime/ws-url'
 
-const USER_QUEUE = '/user/queue/notifications'
-
 /**
- * Live auction updates over STOMP (spec §6). Subscribes to the auction topic and, when logged in,
- * the private notification queue. Reconnects with exponential backoff; each (re)connect fetches a
+ * Live auction updates over STOMP (spec §6). Subscribes to the auction topic; personal notifications
+ * (incl. outbid toasts) come from `useUserNotifications`. Reconnects with exponential backoff; each (re)connect fetches a
  * fresh token, and every (re)connect calls `onResync` to recover events missed before the subscription.
- * Re-runs (disconnects and reconnects) when the auction or the logged-in user changes, so logout
- * drops the private queue.
+ * Re-runs (disconnects and reconnects) when the auction or the logged-in user changes.
  */
 export function useAuctionSocket(auctionId: string, onResync?: () => void): void {
   const userId = useAuthStore((s) => s.user?.id ?? null)
@@ -48,12 +44,6 @@ export function useAuctionSocket(auctionId: string, onResync?: () => void): void
       },
       ended: (p) => useAuctionStore.getState().ended(auctionId, p),
       cancelled: () => useAuctionStore.getState().cancelled(auctionId),
-      outbid: (outbidAuctionId, p) => {
-        // The store no-ops unless this is the open auction; the toast shows for any auction.
-        useAuctionStore.getState().outbid(outbidAuctionId)
-        const where = p.auctionTitle ? ` on “${p.auctionTitle}”` : ''
-        toast.warning(`You’ve been outbid${where} — now ${formatCurrency(p.currentPrice)}`)
-      },
     }
 
     const onMessage = (message: IMessage) => {
@@ -73,7 +63,6 @@ export function useAuctionSocket(auctionId: string, onResync?: () => void): void
       },
       onConnect: () => {
         client.subscribe(`/topic/auctions/${auctionId}`, onMessage)
-        if (userId) client.subscribe(USER_QUEUE, onMessage)
         onResyncRef.current?.()
       },
     })

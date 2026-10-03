@@ -48,6 +48,8 @@ class AuctionClosureServiceTest {
     private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     @Mock
     private AuctionKafkaProducer kafkaProducer;
+    @Mock
+    private AuctionEndingSoonService endingSoonService;
 
     private static final Instant NOW = Instant.parse("2026-10-01T12:00:00Z");
     private static final OffsetDateTime PAST_END = OffsetDateTime.ofInstant(NOW.minusSeconds(1), ZoneOffset.UTC);
@@ -59,7 +61,7 @@ class AuctionClosureServiceTest {
     void initTransactionSync() {
         TransactionSynchronizationManager.initSynchronization();
         closureService = new AuctionClosureService(auctionItemRepository, auctionStatusHistoryRepository,
-                kafkaProducer, CLOSURE, Clock.fixed(NOW, ZoneOffset.UTC));
+                kafkaProducer, CLOSURE, Clock.fixed(NOW, ZoneOffset.UTC), endingSoonService);
     }
 
     @AfterEach
@@ -279,5 +281,29 @@ class AuctionClosureServiceTest {
                 .isNotEqualTo(AuctionClosureService.closureJobId(auctionId, end.plusSeconds(300)));
         assertThat(AuctionClosureService.closureJobId(auctionId, end))
                 .isNotEqualTo(AuctionClosureService.closureJobId(UUID.randomUUID(), end));
+    }
+
+    @Test
+    void scheduleClosureJob_alsoSchedulesEndingSoonAlertsForTheSameEndTime() {
+        UUID auctionId = UUID.randomUUID();
+        Instant endTime = NOW.plus(Duration.ofHours(2));
+
+        closureService.scheduleClosureJob(auctionId, endTime);
+
+        verify(endingSoonService).scheduleAll(auctionId, endTime);
+    }
+
+    @Test
+    void scheduleClosureJob_outsideATransaction_failsBeforeSchedulingAnything() {
+        TransactionSynchronizationManager.clearSynchronization();
+        try {
+            UUID auctionId = UUID.randomUUID();
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                    () -> closureService.scheduleClosureJob(auctionId, NOW.plus(Duration.ofHours(2))))
+                    .isInstanceOf(IllegalStateException.class);
+            org.mockito.Mockito.verifyNoInteractions(endingSoonService);
+        } finally {
+            TransactionSynchronizationManager.initSynchronization();
+        }
     }
 }

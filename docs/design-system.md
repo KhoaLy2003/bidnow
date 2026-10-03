@@ -518,7 +518,7 @@ shadcn's `--radius` drives its components. BidNow extends with a full scale:
 | StatusBadge | **Custom** | Extends shadcn Badge with auction variants |
 | AuctionCard | **Custom** | Composes shadcn Card + custom elements |
 | WalletBadge | **Custom** | Header wallet display |
-| NotificationBell | **Custom** | Composes shadcn Badge for unread count |
+| NotificationBell | **Custom** | Base UI Popover with an unread badge (9+) |
 | BidForm | **Custom** | Composes shadcn Input + Button + Switch |
 | AuctionGrid | **Custom** | Responsive grid layout |
 | Header / BottomNav | **Custom** | App shell, composes shadcn NavigationMenu |
@@ -773,8 +773,12 @@ frontend/
 │   │   └── index.ts
 │   │
 │   ├── notification/
-│   │   ├── NotificationBell/          ← Uses shadcn Badge for unread count
-│   │   ├── NotificationPanel/         ← Uses shadcn Sheet
+│   │   ├── NotificationBell.tsx       ← Base UI Popover trigger; unread badge (9+)
+│   │   ├── NotificationPanel.tsx      ← Popover panel: recent 10, "Mark all as read", "View all notifications"
+│   │   ├── NotificationItem.tsx       ← Shared by panel and /notifications page; icon/accent from notification-style.ts, formatTimeAgo
+│   │   ├── NotificationToast.tsx
+│   │   ├── UserNotificationsBridge.tsx ← Mounts useUserNotifications once in the root layout
+│   │   ├── notification-style.ts
 │   │   └── index.ts
 │   │
 │   ├── layout/
@@ -801,7 +805,7 @@ frontend/
 │   ├── useCountdown.ts                ← Accepts UTC Date from server
 │   ├── useAuctionSocket.ts
 │   ├── useWallet.ts
-│   └── useNotifications.ts
+│   └── useUserNotifications.ts        ← Personal /user/queue/notifications socket; mounted via UserNotificationsBridge
 │
 ├── types/
 │   ├── auction.ts

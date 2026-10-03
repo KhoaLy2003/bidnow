@@ -18,10 +18,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserVerificationRequestedEvent {
     private UUID userId;
+    @com.bidnow.common.annotation.MaskPii
     private String email;
     /**
      * The plain-text 6-digit OTP to be delivered via email.
      */
+    @com.bidnow.common.annotation.MaskPii
     private String otp;
     private LocalDateTime otpExpiresAt;
     private LocalDateTime requestedAt;

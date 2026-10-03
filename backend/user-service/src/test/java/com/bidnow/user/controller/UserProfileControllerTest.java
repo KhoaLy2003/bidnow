@@ -1,5 +1,6 @@
 package com.bidnow.user.controller;
 
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.exception.GlobalExceptionHandler;
 import com.bidnow.common.exception.NotFoundException;
@@ -105,6 +106,36 @@ class UserProfileControllerTest {
         mockMvc.perform(post("/api/v1/users/internal/summaries").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userIds\":[" + ids + "]}"))
                 .andExpect(status().isBadRequest());
+        verifyNoInteractions(userProfileService);
+    }
+
+    // -------------------------------------------------------
+    // POST /api/v1/users/internal/notification-preferences
+    // -------------------------------------------------------
+
+    @Test
+    void getNotificationPreferences_returns200WithList() throws Exception {
+        UUID alice = UUID.randomUUID();
+        when(userProfileService.getNotificationPreferences(anyList())).thenReturn(List.of(
+                UserNotificationPreferenceResponse.builder()
+                        .userId(alice).language("vi").emailNotifications(true).build()));
+
+        mockMvc.perform(post("/api/v1/users/internal/notification-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[\"" + alice + "\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].userId").value(alice.toString()))
+                .andExpect(jsonPath("$.data[0].language").value("vi"))
+                .andExpect(jsonPath("$.data[0].emailNotifications").value(true));
+    }
+
+    @Test
+    void getNotificationPreferences_emptyIds_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/users/internal/notification-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[]}"))
+                .andExpect(status().isBadRequest());
+
         verifyNoInteractions(userProfileService);
     }
 }
