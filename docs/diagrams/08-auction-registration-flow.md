@@ -1,5 +1,7 @@
 # Auction Participation Registration Flow
 
+> **⚠️ Superseded.** Explicit pre-registration was removed. A user's **first bid** now implicitly registers them: the Bidding Service calls Wallet Service `POST /api/v1/internal/wallet/deposit-lock`, and the resulting `deposit_locks` row is the registration record. See `docs/superpowers/specs/2026-05-21-wallet-financial-management-design.md` (Flow 3) and `docs/superpowers/specs/2026-09-28-wallet-deposit-lock-design.md`. The diagram below is kept for history only.
+
 This flow describes the process of a user explicitly registering for an auction and paying the mandatory deposit before being allowed to place any bids.
 
 ```mermaid

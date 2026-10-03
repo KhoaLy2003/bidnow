@@ -3,6 +3,7 @@ package com.bidnow.wallet.service.impl;
 import com.bidnow.common.dto.PageResponse;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.wallet.constant.WalletErrorCodes;
 import com.bidnow.wallet.domain.entity.Transaction;
 import com.bidnow.wallet.domain.entity.Wallet;
 import com.bidnow.wallet.domain.enums.TransactionStatus;
@@ -11,6 +12,7 @@ import com.bidnow.wallet.domain.enums.WalletStatus;
 import com.bidnow.wallet.dto.request.DepositRequest;
 import com.bidnow.wallet.dto.response.DepositResponse;
 import com.bidnow.wallet.dto.response.TransactionResponse;
+import com.bidnow.wallet.dto.response.WalletBalanceResponse;
 import com.bidnow.wallet.dto.response.WalletResponse;
 import com.bidnow.wallet.kafka.DepositCompletedApplicationEvent;
 import com.bidnow.wallet.repository.TransactionRepository;
@@ -132,7 +134,7 @@ class WalletServiceImplTest {
                 .currency("USD")
                 .status(WalletStatus.ACTIVE)
                 .build();
-        when(walletRepository.findByUserId(userId)).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(wallet));
         when(walletRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -169,7 +171,7 @@ class WalletServiceImplTest {
                 .currency("USD")
                 .status(WalletStatus.SUSPENDED)
                 .build();
-        when(walletRepository.findByUserId(userId)).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.of(wallet));
 
         assertThatThrownBy(() -> walletService.deposit(userId, new DepositRequest(new BigDecimal("100.00"))))
                 .isInstanceOf(BadRequestException.class);
@@ -181,7 +183,7 @@ class WalletServiceImplTest {
     @Test
     void deposit_walletNotFound_throwsNotFoundException() {
         UUID userId = UUID.randomUUID();
-        when(walletRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(walletRepository.findByUserIdForUpdate(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> walletService.deposit(userId, new DepositRequest(new BigDecimal("100.00"))))
                 .isInstanceOf(NotFoundException.class);
@@ -266,5 +268,39 @@ class WalletServiceImplTest {
 
         assertThat(result.getData()).isEmpty();
         assertThat(result.getPagination().getTotal()).isZero();
+    }
+
+    // ── getBalance tests ──────────────────────────────────────────────────────
+
+    @Test
+    void getBalance_walletFound_returnsBalances() {
+        UUID userId = UUID.randomUUID();
+        Wallet wallet = Wallet.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .totalBalance(new BigDecimal("200.00"))
+                .availableBalance(new BigDecimal("150.00"))
+                .lockedBalance(new BigDecimal("50.00"))
+                .currency("USD")
+                .status(WalletStatus.ACTIVE)
+                .build();
+        when(walletRepository.findByUserId(userId)).thenReturn(Optional.of(wallet));
+
+        WalletBalanceResponse result = walletService.getBalance(userId);
+
+        assertThat(result.getTotalBalance()).isEqualByComparingTo("200.00");
+        assertThat(result.getAvailableBalance()).isEqualByComparingTo("150.00");
+        assertThat(result.getLockedBalance()).isEqualByComparingTo("50.00");
+        assertThat(result.getCurrency()).isEqualTo("USD");
+    }
+
+    @Test
+    void getBalance_walletNotFound_throwsNotFoundWithWalletCode() {
+        UUID userId = UUID.randomUUID();
+        when(walletRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> walletService.getBalance(userId))
+                .isInstanceOf(NotFoundException.class)
+                .extracting("errorCode").isEqualTo(WalletErrorCodes.WALLET_NOT_FOUND);
     }
 }

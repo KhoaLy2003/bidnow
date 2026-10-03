@@ -106,49 +106,49 @@ The Wallet Service acts as the **escrow and financial hub** that:
 - [ ] If insufficient funds, reject registration with clear error message
 - [ ] Prevent bidding without completed registration (Bidding Service validates)
 
-**Refund Logic (Losing Bidders):**
+**Refund Logic (Losing Bidders & Cancelled Auctions) — WALLET-304:**
 
-- [ ] Event: Auction Service publishes `AUCTION_ENDED` with list of all bidders
-- [ ] For each non-winner bidder:
-  - Find their LOCKED deposit for this auction
-  - Create REFUND transaction
-  - Update available_balance += deposit_amount
-  - Update deposit_locks status = RELEASED
-  - Emit DEPOSIT_REFUNDED event for Media Service
-- [ ] Refund processing: batch job runs every 5-15 minutes post-auction closure
-- [ ] Notification to bidder: "Your deposit has been refunded"
+- [ ] Wallet consumes `auction-ended-topic` (`AuctionEndedEvent`) and `auction-cancelled-topic` (`AuctionCancelledEvent`)
+- [ ] Refund targets are derived from `deposit_locks` (`status = LOCKED` for the auction): on end, everyone except the winner; on cancel, everyone. `AuctionEndedEvent.loserIds` is not used (it is empty until the bidding-service exists)
+- [ ] For each lock, in its own DB transaction (wallet row locked first):
+  - `available_balance += amount`, `locked_balance -= amount` (total unchanged)
+  - Create REFUND transaction (before/after balances, `reference_id = auctionId`)
+  - Update `deposit_locks.status = RELEASED`, `released_at = now`
+  - After commit, emit `DepositRefundedEvent` on `deposit-refunded-topic` (reason `AUCTION_LOST` / `AUCTION_CANCELLED`)
+- [ ] Zero-amount locks are released without a transaction or event
+- [ ] Failures: other locks still refunded; record retried (1s/2s/4s) then sent to `<topic>.DLT`; replay of processing failures is idempotent (undeserializable records need manual decoding)
+- [ ] Notification to bidder: "Your deposit has been refunded" (media-service consumes `deposit-refunded-topic` — later story)
 
-**Winner Payment Flow:**
+**Winner Payment — WALLET-305:**
 
-- [ ] Event: Auction Service publishes `AUCTION_ENDED_WITH_WINNER` event
-- [ ] Calculate final_payment_amount = winning_bid_amount
-- [ ] Validate winner's available_balance >= final_payment_amount
-- [ ] Create HOLD transaction (status = PENDING_PAYMENT, deadline = now + 48 hours)
-- [ ] Update available_balance = available - final_payment_amount (temporarily)
-- [ ] Set payment_deadline in database
-- [ ] Notification to winner: "Complete payment within 48 hours"
-- [ ] Expose payment confirmation endpoint:
-  - Accept payment from winner
-  - Deduct final_payment_amount from winner's wallet
-  - Calculate and deduct platform_fee from amount
-  - Transfer (final_payment_amount - platform_fee) to seller's wallet
-  - Create PAYMENT transaction for winner, PAYMENT transaction for seller
-  - Update HOLD status = COMPLETED
-  - Emit PAYMENT_COMPLETED event
+- [ ] On `auction-ended-topic` with a winner, create a `payment_holds` row (one per auction): `deposit_applied = min(LOCKED deposit, winning bid)`, `remaining = bid − deposit_applied`, deadline `now + 48h`
+- [ ] If available ≥ remaining, move remaining to locked (HOLD ledger row); otherwise the hold is unfunded (`funds_held = false`) and the winner must top up before confirming
+- [ ] `GET /api/v1/wallets/payments/pending` — pending holds with `deadline`, `hoursLeft`, `expired`
+- [ ] `POST /api/v1/wallets/payments/confirm { auctionId }` — atomic: winner pays exactly the winning bid (deposit consumed, excess refunded), seller credited exactly the winning bid, PAYMENT ledger rows for both, hold COMPLETED
+- [ ] Errors: `404 PAYMENT_HOLD_NOT_FOUND`, `400 PAYMENT_DEADLINE_EXPIRED`, `409 PAYMENT_NOT_PENDING`, `400 INSUFFICIENT_BALANCE`, `409 DEPOSIT_LOCK_CLOSED`, `404 SELLER_WALLET_NOT_FOUND`
+- [ ] `PaymentEvent` on `payment-event-topic`: `REQUIRED` on hold creation, `COMPLETED` on confirm
+- [ ] On `auction-cancelled-topic`, a `PENDING_PAYMENT` hold is voided (held funds returned, HOLD_CANCEL ledger row, status CANCELLED)
+- [ ] Follow-ups: auction-service consumes `PaymentEvent` (`REQUIRED` → `payment_deadline`, `COMPLETED` → `winner_paid_at`, `FAILED` → mark the sale failed)
 
-**Forfeit Logic (Non-Payment):**
+**Known gaps (follow-up tickets, outside WALLET-304):**
 
-- [ ] Scheduled job runs every 1-5 minutes, checks for expired PENDING_PAYMENT records
-- [ ] For each expired payment (deadline < now):
-  - Find the original deposit_lock for this auction
-  - Deduct deposit_amount from winner's available_balance
-  - Create FORFEIT transaction
-  - Transfer forfeited amount to [platform account OR seller account - see Open Questions]
-  - Update deposit_locks status = FORFEITED
-  - Update auction status = FAILED
-  - Emit PAYMENT_FAILED event
-  - Notification to winner: "Payment deadline missed. Deposit forfeited."
-  - Notification to seller: "Auction failed. Winner did not pay."
+- Auction-service publishes `AuctionCancelledEvent` (admin and seller cancel) and the admin force-close `AuctionEndedEvent` *before* its DB transaction commits; a rollback after the send would refund deposits on a still-ACTIVE auction. Only `AuctionClosureService` publishes after commit.
+- `AuctionItem` has no optimistic lock and close/cancel don't lock the auction row, so an auction can emit both ended and cancelled events. WALLET-305 handles either order: a cancel voids any pending hold and records an `auction_cancellations` marker; a later end event creates no hold when the marker exists or the winner's deposit was already released. A cancel after the payment was COMPLETED is logged at ERROR for manual reconciliation. Residual: if both events are processed at the same instant on different consumer threads, a hold can still be created (needs a per-auction lock or auction-service serialization).
+- A deposit lock created after the refund sweep (or after the auction closed) stays LOCKED: wallet does not know auction state. Needs a closed-auction guard in `lockDeposit` or a reconciliation job.
+- Lock ordering rule for any future flow touching payment holds: lock the `payment_holds` row before wallets, and order wallet locks with Java `UUID.compareTo` (as confirm, cancel and forfeit do). Forfeited deposits go entirely to the platform wallet; a seller share is an open question.
+
+**Winner Payment Flow:** see **Winner Payment — WALLET-305** above (supersedes the original draft: no `AUCTION_ENDED_WITH_WINNER` event, no PENDING_PAYMENT transaction, no platform fee in Phase 1).
+
+**Forfeit Logic (Non-Payment) — WALLET-306:**
+
+- [ ] `ForfeitScheduler` runs every `wallet.payment.forfeit-interval-ms` (5 min), reads up to `forfeit-batch-size` (100) `payment_holds` in `PENDING_PAYMENT` with `deadline < now`
+- [ ] Each hold forfeited in its own transaction: hold row `FOR UPDATE SKIP LOCKED` (safe on several instances), re-check still pending and past deadline, then winner + platform wallets locked in ascending id order
+- [ ] Held remainder returned to the winner (HOLD_CANCEL ledger row)
+- [ ] Whole LOCKED deposit moved to the platform wallet (`wallet.platform-user-id`): FORFEIT rows on both wallets; `deposit_locks.status = FORFEITED`
+- [ ] No LOCKED deposit → nothing forfeited, hold still FORFEITED
+- [ ] `payment_holds.status = FORFEITED`; after commit `PaymentEvent{paymentType=FAILED, depositAmount=forfeited}` on `payment-event-topic`
+- [ ] Failures logged per hold and retried on the next run
+- [ ] Notifications (winner: deposit forfeited; seller: auction failed) — media-service, later story
 
 **Platform Fee Calculation & Tracking:**
 
@@ -387,29 +387,34 @@ See detailed schema in [wallet-schema.md](./wallet-schema.md) (to be created). C
 
 **Payment (Winner Only):**
 
-- `POST /api/v1/wallet/payment/confirm` — Confirm payment for won auction
-- `GET /api/v1/wallet/payment-pending` — List pending payments with deadlines
+- `POST /api/v1/wallets/payments/confirm` `{ auctionId }` — Confirm payment for won auction
+- `GET /api/v1/wallets/payments/pending` — List pending payments with deadlines
 
-### Internal Service Endpoints (Auth Required)
+### Internal Service Endpoints (service-to-service, not routed via API Gateway)
 
-**Auction Service Integration:**
+Called directly via Eureka/OpenFeign. The gateway blocks `/api/v1/**/internal/**`; wallet-service permits `/api/v1/internal/**` without user auth. Responses use `BaseResponse<T>`; errors use `ErrorResponse`.
 
-- `POST /api/v1/internal/wallet/lock-deposit` — Lock deposit for auction participation
-- `POST /api/v1/internal/wallet/unlock-deposit` — Release locked deposit
-- `GET /api/v1/internal/wallet/balance/{userId}` — Check user balance (sync call)
+**Bidding Service Integration (WALLET-303 — first bid = implicit registration):**
+
+- `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` — Deposit lock status → `{ locked, amount?, status?, lockedAt? }`
+- `POST /api/v1/internal/wallet/deposit-lock` `{ userId, auctionId, depositAmount }` — Idempotently lock the deposit → `{ lockId, amount, status, alreadyLocked, availableBalance, lockedBalance }`
+  - Errors: `400 INSUFFICIENT_BALANCE` (`errors: { availableBalance, required }`), `400 INVALID_INPUT`, `403 WALLET_NOT_ACTIVE`, `404 WALLET_NOT_FOUND`, `409 DEPOSIT_LOCK_CLOSED`
+- `GET /api/v1/internal/wallet/balance/{userId}` — `{ totalBalance, availableBalance, lockedBalance, currency }`; `404 WALLET_NOT_FOUND`
+- Deposit release (unlock) — future story (refund/forfeit flows)
 
 **Event Publishing:**
 
 - `POST /api/v1/internal/wallet/events/refund-batch` — Trigger refund processing
 - `POST /api/v1/internal/wallet/events/forfeit-batch` — Trigger forfeit processing
 
-### Admin Endpoints
+### Admin Endpoints (WALLET-307 — ADMIN role, `/api/v1/admin/wallets`)
 
-- `GET /api/v1/admin/wallet/{userId}` — View user's full wallet details
-- `GET /api/v1/admin/transactions` — View all transactions (platform-wide)
-- `GET /api/v1/admin/wallet-stats` — Dashboard stats (total fees, active locks, etc.)
-- `POST /api/v1/admin/transactions/{id}/refund` — Manual refund (with audit reason)
-- `POST /api/v1/admin/wallet/{userId}/freeze` — Freeze account (fraud prevention)
+- `GET /stats` — `{ platformWalletBalance, totalActiveWallets, totalLockedBalance, totalActiveDepositLocks }`
+- `GET /transactions?type&page=0&size=50` — all transactions across wallets, newest first
+- `GET /{userId}` — wallet, last 20 transactions, active deposit locks
+- `POST /{userId}/freeze` / `POST /{userId}/unfreeze` — status `SUSPENDED` / `ACTIVE` (freeze blocks mock deposits and new deposit locks; incoming refunds/proceeds still allowed; platform wallet cannot be frozen)
+- `POST /transactions/{transactionId}/refund { reason }` — refunds a user-side `PAYMENT`/`FORFEIT` debit in full, once (409 on repeat); funded by the platform wallet (400 if it can't cover); REFUND rows on both wallets with `{adminId, reason, originalTransactionId, direction}` metadata
+- All actions audited via `@Audit` → `audit-events`
 
 ---
 

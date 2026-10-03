@@ -30,8 +30,9 @@ spring:
       group-id: wallet-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
         spring.json.trusted.packages: "*"
         reconnect.backoff.ms: 5000
         reconnect.backoff.max.ms: 30000
@@ -40,6 +41,11 @@ spring:
 
 wallet:
   platform-user-id: 87754524-54c7-4aa4-b6fb-43d359c2121f
+  payment:
+    deadline-hours: 48
+    forfeit-interval-ms: 300000
+    forfeit-batch-size: 100
+    forfeit-initial-delay-ms: 60000
 
 eureka:
   instance:

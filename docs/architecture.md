@@ -60,6 +60,43 @@
 - **WebSockets**: Used for live price updates on auction pages and "Outbid" alerts.
 - **Message Broker**: Ensures eventual consistency between services (e.g., Auction closed → Notification sent → Wallet refund initiated).
 
+### Service-to-Service Internal APIs
+
+Synchronous internal calls go directly between services via Eureka + OpenFeign, never through the API Gateway. The gateway's `AuthenticationFilter` blocks `/api/v1/**/internal/**`, and each owning service `permitAll`s its own internal paths.
+
+| Owner | Endpoint | Caller | Purpose |
+|---|---|---|---|
+| Wallet | `GET /api/v1/internal/wallet/deposit-lock?userId=&auctionId=` | Bidding | Is the user's deposit locked for this auction? |
+| Wallet | `POST /api/v1/internal/wallet/deposit-lock` `{userId, auctionId, depositAmount}` | Bidding | Idempotently lock the deposit on first bid (implicit registration). Errors: `INSUFFICIENT_BALANCE` 400, `WALLET_NOT_ACTIVE` 403, `WALLET_NOT_FOUND` 404, `DEPOSIT_LOCK_CLOSED` 409 |
+| Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |
+
+### Wallet Events (Kafka)
+
+| Direction | Topic | Payload | Purpose |
+|---|---|---|---|
+| Consumes | `auction-ended-topic` | `AuctionEndedEvent` | Refund every `LOCKED` deposit for the auction except the winner's (`AUCTION_LOST`). Losers are derived from `deposit_locks`; `loserIds` is not used. |
+| Consumes | `auction-cancelled-topic` | `AuctionCancelledEvent` | Refund every `LOCKED` deposit for the auction (`AUCTION_CANCELLED`). |
+| Produces | `deposit-refunded-topic` (key `userId`) | `DepositRefundedEvent { userId, walletId, auctionId, amount, reason, refundedAt }` | One per non-zero refund, published after commit. |
+| Consumes | `auction-ended-topic` (winner) | `AuctionEndedEvent` | Create a 48h payment hold for the winner (`payment_holds`); deposit counts toward the price. |
+| Consumes | `auction-cancelled-topic` (hold) | `AuctionCancelledEvent` | Void any `PENDING_PAYMENT` hold and return held funds. |
+| Produces | `payment-event-topic` (key winner `userId`) | `PaymentEvent { paymentType: REQUIRED \| COMPLETED \| FAILED, … }` | Payment required (with deadline, `insufficientFunds`) / payment completed / payment failed (deposit forfeited by the 5-minute forfeit scheduler); after commit. Field meanings differ by type: `depositAmount` is the deposit applied for REQUIRED/COMPLETED but the amount forfeited for FAILED; `remaining` is still owed for REQUIRED, paid from balance for COMPLETED, and returned to the winner for FAILED. |
+
+Each refund is its own DB transaction. The retry/DLT policy applies to **all** wallet-service listeners (including `user-registered-topic`): failed records are retried 3 times with exponential backoff (1s, 2s, 4s), then published to `<topic>.DLT` on the same partition number — so a `.DLT` topic must have at least as many partitions as its source topic (auto-created topics use the broker default, currently 3). Redelivery and DLT replay of processing failures are safe because released locks are skipped. Undeserializable records go straight to `<topic>.DLT` via `ErrorHandlingDeserializer`; their payload is the raw bytes re-encoded as a base64 JSON string, so they need manual decoding and cannot be replayed as-is.
+
+**Winner payment endpoints (public, via gateway):** `GET /api/v1/wallets/payments/pending`, `POST /api/v1/wallets/payments/confirm { auctionId }`. Confirm settles atomically: hold row locked first, then winner and seller wallets in ascending id order.
+
+**Wallet admin API (ADMIN role, via gateway `/api/v1/admin/wallets/**`):**
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/admin/wallets/stats` | Platform wallet balance, active wallets, total locked, active deposit locks |
+| GET | `/api/v1/admin/wallets/transactions?type&page=0&size=50` | All transactions, newest first |
+| GET | `/api/v1/admin/wallets/{userId}` | Wallet, last 20 transactions, active deposit locks |
+| POST | `/api/v1/admin/wallets/{userId}/freeze` · `/unfreeze` | Status SUSPENDED / ACTIVE |
+| POST | `/api/v1/admin/wallets/transactions/{id}/refund` `{ reason }` | Refund a user-side PAYMENT/FORFEIT once, funded by the platform wallet |
+
+Admin actions are audited (`@Audit` → `audit-events` topic).
+
 ---
 
 ## High-Level Diagram
