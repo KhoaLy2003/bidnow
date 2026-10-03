@@ -25,6 +25,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SecurityConstants.PUBLIC_ENDPOINTS)
                         .permitAll()
+                        .requestMatchers("/ws-notifications/**")
+                        .permitAll()
                         .anyRequest()
                         .authenticated()
                 )

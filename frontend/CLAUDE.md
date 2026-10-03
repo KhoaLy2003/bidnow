@@ -10,17 +10,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev      # Start dev server (Next.js on default port 3000)
 npm run build    # Production build
 npm run lint     # ESLint check
+npm test         # Vitest unit tests (pure modules: lib/, services/, store/, types/mappers/)
 ```
-
-No test suite is configured. There is no test runner command.
 
 ## Environment
 
 Requires `.env.local` with:
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_SOCKET_URL=<websocket server url>
+NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws-notifications/websocket   # optional; derived from NEXT_PUBLIC_API_URL when unset
 ```
+
+See `.env.example` for all configuration options.
 
 ## Architecture
 
@@ -39,16 +40,13 @@ NEXT_PUBLIC_SOCKET_URL=<websocket server url>
 
 Four Zustand stores in `store/`:
 - `authStore` — JWT tokens + user, persisted to `localStorage` via `zustand/middleware/persist` (key: `auth-storage`)
-- `auctionStore` — live bid state for the active auction detail page; reset on unmount
+- `auctionStore` — live state (`LiveAuctionState`) of the auction detail page being viewed, updated only through the monotonic reducers in `lib/realtime/auction-live.ts`; reset on unmount
 - `notificationStore` — notification list and unread count
 - `walletStore` — balance and transaction history
 
 ### Real-time (WebSocket)
 
-`hooks/useAuctionSocket.ts` connects to `NEXT_PUBLIC_SOCKET_URL` using socket.io-client. It joins an auction room on mount (`auction:join`) and listens for three events:
-- `bid:new` → calls `setBid` + `addBidToHistory` on `auctionStore`
-- `auction:status` → calls `setStatus`
-- `auction:end` → sets final bid + marks status `Closed`
+`hooks/useAuctionSocket.ts` connects with `@stomp/stompjs` over native WebSocket to `/ws-notifications/websocket` through the gateway (JWT as `access_token`, refreshed on every connect), subscribes to `/topic/auctions/{id}` (`BID_PLACED`, `AUCTION_EXTENDED`, `AUCTION_ENDED`, `AUCTION_CANCELLED`) and, when logged in, `/user/queue/notifications` (`OUTBID`). Messages are parsed/routed by `lib/realtime/dispatch.ts`; `AuctionLiveBridge` hydrates the store and resyncs (re-fetches the auction + first history page) on every (re)connect, including the first, to recover events missed before the subscription; components read through `useLiveAuction`. Clients are receive-only.
 
 ### API & Types
 
@@ -80,4 +78,4 @@ Two CSS layers in `app/globals.css`:
 
 ### Money / Formatting
 
-Amounts are stored and transmitted in **cents** (integers). Always use `formatCurrency(cents)` from `lib/format.ts` for display. Render prices, balances, and timers in `font-mono` (Geist Mono) to prevent layout shift on digit change.
+Amounts are **dollars** (`number`) end-to-end, exactly as the API sends them. Do arithmetic/comparison through `lib/money.ts` (integer cents internally) and display with `formatCurrency(dollars)` in `font-mono`.

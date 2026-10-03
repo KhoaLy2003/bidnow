@@ -22,6 +22,10 @@ import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.NotFoundException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -70,6 +74,21 @@ class AuctionServiceImplTest {
 
     @InjectMocks
     private AuctionServiceImpl auctionService;
+
+    @BeforeEach
+    void initTransactionSync() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @AfterEach
+    void clearTransactionSync() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private void triggerAfterCommit() {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+    }
 
     // -------------------------------------------------------
     // Helpers
@@ -327,4 +346,35 @@ class AuctionServiceImplTest {
 //        assertThat(result.get(0).getCategoryName()).isEqualTo("Electronics");
 //        assertThat(result.get(0).getCount()).isEqualTo(5L);
 //    }
+
+    @Test
+    void cancelAuction_activeAuction_readsWithRowLockAndCancels() {
+        UUID auctionId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+        AuctionItem item = buildItem(auctionId);
+        item.setSellerId(sellerId);
+        item.setStatus(AuctionStatus.ACTIVE);
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(item));
+
+        auctionService.cancelAuction(sellerId, auctionId, null);
+
+        assertThat(item.getStatus()).isEqualTo(AuctionStatus.CANCELLED);
+        verify(auctionItemRepository, never()).findByIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    void cancelAuction_activeAuction_publishesCancelledEventOnlyAfterCommit() {
+        UUID auctionId = UUID.randomUUID();
+        UUID sellerId = UUID.randomUUID();
+        AuctionItem item = buildItem(auctionId);
+        item.setSellerId(sellerId);
+        item.setStatus(AuctionStatus.ACTIVE);
+        when(auctionItemRepository.findByIdForUpdate(auctionId)).thenReturn(Optional.of(item));
+
+        auctionService.cancelAuction(sellerId, auctionId, null);
+
+        verify(auctionKafkaProducer, never()).publishAuctionCancelled(any());
+        triggerAfterCommit();
+        verify(auctionKafkaProducer).publishAuctionCancelled(any());
+    }
 }

@@ -1,4 +1,5 @@
 import { AuctionStatus } from '@/lib/design-tokens'
+import { addDollars } from '@/lib/money'
 
 const WARNING_THRESHOLD_SECONDS  = 5 * 60
 const CRITICAL_THRESHOLD_SECONDS = 60
@@ -31,4 +32,15 @@ export function getAuctionStatus(auction: { status: AuctionStatus; endsAt: Date 
   if (timerState === 'critical') return AuctionStatus.Critical
   if (timerState === 'warning')  return AuctionStatus.EndingSoon
   return AuctionStatus.Active
+}
+
+/** Server rule: the first bid may equal the starting price; later bids must beat current + increment. */
+export function minimumNextBid(input: {
+  currentBid: number
+  bidIncrement: number
+  startingPrice: number
+  totalBids: number
+}): number {
+  if (input.totalBids === 0) return input.startingPrice
+  return addDollars(input.currentBid, input.bidIncrement)
 }

@@ -34,6 +34,8 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        max.block.ms: 2000
 
 eureka:
   client:
@@ -66,3 +68,11 @@ org:
       enabled: false
     database:
       skip-create: true
+
+auction:
+  anti-snipe:
+    window-seconds: 120
+    extension-seconds: 300
+  closure:
+    # Must exceed JobRunr's background-job-server poll interval (15 s default) so a closure job never runs before end_time.
+    grace-seconds: 20

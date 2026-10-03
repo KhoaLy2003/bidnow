@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,6 +84,18 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .name(profile.getDisplayName())
                 .avatarUrl(profile.getAvatarUrl())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserSummaryResponse> getUserSummaries(List<UUID> userIds) {
+        return userProfileRepository.findByUserIdIn(new LinkedHashSet<>(userIds)).stream()
+                .map(profile -> UserSummaryResponse.builder()
+                        .id(profile.getUserId())
+                        .name(profile.getDisplayName())
+                        .avatarUrl(profile.getAvatarUrl())
+                        .build())
+                .toList();
     }
 
     @Override

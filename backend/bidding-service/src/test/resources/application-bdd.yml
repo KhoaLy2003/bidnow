@@ -1,0 +1,17 @@
+# backend/bidding-service/src/test/resources/application-bdd.yml
+spring:
+  cloud:
+    discovery:
+      enabled: false
+  jpa:
+    show-sql: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  tracing:
+    enabled: false

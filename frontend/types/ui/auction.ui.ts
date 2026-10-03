@@ -17,11 +17,16 @@ export interface Bid {
   isAutoBid: boolean
 }
 
-export interface BidHistoryItem extends Bid {
-  bidderName:      string
+/** A bid with the bidder's display data — what the live store and history hold. */
+export interface BidEntry extends Bid {
+  bidderName:       string
   bidderAvatarUrl?: string
-  isCurrentUser:   boolean
-  isWinning:       boolean
+}
+
+/** A bid as rendered for a specific viewer. */
+export interface BidHistoryItem extends BidEntry {
+  isCurrentUser: boolean
+  isWinning:     boolean
 }
 
 export interface AuctionDetailSeller {

@@ -6,6 +6,7 @@ import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
+import com.bidnow.auction.util.AfterCommit;
 import com.bidnow.common.dto.event.AuctionCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class AuctionActivationService {
      */
     @Transactional
     public void activate(UUID auctionId) {
-        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(auctionId)
+        AuctionItem auction = auctionItemRepository.findByIdForUpdate(auctionId)
                 .orElse(null);
         if (auction == null) {
             log.warn("Activation skipped — auction {} not found or deleted", auctionId);
@@ -66,13 +67,14 @@ public class AuctionActivationService {
                 .reason("Scheduled start time reached")
                 .build());
 
-        kafkaProducer.publishAuctionCreated(AuctionCreatedEvent.builder()
+        AuctionCreatedEvent createdEvent = AuctionCreatedEvent.builder()
                 .auctionId(auction.getId())
                 .sellerId(auction.getSellerId())
                 .title(auction.getTitle())
                 .startingPrice(auction.getStartingPrice())
                 .endTime(auction.getEndTime().toInstant())
-                .build());
+                .build();
+        AfterCommit.run(() -> kafkaProducer.publishAuctionCreated(createdEvent));
 
         closureService.scheduleClosureJob(auctionId, auction.getEndTime().toInstant());
         log.info("Activated auction {} (SCHEDULED → ACTIVE)", auctionId);

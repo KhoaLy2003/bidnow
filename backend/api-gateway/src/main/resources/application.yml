@@ -12,10 +12,12 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      # Auto-generated /{service-id}/** routes are disabled: they exposed every
+      # downstream path (actuator, internal endpoints) to any JWT holder.
+      # Only the explicit /api/v1/** routes below are reachable through the gateway.
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false
       routes:
         - id: identity-service
           uri: lb://identity-service
@@ -41,6 +43,10 @@ spring:
           uri: lb://media-service
           predicates:
             - Path=/api/v1/media/**, /api/v1/admin/templates/**, /api/v1/admin/email-logs/**, /api/v1/admin/audit-logs
+        - id: media-websocket
+          uri: lb://media-service
+          predicates:
+            - Path=/ws-notifications/**
       globalcors:
         cors-configurations:
           "[/**]":
@@ -56,12 +62,11 @@ spring:
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600
-
-        default-filters:
-          - name: DeduplicateResponseHeader
-            args:
-              name: Access-Control-Allow-Origin Access-Control-Allow-Credentials
-              strategy: RETAIN_FIRST
+      default-filters:
+        - name: DedupeResponseHeader
+          args:
+            name: Access-Control-Allow-Origin Access-Control-Allow-Credentials
+            strategy: RETAIN_FIRST
 
 eureka:
   client:
