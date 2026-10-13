@@ -1,14 +1,12 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET
-
 export function resolveImageUrl(value?: string | null): string | undefined {
   if (!value) return undefined
-  if (!SUPABASE_URL || !SUPABASE_BUCKET) {
-    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_BUCKET')
+  // Already a full URL (written by media-service at upload time, or a pre-migration URL)
+  if (value.startsWith('http')) return value
+  const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL
+  if (!cdnUrl) {
+    console.error('Missing NEXT_PUBLIC_CDN_URL')
     return undefined
   }
-  // Already a full URL (new records written after this change)
-  if (value.startsWith('http')) return value
-  // Legacy s3Key stored in DB before this change (e.g. "uploads/uuid/file.jpg")
-  return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${value}`
+  // Bare s3Key (e.g. "uploads/uuid/file.jpg") served through CloudFront
+  return `${cdnUrl.replace(/\/$/, '')}/${value.replace(/^\//, '')}`
 }

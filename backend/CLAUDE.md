@@ -35,7 +35,8 @@ Each service reads these from the environment (no `.env` file in repo):
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`                                              | identity-service, user-service, media-service (and others with a DB) |
 | `KAFKA_BOOTSTRAP_SERVERS`                                                           | all services (default: `localhost:9092`)                             |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`             | media-service                                                        |
-| `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_REGION`, `AWS_BUCKET_NAME`, `AWS_ENDPOINT` | media-service                                                        |
+| `AWS_REGION`, `AWS_BUCKET_NAME`, `CDN_BASE_URL`                                     | media-service (S3 uploads; images served via CloudFront)             |
+| `AWS_PROFILE` or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` (local only)          | media-service (on AWS the task/pod role is used; no keys)            |
 
 ## Architecture Overview
 

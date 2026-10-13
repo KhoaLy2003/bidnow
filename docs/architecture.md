@@ -25,7 +25,7 @@
 
 ### External Services
 
-- **Cloud Storage:** Cloudinary (Product images and user avatars)
+- **Cloud Storage:** AWS S3 (private bucket) served through CloudFront (Product images and user avatars). See [media-storage.md](media-storage.md).
 - **Email:** SMTP via JavaMail (any SMTP provider; Mailpit in dev)
 - **Payment Gateway:** Stripe or VNPay (Planned for payment phase)
 
