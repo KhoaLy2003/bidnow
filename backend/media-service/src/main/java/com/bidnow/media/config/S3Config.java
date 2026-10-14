@@ -6,26 +6,17 @@ package com.bidnow.media.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
-import java.net.URI;
-
+/**
+ * Credentials come from the AWS default provider chain: env vars / {@code AWS_PROFILE} locally,
+ * the task / pod / instance role when deployed on AWS. No keys are configured here.
+ */
 @Configuration
 public class S3Config {
-
-    @Value("${aws.s3.ENDPOINT}")
-    private String endpoint;
-
-    @Value("${aws.s3.ACCESS_KEY}")
-    private String accessKey;
-
-    @Value("${aws.s3.SECRET_KEY}")
-    private String secretKey;
 
     @Value("${aws.s3.REGION}")
     private String region;
@@ -33,26 +24,16 @@ public class S3Config {
     @Bean
     public S3Client s3Client() {
         return S3Client.builder()
-                .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(true)
-                        .build())
+                .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
     }
 
     @Bean
     public S3Presigner s3Presigner() {
         return S3Presigner.builder()
-                .endpointOverride(URI.create(endpoint))
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(true)
-                        .build())
+                .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
     }
 }

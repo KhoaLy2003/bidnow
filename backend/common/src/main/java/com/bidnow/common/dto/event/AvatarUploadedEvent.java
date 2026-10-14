@@ -24,7 +24,7 @@ public class AvatarUploadedEvent {
      */
     private String s3Key;
     /**
-     * Supabase public URL for the image. Stored as avatar_url in user_profiles.
+     * CloudFront public URL for the image. Stored as avatar_url in user_profiles.
      */
     private String publicUrl;
 }

@@ -70,14 +70,11 @@ mail:
 
 aws:
   s3:
-    ACCESS_KEY: ${AWS_ACCESS_KEY}
-    SECRET_KEY: ${AWS_SECRET_KEY}
     REGION: ${AWS_REGION}
     BUCKET_NAME: ${AWS_BUCKET_NAME}
-    ENDPOINT: ${AWS_ENDPOINT}
 
-supabase:
-  public-url: ${SUPABASE_PUBLIC_URL}
+cdn:
+  base-url: ${CDN_BASE_URL}   # CloudFront domain serving the bucket, e.g. https://d1234abcd.cloudfront.net
 
 eureka:
   instance:
