@@ -36,7 +36,7 @@ export function WalletBadge() {
       <SheetContent side="right" className="w-full sm:max-w-sm p-0 gap-4 flex flex-col py-4">
         <SheetHeader>
           <SheetTitle>Wallet</SheetTitle>
-          <SheetDescription>Manage your auction balance</SheetDescription>
+          <SheetDescription className="mt-4">Manage your auction balance</SheetDescription>
         </SheetHeader>
         <WalletPanel />
       </SheetContent>

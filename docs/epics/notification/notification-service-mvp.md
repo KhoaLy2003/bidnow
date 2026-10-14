@@ -1,3 +1,8 @@
+> **Superseded where it differs from what was built.** The implemented design is in
+> [the notification epic roadmap](../../superpowers/plans/2026-09-30-notification-epic-roadmap.md) (Decisions and
+> per-story Refinements). Notes marked **Superseded** below point out each difference; the original text is kept
+> for history.
+
 ## 📋 Scope Finalized - Media Service MVP
 
 ### **A. Channels Implementation**
@@ -21,12 +26,16 @@
 - Deposit refunded
 - Payment successful
 
+> **Superseded:** there is no separate "Auction won" email. The "You won, pay within 48h" email is payment reminder #1, sent from wallet's `PaymentEvent REQUIRED`; `AuctionEndedEvent` only creates the in-app `AUCTION_WON` (Decision 3).
+
 ✅ **Storage:**
 
 - Notification history table (unlimited retention)
 - Mark as read/unread
 - Delete notifications
 - Pagination support
+
+> **Superseded:** "Delete" is a soft delete, and the history lives in `media_notifications` (see [the schema doc](../../database/notification-service.schema.md)). Roadmap Decision 6.
 
 ### **B. Key Features & Business Rules**
 
@@ -43,6 +52,8 @@ Seller sets:
 
 - Seller creates auction and sets: "Notify bidders at 1 hour and 15 minutes before end"
 - System sends notifications accordingly
+
+> **Superseded:** ending soon is a platform default: every auction notifies its active bidders at 60 and 15 minutes before the end (`auction.ending-soon.thresholds-minutes`). There is no seller setting, enable/disable switch or custom thresholds (Decision 7).
 
 #### **2. Outbid Alert - Smart Batching**
 
@@ -69,6 +80,8 @@ Timeline:
 - T0 + 24h: If not paid → Send email #2 "Reminder: 24 hours left to complete payment"
 - T0 + 48h: If still not paid → Mark as failed, forfeit deposit, no more emails
 ```
+
+> **Superseded:** email #1 is the won/payment-required email sent when wallet publishes `PaymentEvent REQUIRED` (not a separate auction-won email), and reminder #2 is sent when 24 h are left to the deadline (Decision 3).
 
 #### **4. Anti-Sniping Extension Notification**
 
@@ -115,7 +128,11 @@ Admin Dashboard:
 - See failure reason (invalid email, SMTP error, etc.)
 ```
 
+> **Superseded:** there is no automatic retry and no admin alert. An email is sent once; a failure is logged as `FAILED` in `media_email_logs`, and the in-app notification is still created. An admin email-log list and page exist, but `POST /api/v1/admin/email-logs/{id}/retry` is not functional (`EmailServiceImpl.retryEmail` throws `UnsupportedOperationException`). Retry is out of scope (Decision 11, NOTIF-103).
+
 #### **3. Database Schema (Media Service)**
+
+> **Superseded:** the sketches below are the original design. The tables are `media_*` (`media_notifications`, `media_email_logs`, `media_notification_templates`, ...), with different columns. See [the notification service schema](../../database/notification-service.schema.md).
 
 **Table: notifications**
 
@@ -201,6 +218,8 @@ GET    /api/v1/admin/templates            # Manage templates
 PUT    /api/v1/admin/templates/{id}       # Update template
 ```
 
+> **Superseded:** the user inbox is `/api/v1/notifications` with `unread-count`, `{id}` (get, marks read), `{id}/read`, `{id}/unread`, `mark-all-read`, `delete-all` and `delete-read`; see "Inbox REST" in [the architecture doc](../../architecture.md). There is no internal `send` endpoint (Decision 9). Admin endpoints exist for email logs (list; retry is not functional) and templates (create, update, get, list, test send `/{id}/test`, group send `/{id}/send`).
+
 ---
 
 ### **E. Event Types to Listen**
@@ -219,6 +238,8 @@ PUT    /api/v1/admin/templates/{id}       # Update template
 | PAYMENT_REMINDER_24H      | Wallet Service   | Payment reminder #2         | Email             |
 | PAYMENT_COMPLETED         | Wallet Service   | Payment successful          | Email             |
 | DEPOSIT_REFUNDED          | Wallet Service   | Refund notification         | Email             |
+
+> **Superseded:** the winner gets only the in-app `AUCTION_WON` from `AUCTION_ENDED_WITH_WINNER`; the winner email comes from `PAYMENT_REQUIRED` (Decision 3). Losers and active bidders come from media's own participants projection (Decision 4).
 
 ---
 
@@ -243,6 +264,8 @@ PUT    /api/v1/admin/templates/{id}       # Update template
    - Version control (optional for post-MVP)
 ```
 
+> **Superseded:** language comes from user-service preferences (Decision 5). In-app copy is EN only. Admins can manage templates through `/api/v1/admin/templates` and the admin templates page, but there is no preview endpoint, and template versioning is out of scope (Decision 11).
+
 ---
 
 ## 📝 Issues to Create
@@ -262,6 +285,8 @@ PUT    /api/v1/admin/templates/{id}       # Update template
 - Retry mechanism & failure logging
 - Admin panel for failed emails
 
+> **Superseded:** automatic and manual retry are out of scope; failures are only logged (Decision 11). An admin email-log page exists, but its retry action is not functional.
+
 ### **Issue #3: Real-time Notification System**
 
 - WebSocket broadcast mechanism
@@ -275,6 +300,8 @@ PUT    /api/v1/admin/templates/{id}       # Update template
 
 - Outbid alert batching logic
 - Seller-configurable "ending soon" settings
+
+> **Superseded:** ending soon uses platform-default thresholds, no seller setting (Decision 7).
 - Anti-sniping extension notifications
 - Payment reminder scheduler (2 attempts)
 

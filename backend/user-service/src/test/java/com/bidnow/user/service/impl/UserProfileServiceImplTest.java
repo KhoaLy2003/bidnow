@@ -1,8 +1,10 @@
 package com.bidnow.user.service.impl;
 
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.exception.NotFoundException;
+import com.bidnow.user.domain.entity.UserPreferences;
 import com.bidnow.user.domain.entity.UserProfile;
 import com.bidnow.user.mapper.UserProfileMapper;
 import com.bidnow.user.repository.UserPreferencesRepository;
@@ -15,6 +17,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -134,5 +138,59 @@ class UserProfileServiceImplTest {
         ArgumentCaptor<UserProfile> captor = ArgumentCaptor.forClass(UserProfile.class);
         verify(userProfileRepository).save(captor.capture());
         assertThat(captor.getValue().getDisplayName()).isNull();
+    }
+
+    @Test
+    void getUserSummaries_returnsOnlyExistingUsersWithOneQuery() {
+        UUID alice = UUID.randomUUID();
+        UUID unknown = UUID.randomUUID();
+        when(userProfileRepository.findByUserIdIn(any())).thenReturn(List.of(
+                UserProfile.builder().userId(alice).displayName("Alice").avatarUrl("https://cdn/a.png").build()));
+
+        List<UserSummaryResponse> result = userProfileService.getUserSummaries(List.of(alice, unknown, alice));
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(alice);
+        assertThat(result.get(0).getName()).isEqualTo("Alice");
+        assertThat(result.get(0).getAvatarUrl()).isEqualTo("https://cdn/a.png");
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> ids = ArgumentCaptor.forClass(Collection.class);
+        verify(userProfileRepository).findByUserIdIn(ids.capture());
+        assertThat(ids.getValue()).containsExactlyInAnyOrder(alice, unknown);
+    }
+
+    // -------------------------------------------------------
+    // getNotificationPreferences
+    // -------------------------------------------------------
+
+    @Test
+    void getNotificationPreferences_joinsProfilesWithPreferences() {
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+        UUID unknown = UUID.randomUUID();
+        when(userProfileRepository.findByUserIdIn(any())).thenReturn(List.of(
+                UserProfile.builder().userId(alice).displayName("Alice").build(),
+                UserProfile.builder().userId(bob).displayName("Bob").build()));
+        when(userPreferencesRepository.findByUserIdIn(any())).thenReturn(List.of(
+                UserPreferences.builder().userId(alice).language("vi").emailNotifications(false).build()));
+
+        List<UserNotificationPreferenceResponse> result =
+                userProfileService.getNotificationPreferences(List.of(alice, bob, unknown, alice));
+
+        assertThat(result).extracting(UserNotificationPreferenceResponse::getUserId).containsExactlyInAnyOrder(alice, bob);
+        assertThat(result).filteredOn(p -> p.getUserId().equals(alice)).singleElement().satisfies(p -> {
+            assertThat(p.getDisplayName()).isEqualTo("Alice");
+            assertThat(p.getLanguage()).isEqualTo("vi");
+            assertThat(p.getEmailNotifications()).isFalse();
+        });
+        assertThat(result).filteredOn(p -> p.getUserId().equals(bob)).singleElement().satisfies(p -> {
+            assertThat(p.getDisplayName()).isEqualTo("Bob");
+            assertThat(p.getLanguage()).isNull();
+            assertThat(p.getEmailNotifications()).isNull();
+        });
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> profileIds = ArgumentCaptor.forClass(Collection.class);
+        verify(userProfileRepository).findByUserIdIn(profileIds.capture());
+        assertThat(profileIds.getValue()).containsExactlyInAnyOrder(alice, bob, unknown);
     }
 }

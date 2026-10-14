@@ -6,7 +6,7 @@ import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
 interface CurrentBidDisplayProps {
-  amount:               number        // cents
+  amount:               number        // dollars
   isCurrentUserWinning?: boolean
   status?:              AuctionStatus
   size?:                'sm' | 'md' | 'lg'

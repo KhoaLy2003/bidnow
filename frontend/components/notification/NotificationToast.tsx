@@ -1,15 +1,19 @@
 import { toast } from 'sonner'
-import { Trophy, Timer, ArrowDown } from 'lucide-react'
+import { Trophy, Timer, ArrowDown, CreditCard } from 'lucide-react'
 import type { Notification } from '@/types/ui/notification.ui'
 
 const DURATION: Record<Notification['type'], number | undefined> = {
-  won:          8_000,
-  outbid:       12_000,
-  ending_soon:  8_000,
-  lost:         8_000,
-  bid_placed:   4_000,
-  payment_due:  undefined,  // persistent
-  system:       5_000,
+  won:            8_000,
+  outbid:         12_000,
+  ending_soon:    8_000,
+  lost:           8_000,
+  bid_placed:     4_000,
+  payment_due:    undefined,  // persistent until dismissed
+  payment:        5_000,
+  payment_failed: 8_000,
+  auction:        5_000,
+  refund:         5_000,
+  system:         5_000,
 }
 
 export function showNotificationToast(notification: Notification) {
@@ -36,6 +40,13 @@ export function showNotificationToast(notification: Notification) {
         ...base,
         icon: <Timer className="size-4" />,
         classNames: { toast: 'border-l-4 border-l-[var(--color-auction-ending-accent)]' },
+      })
+
+    case 'payment_due':
+      return toast.warning(notification.title, {
+        ...base,
+        icon: <CreditCard className="size-4" />,
+        classNames: { toast: 'border-l-4 border-l-[var(--color-warning-default)]' },
       })
 
     default:

@@ -38,9 +38,10 @@ Describe all roles that interact with the system.
 - Sellers can view the list of their active and historical auctions.
 
 ### 4. Bidding System (Bidder)
-- Bidders can place manual bids (must be > current price + increment).
-- **Auto-bidding**: Users can set a maximum bid value for the system to bid automatically.
-- **Anti-Sniping**: The system must extend the auction end time if a bid is placed in the final minutes (e.g., 5-minute extension for bids in the last 2 minutes).
+- Bidders can place manual bids. The **first bid** on an auction must be **≥ the starting price**; every later bid must be **≥ current price + bid increment**. Amounts have at most 2 decimal places.
+- A bidder's **first bid** on an auction locks the auction's deposit in their wallet (implicit registration); it fails with an insufficient-balance error if the wallet cannot cover it.
+- **Auto-bidding** (Phase 2, not yet implemented): Users can set a maximum bid value for the system to bid automatically.
+- **Anti-Sniping**: An accepted bid placed with **strictly less than 120 seconds** remaining extends the auction end time by **300 seconds** (added to the current end time). There is no cap on the number of extensions; each one is recorded and broadcast live.
 - **Buy It Now**: Users can instantly purchase an item at the specified price, immediately ending the auction.
 
 ### 5. Auction Lifecycle & Closing
@@ -50,8 +51,30 @@ Describe all roles that interact with the system.
 - If payment is not made, the system marks the auction as "Failed" and deducts the deposit.
 
 ### 6. Notifications
-- Real-time in-app notifications for: Outbid alerts, Auction ending soon, Auction Won/Lost.
-- Email notifications for: Registration, Successful Listing, Winning an Auction, Payment Reminders.
+- **In-app (real-time):**
+    - Welcome (on registration).
+    - Outbid (batched: the first immediately, then one "outbid N more times" per 5 minutes).
+    - New bid on your auction (seller, batched the same way; the first bid is immediate).
+    - Auction ending soon (60 and 15 minutes before the current end, to bidders; platform default, not seller-configurable).
+    - Anti-sniping extension.
+    - Auction won, lost, unsold and cancelled.
+    - Payment required, reminder, completed and failed.
+    - Deposit refunded.
+- **Email:**
+    - Welcome.
+    - Auction live.
+    - Won, pay within 48 h (sent once, with payment-required).
+    - Payment reminder #2 (24 h left).
+    - Payment successful.
+    - Sale payment received (seller).
+    - Payment failed (forfeit).
+    - Auction lost.
+    - Auction cancelled.
+    - Deposit refunded after a loss.
+
+  Payment emails are transactional. Engagement emails respect the user's email opt-out.
+- **Inbox:** list with filters, search and paging; read/unread; mark all; delete (soft) and bulk.
+- **Out of scope:** SMS, push, sound and desktop notifications, email retry, seller-configurable thresholds, per-user notification settings UI.
 
 ---
 

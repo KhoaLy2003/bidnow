@@ -7,6 +7,41 @@ export const TOKEN_REFRESH_BUFFER_MS = 60_000;
 
 let refreshPromise: Promise<void> | null = null;
 
+/** Refreshes the access token if it is expired or within the refresh buffer. Throws `session_expired` after logging out. */
+async function refreshIfNearExpiry(): Promise<void> {
+  const { accessToken, accessTokenExpiresAt, refreshToken } = useAuthStore.getState();
+  if (accessToken && accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - TOKEN_REFRESH_BUFFER_MS) {
+    if (!refreshToken) {
+      forceLogout();
+      throw new Error("session_expired");
+    }
+    if (!refreshPromise) {
+      refreshPromise = authService
+        .refresh(refreshToken)
+        .then(({ data }) => {
+          useAuthStore.getState().setTokens(data.accessToken, data.refreshToken, data.expiresIn);
+        })
+        .catch(() => {
+          forceLogout();
+          throw new Error("session_expired");
+        })
+        .finally(() => { refreshPromise = null; });
+    }
+    await refreshPromise;
+  }
+}
+
+/** A usable access token for non-fetch transports (the STOMP handshake), or null when anonymous or logged out. */
+export async function getFreshAccessToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    await refreshIfNearExpiry();
+  } catch {
+    return null;
+  }
+  return useAuthStore.getState().accessToken;
+}
+
 export async function apiFetch(
   url: string,
   options: RequestInit = {}
@@ -17,29 +52,7 @@ export async function apiFetch(
   }
 
   // Proactive refresh: if token is expired or within 60 s of expiry, refresh before sending.
-  // Block-scoped to avoid naming conflicts with the reactive 401 path below.
-  {
-    const { accessToken, accessTokenExpiresAt, refreshToken } = useAuthStore.getState();
-    if (accessToken && accessTokenExpiresAt !== null && Date.now() >= accessTokenExpiresAt - TOKEN_REFRESH_BUFFER_MS) {
-      if (!refreshToken) {
-        forceLogout();
-        throw new Error("session_expired");
-      }
-      if (!refreshPromise) {
-        refreshPromise = authService
-          .refresh(refreshToken)
-          .then(({ data }) => {
-            useAuthStore.getState().setTokens(data.accessToken, data.refreshToken, data.expiresIn);
-          })
-          .catch(() => {
-            forceLogout();
-            throw new Error("session_expired");
-          })
-          .finally(() => { refreshPromise = null; });
-      }
-      await refreshPromise;
-    }
-  }
+  await refreshIfNearExpiry();
 
   const response = await doFetch(url, options);
 

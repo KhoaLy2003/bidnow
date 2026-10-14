@@ -14,6 +14,7 @@ import com.bidnow.media.dto.response.TemplateResponse;
 import com.bidnow.media.repository.NotificationTemplateRepository;
 import com.bidnow.media.service.TemplateService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,7 +37,7 @@ public class TemplateServiceImpl implements TemplateService {
         if (template.getBodyHtml() == null) {
             return null;
         }
-        return replaceVariables(template.getBodyHtml(), variables);
+        return replaceVariables(template.getBodyHtml(), variables, true);
     }
 
     @Override
@@ -44,7 +45,7 @@ public class TemplateServiceImpl implements TemplateService {
         if (template.getBodyText() == null) {
             return null;
         }
-        return replaceVariables(template.getBodyText(), variables);
+        return replaceVariables(template.getBodyText(), variables, false);
     }
 
     @Override
@@ -52,10 +53,10 @@ public class TemplateServiceImpl implements TemplateService {
         if (template.getSubject() == null) {
             return null;
         }
-        return replaceVariables(template.getSubject(), variables);
+        return replaceVariables(template.getSubject(), variables, false);
     }
 
-    private String replaceVariables(String text, Map<String, Object> variables) {
+    private String replaceVariables(String text, Map<String, Object> variables, boolean escapeHtml) {
         if (variables == null || variables.isEmpty()) {
             return text;
         }
@@ -63,9 +64,13 @@ public class TemplateServiceImpl implements TemplateService {
         Map<String, String> stringVariables = variables.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        e -> e.getValue() != null ? String.valueOf(e.getValue()) : ""));
+                        e -> {
+                            String value = e.getValue() != null ? String.valueOf(e.getValue()) : "";
+                            return escapeHtml ? StringEscapeUtils.escapeHtml4(value) : value;
+                        }));
 
         StringSubstitutor substitutor = new StringSubstitutor(stringVariables, "{", "}");
+        substitutor.setDisableSubstitutionInValues(true);
         return substitutor.replace(text);
     }
 

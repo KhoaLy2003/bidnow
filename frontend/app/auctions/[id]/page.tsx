@@ -9,8 +9,10 @@ import { AuctionGallery }   from '@/components/auction/AuctionGallery'
 import { BidPanel }         from '@/components/auction/BidPanel'
 import { ItemSpecs }        from '@/components/auction/ItemSpecs'
 import { SellerCard }       from '@/components/auction/SellerCard'
-import { BidHistory }       from '@/components/auction/BidHistory'
+import { AuctionLiveBridge } from '@/components/auction/AuctionLiveBridge'
+import { LiveBidHistory }   from '@/components/auction/LiveBidHistory'
 import { auctionService }   from '@/services/auction.service'
+import { bidService, EMPTY_BID_PAGE, BID_PAGE_SIZE } from '@/services/bid.service'
 import { getAuctionStatus } from '@/lib/auction-utils'
 import { formatRelativeTime } from '@/lib/format'
 
@@ -26,9 +28,9 @@ export async function generateMetadata({ params }: AuctionDetailPageProps): Prom
 
 export default async function AuctionDetailPage({ params }: AuctionDetailPageProps) {
   const { id } = await params
-  const [auction, bids] = await Promise.all([
+  const [auction, firstBidPage] = await Promise.all([
     auctionService.getAuctionById(id),
-    auctionService.getBidHistory(id),
+    bidService.getAuctionBids(id, { page: 0, size: BID_PAGE_SIZE }).catch(() => EMPTY_BID_PAGE),
   ])
   if (!auction) notFound()
 
@@ -39,6 +41,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
     <>
       <Header />
       <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-detail)] px-4 py-8 pb-14 md:pb-8">
+        <AuctionLiveBridge auction={auction} initialBids={firstBidPage.items} />
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6" aria-label="Breadcrumb">
@@ -85,18 +88,13 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
           </div>
 
           <div className="order-1 md:order-2 md:sticky md:top-20 md:self-start">
-            <BidPanel auction={displayAuction} />
+            <BidPanel auction={auction} />
           </div>
         </div>
 
         <Separator className="mb-8" />
 
-        <section>
-          <h2 className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
-            Bid History · {auction.totalBids}
-          </h2>
-          <BidHistory items={bids} />
-        </section>
+        <LiveBidHistory auction={auction} initialBids={firstBidPage.items} initialHasMore={firstBidPage.hasNext} />
       </main>
       <Footer />
       <BottomNav />

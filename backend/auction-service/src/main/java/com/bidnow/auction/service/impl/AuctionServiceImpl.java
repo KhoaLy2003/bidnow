@@ -26,6 +26,7 @@ import com.bidnow.auction.repository.AuctionItemRepository;
 import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.auction.service.AuctionClosureService;
 import com.bidnow.auction.service.AuctionService;
+import com.bidnow.auction.util.AfterCommit;
 import com.bidnow.common.constant.ErrorCodes;
 import com.bidnow.common.dto.PageResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
@@ -165,7 +166,7 @@ public class AuctionServiceImpl implements AuctionService {
     @Override
     @Transactional
     public void cancelAuction(UUID sellerId, UUID id, CancelAuctionRequest request) {
-        AuctionItem auction = auctionItemRepository.findByIdAndDeletedAtIsNull(id)
+        AuctionItem auction = auctionItemRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Auction not found", ErrorCodes.NOT_FOUND));
 
         if (!auction.getSellerId().equals(sellerId)) {
@@ -193,14 +194,15 @@ public class AuctionServiceImpl implements AuctionService {
         recordStatusHistory(auction, oldStatus, AuctionStatus.CANCELLED, sellerId, reason);
 
         if (oldStatus == AuctionStatus.ACTIVE || oldStatus == AuctionStatus.SCHEDULED) {
-            auctionKafkaProducer.publishAuctionCancelled(AuctionCancelledEvent.builder()
+            AuctionCancelledEvent event = AuctionCancelledEvent.builder()
                     .auctionId(auction.getId())
                     .sellerId(sellerId)
                     .auctionTitle(auction.getTitle())
                     .previousStatus(oldStatus.name())
                     .reason(reason)
                     .cancelledAt(now.toInstant())
-                    .build());
+                    .build();
+            AfterCommit.run(() -> auctionKafkaProducer.publishAuctionCancelled(event));
         }
 
         log.info("Cancelled auction {} (was {}) by seller {}", id, oldStatus, sellerId);

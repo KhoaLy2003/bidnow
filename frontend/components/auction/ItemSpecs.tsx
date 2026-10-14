@@ -30,7 +30,6 @@ function SpecRow({
 export function ItemSpecs({ auction, categoryLabel }: ItemSpecsProps) {
   const rows: { label: string; value: React.ReactNode; mono?: boolean }[] = [
     { label: 'Category',        value: categoryLabel },
-    { label: 'Item ID',         value: `#AUC-${auction.id}`, mono: true },
     { label: 'Starting price',  value: formatCurrency(auction.startingPrice), mono: true },
     { label: 'Bid increment',   value: formatCurrency(auction.bidIncrement), mono: true },
     { label: 'Deposit required', value: formatCurrency(auction.depositAmount), mono: true },

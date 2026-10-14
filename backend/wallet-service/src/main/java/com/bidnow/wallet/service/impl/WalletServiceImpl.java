@@ -6,6 +6,7 @@ import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.specification.SearchOperator;
 import com.bidnow.common.specification.SpecificationBuilder;
+import com.bidnow.wallet.constant.WalletErrorCodes;
 import com.bidnow.wallet.domain.entity.Transaction;
 import com.bidnow.wallet.domain.entity.Wallet;
 import com.bidnow.wallet.domain.enums.TransactionStatus;
@@ -14,6 +15,7 @@ import com.bidnow.wallet.domain.enums.WalletStatus;
 import com.bidnow.wallet.dto.request.DepositRequest;
 import com.bidnow.wallet.dto.response.DepositResponse;
 import com.bidnow.wallet.dto.response.TransactionResponse;
+import com.bidnow.wallet.dto.response.WalletBalanceResponse;
 import com.bidnow.wallet.dto.response.WalletResponse;
 import com.bidnow.wallet.kafka.DepositCompletedApplicationEvent;
 import com.bidnow.wallet.repository.TransactionRepository;
@@ -78,9 +80,23 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public WalletBalanceResponse getBalance(UUID userId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        "Wallet not found for userId: " + userId, WalletErrorCodes.WALLET_NOT_FOUND));
+        return WalletBalanceResponse.builder()
+                .totalBalance(wallet.getTotalBalance())
+                .availableBalance(wallet.getAvailableBalance())
+                .lockedBalance(wallet.getLockedBalance())
+                .currency(wallet.getCurrency())
+                .build();
+    }
+
+    @Override
     @Transactional
     public DepositResponse deposit(UUID userId, DepositRequest request) {
-        Wallet wallet = walletRepository.findByUserId(userId)
+        Wallet wallet = walletRepository.findByUserIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundException(
                         "Wallet not found for userId: " + userId, ErrorCodes.NOT_FOUND));
 

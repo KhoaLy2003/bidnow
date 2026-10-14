@@ -28,6 +28,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/demo/**")
                         .permitAll()
+                        .requestMatchers("/api/v1/internal/**")
+                        .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auctions/public", "/api/v1/auctions/public/**")

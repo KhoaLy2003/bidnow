@@ -54,7 +54,9 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
         <BidForm
           auctionId={auction.id}
           currentBid={auction.currentBid}
-          minIncrement={auction.bidIncrement}
+          bidIncrement={auction.bidIncrement}
+          startingPrice={auction.startingPrice}
+          totalBids={auction.totalBids}
         />
 
         {/* Buy Now block — only when buyNowPrice is set */}

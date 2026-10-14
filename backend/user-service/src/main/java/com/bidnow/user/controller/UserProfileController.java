@@ -5,9 +5,11 @@ package com.bidnow.user.controller;
 
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
+import com.bidnow.user.dto.request.UserSummariesRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 import com.bidnow.user.service.UserProfileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -62,6 +65,20 @@ public class UserProfileController {
             @PathVariable UUID userId) {
         UserSummaryResponse response = userProfileService.getUserSummary(userId);
         return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    @Operation(summary = "Get user summaries by IDs (Internal)", hidden = true)
+    @PostMapping("/internal/summaries")
+    public ResponseEntity<BaseResponse<List<UserSummaryResponse>>> getUserSummaries(
+            @Valid @RequestBody UserSummariesRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(userProfileService.getUserSummaries(request.getUserIds())));
+    }
+
+    @Operation(summary = "Get notification preferences by user IDs (Internal)", hidden = true)
+    @PostMapping("/internal/notification-preferences")
+    public ResponseEntity<BaseResponse<List<UserNotificationPreferenceResponse>>> getNotificationPreferences(
+            @Valid @RequestBody UserSummariesRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(userProfileService.getNotificationPreferences(request.getUserIds())));
     }
 
     /**

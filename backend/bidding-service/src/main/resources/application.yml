@@ -9,6 +9,11 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 3000   # fail fast (-> 5xx) instead of queueing 30 s when bids saturate the pool
+  transaction:
+    default-timeout: 3s          # bounds the insert + apply-bid transaction (apply-bid read timeout is 2 s)
   jpa:
     hibernate:
       ddl-auto: none
@@ -21,12 +26,50 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 200ms
+      connect-timeout: 500ms
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    template:
+      observation-enabled: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        max.block.ms: 2000   # never block a bid request for long when the broker is unreachable
+    consumer:
+      group-id: bidding-service-group
+      auto-offset-reset: latest   # consumed events only evict caches; history is irrelevant
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "*"
+    listener:
+      observation-enabled: true
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 1000
+            read-timeout: 2000
+
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
 management:
+  health:
+    redis:
+      enabled: false   # Redis is an optimization only; its outage must not mark bidding-service DOWN
   tracing:
     sampling:
       probability: 1.0  # reduce to 0.1 or lower in production
@@ -43,3 +86,8 @@ springdoc:
     path: /api/v1/bids/v3/api-docs
   swagger-ui:
     enabled: false
+
+bidding:
+  cache:
+    context-ttl-seconds: 600
+    user-summary-ttl-seconds: 600

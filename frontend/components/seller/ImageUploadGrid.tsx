@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Upload, X, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ManagedImage } from '@/types/ui/seller.ui'
@@ -16,23 +16,14 @@ const ACCEPT    = ['image/jpeg', 'image/png']
 
 export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
   const inputRef   = useRef<HTMLInputElement>(null)
-  const createdRef = useRef<string[]>([])
   const [dragging, setDragging] = useState(false)
-
-  useEffect(() => {
-    return () => { createdRef.current.forEach(url => URL.revokeObjectURL(url)) }
-  }, [])
 
   function handleFiles(files: FileList | File[]) {
     const remaining = MAX_FILES - images.length
     const next: ManagedImage[] = Array.from(files)
       .slice(0, remaining)
       .filter(f => ACCEPT.includes(f.type) && f.size <= MAX_BYTES)
-      .map(file => {
-        const preview = URL.createObjectURL(file)
-        createdRef.current.push(preview)
-        return { kind: 'new' as const, file, preview }
-      })
+      .map(file => ({ kind: 'new' as const, file, preview: URL.createObjectURL(file) }))
     onChange([...images, ...next])
   }
 
@@ -40,7 +31,6 @@ export function ImageUploadGrid({ images, onChange }: ImageUploadGridProps) {
     const img = images[index]
     if (img.kind === 'new') {
       URL.revokeObjectURL(img.preview)
-      createdRef.current = createdRef.current.filter(u => u !== img.preview)
     }
     onChange(images.filter((_, i) => i !== index))
   }

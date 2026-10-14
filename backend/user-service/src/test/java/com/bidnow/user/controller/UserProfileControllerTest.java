@@ -1,5 +1,6 @@
 package com.bidnow.user.controller;
 
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.exception.GlobalExceptionHandler;
 import com.bidnow.common.exception.NotFoundException;
@@ -10,14 +11,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.bidnow.common.constant.ErrorCodes.NOT_FOUND;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,5 +74,68 @@ class UserProfileControllerTest {
 
         mockMvc.perform(get("/api/v1/users/internal/{userId}/summary", userId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getUserSummaries_returns200WithList() throws Exception {
+        UUID alice = UUID.randomUUID();
+        when(userProfileService.getUserSummaries(anyList())).thenReturn(List.of(
+                UserSummaryResponse.builder().id(alice).name("Alice").build()));
+
+        mockMvc.perform(post("/api/v1/users/internal/summaries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[\"" + alice + "\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(alice.toString()))
+                .andExpect(jsonPath("$.data[0].name").value("Alice"));
+    }
+
+    @Test
+    void getUserSummaries_emptyList_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/users/internal/summaries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[]}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(userProfileService);
+    }
+
+    @Test
+    void getUserSummaries_moreThan100Ids_returns400() throws Exception {
+        String ids = java.util.stream.IntStream.range(0, 101)
+                .mapToObj(i -> "\"" + UUID.randomUUID() + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+
+        mockMvc.perform(post("/api/v1/users/internal/summaries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[" + ids + "]}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(userProfileService);
+    }
+
+    // -------------------------------------------------------
+    // POST /api/v1/users/internal/notification-preferences
+    // -------------------------------------------------------
+
+    @Test
+    void getNotificationPreferences_returns200WithList() throws Exception {
+        UUID alice = UUID.randomUUID();
+        when(userProfileService.getNotificationPreferences(anyList())).thenReturn(List.of(
+                UserNotificationPreferenceResponse.builder()
+                        .userId(alice).language("vi").emailNotifications(true).build()));
+
+        mockMvc.perform(post("/api/v1/users/internal/notification-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[\"" + alice + "\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].userId").value(alice.toString()))
+                .andExpect(jsonPath("$.data[0].language").value("vi"))
+                .andExpect(jsonPath("$.data[0].emailNotifications").value(true));
+    }
+
+    @Test
+    void getNotificationPreferences_emptyIds_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/users/internal/notification-preferences")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userIds\":[]}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userProfileService);
     }
 }

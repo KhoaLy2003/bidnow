@@ -44,6 +44,8 @@ public class MediaServiceImpl implements MediaService {
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
     private static final int MAX_DIMENSION = 1920;
     private static final Duration PRESIGNED_DURATION = Duration.ofMinutes(15);
+    // Keys contain a random UUID and are never overwritten, so CloudFront/browsers may cache forever.
+    private static final String IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
@@ -53,12 +55,12 @@ public class MediaServiceImpl implements MediaService {
     @Value("${aws.s3.BUCKET_NAME}")
     private String bucketName;
 
-    @Value("${supabase.public-url}")
-    private String supabasePublicUrl;
+    @Value("${cdn.base-url}")
+    private String cdnBaseUrl;
 
-    private String buildPublicUrl(String s3Key) {
-        String base = supabasePublicUrl.endsWith("/") ? supabasePublicUrl.substring(0, supabasePublicUrl.length() - 1) : supabasePublicUrl;
-        return base + "/storage/v1/object/public/" + bucketName + "/" + s3Key;
+    String buildPublicUrl(String s3Key) {
+        String base = cdnBaseUrl.endsWith("/") ? cdnBaseUrl.substring(0, cdnBaseUrl.length() - 1) : cdnBaseUrl;
+        return base + "/" + s3Key;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -81,6 +83,7 @@ public class MediaServiceImpl implements MediaService {
                     .key(s3Key)
                     .contentType(file.getContentType())
                     .contentLength((long) processedBytes.length)
+                    .cacheControl(IMMUTABLE_CACHE_CONTROL)
                     .build();
 
             s3Client.putObject(putRequest, RequestBody.fromBytes(processedBytes));

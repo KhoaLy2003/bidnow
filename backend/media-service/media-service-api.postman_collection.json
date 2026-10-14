@@ -2,7 +2,7 @@
   "info": {
     "name": "BidNow - Media Service API",
     "_postman_id": "bidnow-media-service-v1",
-    "description": "API collection for the BidNow media-service. Covers server-side upload, presigned client upload, and presigned download URL generation.\n\nBase URL: http://localhost:8080 (via API Gateway)\n\nAll endpoints except presigned-url generation require a valid JWT Bearer token.",
+    "description": "API collection for the BidNow media-service. Covers server-side upload, presigned client upload, and presigned download URL generation, and the user notification inbox (list, unread count, read/unread, delete).\n\nBase URL: http://localhost:8080 (via API Gateway)\n\nAll endpoints except presigned-url generation require a valid JWT Bearer token.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -17,6 +17,12 @@
       "value": "",
       "type": "string",
       "description": "JWT Bearer token from identity-service login"
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string",
+      "description": "Notification UUID (take one from the list response)"
     }
   ],
   "auth": {
@@ -206,6 +212,250 @@
               "body": "{\n  \"success\": true,\n  \"message\": \"Download URL generated\",\n  \"data\": \"https://bidnow-media.s3.ap-southeast-1.amazonaws.com/uploads/3fa85f64-5717-4562-b3fc-2c963f66afa6/a1b2c3d4.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&...\"\n}"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "The caller's notification inbox. Always scoped to the authenticated user; another user's notification id returns 404. Delete is a soft delete.",
+      "item": [
+        {
+          "name": "List Notifications",
+          "id": "notif-list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications?page=0&size=20&read=false&types=BID_OUTBID&search=watch",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Zero-based page (default 0)"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Page size, 1-100 (default 20)"
+                },
+                {
+                  "key": "read",
+                  "value": "false",
+                  "description": "true = only read, false = only unread, omit = both"
+                },
+                {
+                  "key": "types",
+                  "value": "BID_OUTBID",
+                  "description": "Comma-separated notification types (NotificationType)"
+                },
+                {
+                  "key": "search",
+                  "value": "watch",
+                  "description": "Free text, max 100 characters"
+                },
+                {
+                  "key": "from",
+                  "value": "",
+                  "description": "ISO-8601 date-time with offset",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "description": "ISO-8601 date-time with offset",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Paged inbox, newest first. Filters: read, types, from, to, search."
+          },
+          "response": []
+        },
+        {
+          "name": "Unread Count",
+          "id": "notif-unread-count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/unread-count",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "Number of unread notifications for the caller."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification (marks read)",
+          "id": "notif-get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notification_id}}"
+              ]
+            },
+            "description": "Returns one notification and marks it as read."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Read",
+          "id": "notif-mark-read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notification_id}}",
+                "read"
+              ]
+            },
+            "description": "Marks one notification as read."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Unread",
+          "id": "notif-mark-unread",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/unread",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notification_id}}",
+                "unread"
+              ]
+            },
+            "description": "Marks one notification as unread."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All Read",
+          "id": "notif-mark-all-read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/mark-all-read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "mark-all-read"
+              ]
+            },
+            "description": "Marks every notification of the caller as read."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Notification",
+          "id": "notif-delete",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notification_id}}"
+              ]
+            },
+            "description": "Soft-deletes one notification."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete All",
+          "id": "notif-delete-all",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/delete-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "delete-all"
+              ]
+            },
+            "description": "Soft-deletes all notifications of the caller."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Read",
+          "id": "notif-delete-read",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/delete-read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "delete-read"
+              ]
+            },
+            "description": "Soft-deletes the caller's read notifications."
+          },
+          "response": []
         }
       ]
     }

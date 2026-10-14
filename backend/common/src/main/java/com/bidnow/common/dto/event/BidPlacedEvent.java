@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
@@ -22,4 +23,7 @@ public class BidPlacedEvent {
     private LocalDateTime bidTime;
     private UUID previousHighestBidderId; // Used for outbid alert
     private boolean isAntiSnipingTriggered; // True if auction extended
+    private UUID bidId;
+    private Integer totalBids;
+    private OffsetDateTime endTime; // auction end time after this bid (reflects any anti-sniping extension)
 }

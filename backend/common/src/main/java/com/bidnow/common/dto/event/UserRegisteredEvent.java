@@ -14,6 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserRegisteredEvent {
     private UUID userId;
+    @com.bidnow.common.annotation.MaskPii
     private String email;
     private String firstName;
     private String lastName;

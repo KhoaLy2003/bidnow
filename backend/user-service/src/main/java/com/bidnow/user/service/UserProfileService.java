@@ -3,11 +3,13 @@
  */
 package com.bidnow.user.service;
 
+import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.response.UserProfileResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface UserProfileService {
@@ -15,6 +17,10 @@ public interface UserProfileService {
     UserProfileResponse createUserProfile(CreateUserProfileRequest request);
 
     UserSummaryResponse getUserSummary(UUID userId);
+
+    List<UserSummaryResponse> getUserSummaries(List<UUID> userIds);
+
+    List<UserNotificationPreferenceResponse> getNotificationPreferences(List<UUID> userIds);
 
     UserProfileResponse getUserProfile(UUID userId);
 

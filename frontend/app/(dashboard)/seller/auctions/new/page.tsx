@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter }       from 'next/navigation'
 import Link                from 'next/link'
 import { CalendarIcon, Loader2 } from 'lucide-react'
@@ -117,6 +117,18 @@ export default function CreateAuctionPage() {
   const previewUrl = data.images.length === 0
     ? null
     : data.images[0].kind === 'existing' ? data.images[0].url : data.images[0].preview
+
+  // Revoke blob preview URLs only when the whole create-auction flow is left,
+  // not on every step change (ImageUploadGrid mounts/unmounts per step).
+  const dataRef = useRef(data)
+  useEffect(() => { dataRef.current = data }, [data])
+  useEffect(() => {
+    return () => {
+      dataRef.current.images.forEach(img => {
+        if (img.kind === 'new') URL.revokeObjectURL(img.preview)
+      })
+    }
+  }, [])
 
   // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
   useEffect(() => {

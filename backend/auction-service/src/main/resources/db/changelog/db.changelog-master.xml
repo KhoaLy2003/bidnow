@@ -9,5 +9,6 @@
     <include file="/db/changelog/migrations/001-initial-schema.sql"/>
     <include file="/db/changelog/migrations/002-seed-auction-categories.sql"/>
     <include file="/db/changelog/migrations/003-admin-auction-moderation.sql"/>
+    <include file="/db/changelog/migrations/004-bid-tracking.sql"/>
 
 </databaseChangeLog>
