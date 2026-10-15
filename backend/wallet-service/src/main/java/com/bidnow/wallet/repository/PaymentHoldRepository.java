@@ -20,6 +20,9 @@ public interface PaymentHoldRepository extends JpaRepository<PaymentHold, UUID> 
 
     boolean existsByAuctionId(UUID auctionId);
 
+    /** Plain read of an auction's hold, no lock: status lookups must not contend with confirm / cancel / forfeit. */
+    Optional<PaymentHold> findByAuctionId(UUID auctionId);
+
     /** SELECT ... FOR UPDATE on the hold row. Lock order: hold row first, then wallet rows. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT h FROM PaymentHold h WHERE h.auctionId = :auctionId")

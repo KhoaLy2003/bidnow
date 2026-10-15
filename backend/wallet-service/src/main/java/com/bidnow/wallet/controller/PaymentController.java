@@ -4,6 +4,7 @@ import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.wallet.dto.request.ConfirmPaymentRequest;
 import com.bidnow.wallet.dto.response.ConfirmPaymentResponse;
+import com.bidnow.wallet.dto.response.PaymentStatusResponse;
 import com.bidnow.wallet.dto.response.PendingPaymentResponse;
 import com.bidnow.wallet.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +34,15 @@ public class PaymentController {
     @GetMapping("/pending")
     public ResponseEntity<BaseResponse<List<PendingPaymentResponse>>> getPendingPayments(@AuthenticatedUserId UUID userId) {
         return ResponseEntity.ok(BaseResponse.success(paymentService.getPendingPayments(userId)));
+    }
+
+    @Operation(summary = "Payment status",
+            description = "Status of the payment hold for an auction. Visible to the winner and the seller only; "
+                    + "anyone else, or an auction without a hold, gets 404.")
+    @GetMapping("/{auctionId}")
+    public ResponseEntity<BaseResponse<PaymentStatusResponse>> getPaymentStatus(@AuthenticatedUserId UUID userId,
+                                                                                 @PathVariable UUID auctionId) {
+        return ResponseEntity.ok(BaseResponse.success(paymentService.getPaymentStatus(userId, auctionId)));
     }
 
     @Operation(summary = "Confirm payment", description = "Settles a won auction: debits the winner, credits the seller.")

@@ -61,6 +61,16 @@ sequenceDiagram
         MQ->>NS: Consume
         NS-->>Winner: Payment-failed notice (in-app PAYMENT_FAILED push)
     end
+
+    Note over Winner, WS: D. Winner returns later (reload, another tab, after a timed-out confirm)
+    Winner->>App: Opens the auction page
+    App->>GW: GET /api/v1/wallets/payments/pending
+    GW->>WS: Route
+    WS-->>App: No pending hold for this auction
+    App->>GW: GET /api/v1/wallets/payments/{auctionId}
+    GW->>WS: Route
+    WS-->>App: Status COMPLETED, FORFEITED or CANCELLED, or 404 if there is no hold or the caller is not a participant
+    App-->>Winner: Payment complete, deposit forfeited, or sale cancelled
 ```
 
-The frontend refetches pending payments when a `PAYMENT_REQUIRED`, `PAYMENT_RECEIVED` or `PAYMENT_FAILED` push arrives. Auction-service does not yet learn that the winner paid (`winner_paid_at`); see the WALLET-305 follow-ups.
+The frontend refetches pending payments when a `PAYMENT_REQUIRED`, `PAYMENT_RECEIVED` or `PAYMENT_FAILED` push arrives. A returning winner's panel reads the final state from `GET /api/v1/wallets/payments/{auctionId}`: wallet-service owns the payment facts and auction-service does not record payment (its `winner_paid_at` and `payment_deadline` columns stay unused). Revisit only if auction-service needs the paid fact for its own features.

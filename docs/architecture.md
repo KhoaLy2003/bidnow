@@ -113,7 +113,7 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 
 Each refund is its own DB transaction. The retry/DLT policy applies to **all** wallet-service listeners (including `user-registered-topic`): failed records are retried 3 times with exponential backoff (1s, 2s, 4s), then published to `<topic>.DLT` on the same partition number — so a `.DLT` topic must have at least as many partitions as its source topic (auto-created topics use the broker default, currently 3). Redelivery and DLT replay of processing failures are safe because released locks are skipped. Undeserializable records go straight to `<topic>.DLT` via `ErrorHandlingDeserializer`; their payload is the raw bytes re-encoded as a base64 JSON string, so they need manual decoding and cannot be replayed as-is.
 
-**Winner payment endpoints (public, via gateway):** `GET /api/v1/wallets/payments/pending`, `POST /api/v1/wallets/payments/confirm { auctionId }`. Confirm settles atomically: hold row locked first, then winner and seller wallets in ascending id order.
+**Winner payment endpoints (public, via gateway):** `GET /api/v1/wallets/payments/pending`, `GET /api/v1/wallets/payments/{auctionId}` (status of the auction's hold, `PENDING_PAYMENT | COMPLETED | CANCELLED | FORFEITED`, plus `totalAmount`; readable by the winner and the seller only, anyone else or a missing hold gets 404 `PAYMENT_HOLD_NOT_FOUND`; a malformed id gets 400), `POST /api/v1/wallets/payments/confirm { auctionId }`. Confirm settles atomically: hold row locked first, then winner and seller wallets in ascending id order. The status read takes no lock and writes nothing.
 
 **Wallet admin API (ADMIN role, via gateway `/api/v1/admin/wallets/**`):**
 

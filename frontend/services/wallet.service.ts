@@ -8,6 +8,7 @@ import type {
   PendingPaymentResponse,
   ConfirmPaymentRequest,
   ConfirmPaymentResponse,
+  PaymentStatusResponse,
 } from '@/types/api/wallet.api'
 
 /** A non-2xx payment API response; `body` is the backend ErrorResponse when it was JSON. */
@@ -81,6 +82,18 @@ export const walletService = {
     })
     if (!response.ok) throw await toPaymentRequestError(response)
     const body: ApiResponse<ConfirmPaymentResponse> = await response.json()
+    return body.data
+  },
+
+  /**
+   * The status of the caller's payment hold for an auction (winner or seller). Resolves null on any 404:
+   * no hold yet, not a participant, or a gateway 404. (An older wallet-service without this route answers 500, not 404: deploy wallet-service first.)
+   */
+  async getPaymentStatus(auctionId: string): Promise<PaymentStatusResponse | null> {
+    const response = await apiFetch(`/api/v1/wallets/payments/${encodeURIComponent(auctionId)}`)
+    if (response.status === 404) return null
+    if (!response.ok) throw await toPaymentRequestError(response)
+    const body: ApiResponse<PaymentStatusResponse> = await response.json()
     return body.data
   },
 }

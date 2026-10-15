@@ -1,3 +1,5 @@
+import type { PaymentHoldStatus } from '@/types/api/wallet.api'
+
 export type TransactionType =
   | 'deposit'
   | 'withdrawal'
@@ -34,3 +36,11 @@ export interface PendingPayment {
   hoursLeft:      number   // server-computed, floored; 0 means under one hour
   expired:        boolean  // server-computed
 }
+
+/** Result of asking wallet-service what became of an auction's payment hold ("idle" = not asked yet). */
+export type PaymentStatusLookup =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'found'; status: PaymentHoldStatus }
+  | { kind: 'not-found' }
+  | { kind: 'failed' }

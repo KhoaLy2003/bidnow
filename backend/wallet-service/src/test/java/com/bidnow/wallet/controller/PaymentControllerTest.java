@@ -4,7 +4,9 @@ import com.bidnow.common.exception.BadRequestException;
 import com.bidnow.common.exception.GlobalExceptionHandler;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.resolver.UserIdArgumentResolver;
+import com.bidnow.wallet.domain.enums.PaymentHoldStatus;
 import com.bidnow.wallet.dto.response.ConfirmPaymentResponse;
+import com.bidnow.wallet.dto.response.PaymentStatusResponse;
 import com.bidnow.wallet.dto.response.PendingPaymentResponse;
 import com.bidnow.wallet.exception.ConflictException;
 import com.bidnow.wallet.exception.InsufficientBalanceException;
@@ -79,6 +81,52 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data[0].remaining").value(450.00))
                 .andExpect(jsonPath("$.data[0].hoursLeft").value(10))
                 .andExpect(jsonPath("$.data[0].expired").value(false));
+    }
+
+    @Test
+    void getPaymentStatus_returnsStatusAndTotal() throws Exception {
+        when(paymentService.getPaymentStatus(userId, auctionId)).thenReturn(PaymentStatusResponse.builder()
+                .auctionId(auctionId)
+                .status(PaymentHoldStatus.FORFEITED)
+                .totalAmount(new BigDecimal("500.00"))
+                .build());
+
+        mockMvc.perform(get(BASE + "/" + auctionId).header("X-User-Id", userId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.auctionId").value(auctionId.toString()))
+                .andExpect(jsonPath("$.data.status").value("FORFEITED"))
+                .andExpect(jsonPath("$.data.totalAmount").value(500.00))
+                .andExpect(jsonPath("$.data.deadline").doesNotExist())
+                .andExpect(jsonPath("$.data.remaining").doesNotExist());
+    }
+
+    @Test
+    void getPaymentStatus_noHoldOrNotParticipant_returns404() throws Exception {
+        when(paymentService.getPaymentStatus(userId, auctionId))
+                .thenThrow(new NotFoundException("none", "PAYMENT_HOLD_NOT_FOUND"));
+
+        mockMvc.perform(get(BASE + "/" + auctionId).header("X-User-Id", userId.toString()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PAYMENT_HOLD_NOT_FOUND"));
+    }
+
+    @Test
+    void getPaymentStatus_malformedAuctionId_returns400AndSkipsService() throws Exception {
+        mockMvc.perform(get(BASE + "/not-a-uuid").header("X-User-Id", userId.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.errors.auctionId").value("invalid value"));
+        verify(paymentService, never()).getPaymentStatus(any(), any());
+    }
+
+    @Test
+    void getPendingPayments_literalPathStillBeatsTheAuctionIdTemplate() throws Exception {
+        when(paymentService.getPendingPayments(userId)).thenReturn(List.of());
+
+        mockMvc.perform(get(BASE + "/pending").header("X-User-Id", userId.toString()))
+                .andExpect(status().isOk());
+        verify(paymentService).getPendingPayments(userId);
+        verify(paymentService, never()).getPaymentStatus(any(), any());
     }
 
     @Test

@@ -1,7 +1,8 @@
 import { fromCents, isLessThan, toCents } from '@/lib/money'
 import { resolveImageUrl } from '@/lib/image-utils'
 import type { AuctionImage } from '@/types/ui/auction.ui'
-import type { PendingPayment } from '@/types/ui/wallet.ui'
+import type { PaymentHoldStatus } from '@/types/api/wallet.api'
+import type { PaymentStatusLookup, PendingPayment } from '@/types/ui/wallet.ui'
 
 /** How often the Won panel refetches while the wallet-service hold has not appeared yet. */
 export const PREPARING_POLL_MS = 3_000
@@ -46,7 +47,11 @@ export function isRecentWin(completedAt: Date | undefined, now: number = Date.no
   return now - completedAt.getTime() < RECENT_WIN_MS
 }
 
-export type PaymentPanelState = 'loading' | 'error' | 'preparing' | 'due' | 'expired' | 'paid' | 'none'
+/** The stable "not asked yet" lookup. Selectors must return this constant, never a fresh `{ kind: 'idle' }`. */
+export const IDLE_LOOKUP: PaymentStatusLookup = { kind: 'idle' }
+
+export type PaymentPanelState =
+  | 'loading' | 'error' | 'preparing' | 'due' | 'expired' | 'paid' | 'forfeited' | 'cancelled' | 'none'
 
 export interface PaymentPanelInput {
   holds:          readonly PendingPayment[]
@@ -55,8 +60,28 @@ export interface PaymentPanelInput {
   hasFetched:     boolean
   loadFailed:     boolean
   pollWindowOpen: boolean
+  statusLookup:   PaymentStatusLookup
 }
 
+function stateForStatus(status: PaymentHoldStatus): PaymentPanelState {
+  switch (status) {
+    case 'COMPLETED':
+      return 'paid'
+    case 'FORFEITED':
+      return 'forfeited'
+    case 'CANCELLED':
+      return 'cancelled'
+    case 'PENDING_PAYMENT':
+      return 'preparing' // a hold exists but the pending list has not caught up yet
+    default:
+      return 'none' // a status this build does not know: show the neutral state, not nothing
+  }
+}
+
+/**
+ * Precedence: the paid marker, then a pending hold (due / expired), then the pending list's own load state,
+ * then what wallet-service says became of the hold.
+ */
 export function derivePaymentPanelState(
   input: PaymentPanelInput,
 ): { state: PaymentPanelState; hold: PendingPayment | null } {
@@ -66,8 +91,19 @@ export function derivePaymentPanelState(
   if (hold) return { state: hold.expired ? 'expired' : 'due', hold }
 
   if (!input.hasFetched) return { state: input.loadFailed ? 'error' : 'loading', hold: null }
-  if (input.pollWindowOpen) return { state: 'preparing', hold: null }
-  return { state: 'none', hold: null }
+
+  const lookup = input.statusLookup
+  switch (lookup.kind) {
+    case 'idle':
+    case 'loading':
+      return { state: 'loading', hold: null }
+    case 'failed':
+      return { state: 'error', hold: null }
+    case 'not-found':
+      return { state: input.pollWindowOpen ? 'preparing' : 'none', hold: null }
+    case 'found':
+      return { state: stateForStatus(lookup.status), hold: null }
+  }
 }
 
 export interface AuctionPreview {

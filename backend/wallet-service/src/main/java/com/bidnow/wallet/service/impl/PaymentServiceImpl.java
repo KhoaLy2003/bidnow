@@ -14,6 +14,7 @@ import com.bidnow.wallet.domain.enums.PaymentHoldStatus;
 import com.bidnow.wallet.domain.enums.TransactionStatus;
 import com.bidnow.wallet.domain.enums.TransactionType;
 import com.bidnow.wallet.dto.response.ConfirmPaymentResponse;
+import com.bidnow.wallet.dto.response.PaymentStatusResponse;
 import com.bidnow.wallet.dto.response.PendingPaymentResponse;
 import com.bidnow.wallet.exception.ConflictException;
 import com.bidnow.wallet.exception.InsufficientBalanceException;
@@ -515,5 +516,19 @@ public class PaymentServiceImpl implements PaymentService {
                         .expired(now.isAfter(h.getDeadline()))
                         .build())
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentStatusResponse getPaymentStatus(UUID callerUserId, UUID auctionId) {
+        PaymentHold hold = paymentHoldRepository.findByAuctionId(auctionId)
+                .filter(h -> callerUserId.equals(h.getWinnerUserId()) || callerUserId.equals(h.getSellerUserId()))
+                .orElseThrow(() -> new NotFoundException("No payment hold for auction " + auctionId,
+                        WalletErrorCodes.PAYMENT_HOLD_NOT_FOUND));
+        return PaymentStatusResponse.builder()
+                .auctionId(hold.getAuctionId())
+                .status(hold.getStatus())
+                .totalAmount(hold.getTotalAmount())
+                .build();
     }
 }
