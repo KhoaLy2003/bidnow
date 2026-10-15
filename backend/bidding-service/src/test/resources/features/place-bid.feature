@@ -65,3 +65,17 @@ Feature: Placing a bid end to end (deposit lock + authoritative apply-bid)
     When user "550e8400-e29b-41d4-a716-446655440010" bids "105.00" on auction "d0000000-0000-0000-0000-000000000006"
     Then the response status should be 503
     And 0 bids should be stored for auction "d0000000-0000-0000-0000-000000000006"
+
+  @smoke
+  Scenario: Buy It Now locks the deposit, completes the auction and evicts the cached context
+    Given auction-service has auction "d0000000-0000-0000-0000-000000000006" with status "ACTIVE", price "100.00", increment "5.00", 1 bids, buy-now price "250.00" and seller "550e8400-e29b-41d4-a716-446655440001"
+    And wallet-service locks deposits successfully
+    And auction-service accepts buy-now on auction "d0000000-0000-0000-0000-000000000006" at price "250.00"
+    When user "550e8400-e29b-41d4-a716-446655440010" buys now on auction "d0000000-0000-0000-0000-000000000006"
+    Then the response status should be 201
+    And the response field "data.auctionId" should equal "d0000000-0000-0000-0000-000000000006"
+    And the response field "data.price" should be present
+    And wallet-service should have received 1 deposit-lock request
+    And auction-service should have received 1 buy-now request for auction "d0000000-0000-0000-0000-000000000006"
+    And 0 bids should be stored for auction "d0000000-0000-0000-0000-000000000006"
+    And the bid context for auction "d0000000-0000-0000-0000-000000000006" should not be cached in Redis

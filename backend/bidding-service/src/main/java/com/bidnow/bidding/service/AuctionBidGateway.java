@@ -3,6 +3,8 @@ package com.bidnow.bidding.service;
 import com.bidnow.bidding.constant.BiddingErrorCodes;
 import com.bidnow.bidding.dto.ApplyBidCommand;
 import com.bidnow.bidding.dto.ApplyBidResult;
+import com.bidnow.bidding.dto.BuyNowCommand;
+import com.bidnow.bidding.dto.BuyNowResult;
 import com.bidnow.bidding.exception.BidTooLowException;
 import com.bidnow.bidding.exception.ConflictException;
 import com.bidnow.bidding.exception.ServiceUnavailableException;
@@ -47,6 +49,46 @@ public class AuctionBidGateway {
             throw new ServiceUnavailableException("Auction service is unavailable");
         }
         return data;
+    }
+
+    public BuyNowResult buyNow(UUID auctionId, BuyNowCommand command) {
+        BaseResponse<BuyNowResult> response;
+        try {
+            response = auctionServiceClient.buyNow(auctionId, command);
+        } catch (FeignException ex) {
+            throw toBuyNowException(DownstreamError.of(ex, objectMapper), auctionId, command.buyerId());
+        }
+        BuyNowResult data = response == null ? null : response.getData();
+        if (data == null || data.getPrice() == null || data.getEndedAt() == null) {
+            log.error("auction-service returned an empty or partial buy-now result for buyer {} on auction {}: {}",
+                    command.buyerId(), auctionId, data);
+            throw new ServiceUnavailableException("Auction service is unavailable");
+        }
+        return data;
+    }
+
+    private RuntimeException toBuyNowException(DownstreamError error, UUID auctionId, UUID buyerId) {
+        String code = error.errorCode() == null ? "" : error.errorCode();
+        if (error.status() == 409 && BiddingErrorCodes.AUCTION_NOT_OPEN.equals(code)) {
+            return new ConflictException("Auction is not open for bidding", BiddingErrorCodes.AUCTION_NOT_OPEN);
+        }
+        if (error.status() == 409 && BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE.equals(code)) {
+            return new ConflictException("Buy It Now is no longer available", BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE);
+        }
+        if (error.status() == 403 && BiddingErrorCodes.BID_OWN_AUCTION.equals(code)) {
+            return new ForbiddenException("Sellers cannot buy their own auction", BiddingErrorCodes.BID_OWN_AUCTION);
+        }
+        if (error.status() == 404) {
+            return new NotFoundException("Auction not found: " + auctionId, BiddingErrorCodes.AUCTION_NOT_FOUND);
+        }
+        if (error.status() == -1) {
+            log.error("CRITICAL: buy-now outcome unknown for buyer {} on auction {} - timeout or connection failure, "
+                    + "auction-service may have completed the purchase", buyerId, auctionId);
+            return new ServiceUnavailableException("Auction service is unavailable");
+        }
+        log.error("auction-service buy-now failed for buyer {} on auction {} (status {}, code {})",
+                buyerId, auctionId, error.status(), error.errorCode());
+        return new ServiceUnavailableException("Auction service is unavailable");
     }
 
     private RuntimeException toBiddingException(DownstreamError error, UUID auctionId, UUID bidId) {

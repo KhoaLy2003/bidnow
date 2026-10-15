@@ -45,6 +45,18 @@ class BidContextJsonTest {
         assertThat(ctx.getCurrentWinnerId()).isNull();
         assertThat(ctx.getTotalBids()).isEqualTo(1);
         assertThat(ctx.getEndTime().toInstant()).isEqualTo(Instant.parse("2026-10-01T05:00:00Z"));
+        assertThat(ctx.getBuyNowPrice()).isNull(); // entries cached before this field existed deserialize with null
+    }
+
+    @Test
+    void buyNowPriceRoundTripsAndDeserializesFromAuctionServiceJson() throws Exception {
+        String json = AUCTION_SERVICE_JSON.replace("\"depositAmount\":20.00,", "\"depositAmount\":20.00,\"buyNowPrice\":250.00,");
+
+        BaseResponse<BidContext> response = mapper.readValue(json, new TypeReference<>() { });
+
+        assertThat(response.getData().getBuyNowPrice()).isEqualByComparingTo(new BigDecimal("250.00"));
+        BidContext cached = mapper.readValue(mapper.writeValueAsString(response.getData()), BidContext.class);
+        assertThat(cached.getBuyNowPrice()).isEqualByComparingTo(new BigDecimal("250.00"));
     }
 
     @Test

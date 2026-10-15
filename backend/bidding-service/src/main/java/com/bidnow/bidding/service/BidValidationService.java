@@ -31,6 +31,24 @@ public class BidValidationService {
         }
     }
 
+    /**
+     * Fast pre-filter for Buy It Now against the cached context. A null price may be a stale cache entry,
+     * so callers refresh once before giving up. auction-service re-checks everything under a row lock.
+     */
+    public void preValidateBuyNow(BidContext ctx, UUID buyerId, Instant now) {
+        if (!BidContext.STATUS_ACTIVE.equals(ctx.getStatus()) || !now.isBefore(ctx.getEndTime().toInstant())) {
+            throw new ConflictException("Auction is not open for bidding", BiddingErrorCodes.AUCTION_NOT_OPEN);
+        }
+        if (ctx.getSellerId().equals(buyerId)) {
+            throw new ForbiddenException("Sellers cannot buy their own auction", BiddingErrorCodes.BID_OWN_AUCTION);
+        }
+        BigDecimal buyNowPrice = ctx.getBuyNowPrice();
+        if (buyNowPrice == null || ctx.getCurrentPrice().compareTo(buyNowPrice) >= 0) {
+            throw new ConflictException("Buy It Now is not available for this auction",
+                    BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE);
+        }
+    }
+
     /** The first bid may equal the starting price (current price starts there); later bids must add the increment. */
     static BigDecimal minimumBid(BidContext ctx) {
         return ctx.getTotalBids() == 0

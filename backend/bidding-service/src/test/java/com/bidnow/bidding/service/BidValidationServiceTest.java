@@ -123,4 +123,65 @@ class BidValidationServiceTest {
         assertThat(BidValidationService.minimumBid(context(0, "100.00"))).isEqualByComparingTo("100.00");
         assertThat(BidValidationService.minimumBid(context(3, "100.00"))).isEqualByComparingTo("105.00");
     }
+
+    // ---------------------------------------------------------------------
+    // preValidateBuyNow
+    // ---------------------------------------------------------------------
+
+    private BidContext buyNowContext(String currentPrice, String buyNowPrice) {
+        return context(1, currentPrice).toBuilder()
+                .buyNowPrice(buyNowPrice == null ? null : new BigDecimal(buyNowPrice)).build();
+    }
+
+    @Test
+    void buyNow_priceBelowBuyNowPrice_passes() {
+        assertThatCode(() -> service.preValidateBuyNow(buyNowContext("100.00", "200.00"), BIDDER_ID, NOW))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void buyNow_oneCentBelowBuyNowPrice_passes() {
+        assertThatCode(() -> service.preValidateBuyNow(buyNowContext("199.99", "200.00"), BIDDER_ID, NOW))
+                .doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"200.00", "200.01", "500.00"})
+    void buyNow_priceReachedOrPassed_throwsBuyNowNotAvailable(String currentPrice) {
+        assertThatThrownBy(() -> service.preValidateBuyNow(buyNowContext(currentPrice, "200.00"), BIDDER_ID, NOW))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE);
+    }
+
+    @Test
+    void buyNow_noBuyNowPrice_throwsBuyNowNotAvailable() {
+        assertThatThrownBy(() -> service.preValidateBuyNow(buyNowContext("100.00", null), BIDDER_ID, NOW))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE);
+    }
+
+    @Test
+    void buyNow_inactiveAuction_throwsNotOpenBeforeAnythingElse() {
+        BidContext ctx = buyNowContext("100.00", null).toBuilder().status("COMPLETED").build();
+
+        assertThatThrownBy(() -> service.preValidateBuyNow(ctx, SELLER_ID, NOW))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.AUCTION_NOT_OPEN);
+    }
+
+    @Test
+    void buyNow_atOrAfterEndTime_throwsNotOpen() {
+        BidContext ctx = buyNowContext("100.00", "200.00");
+
+        assertThatThrownBy(() -> service.preValidateBuyNow(ctx, BIDDER_ID, ctx.getEndTime().toInstant()))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.AUCTION_NOT_OPEN);
+    }
+
+    @Test
+    void buyNow_seller_throwsForbidden() {
+        assertThatThrownBy(() -> service.preValidateBuyNow(buyNowContext("100.00", "200.00"), SELLER_ID, NOW))
+                .isInstanceOf(ForbiddenException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.BID_OWN_AUCTION);
+    }
 }

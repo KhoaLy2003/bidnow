@@ -1,7 +1,9 @@
 package com.bidnow.bidding.controller;
 
 import com.bidnow.bidding.constant.BiddingErrorCodes;
+import com.bidnow.bidding.dto.request.BuyNowRequest;
 import com.bidnow.bidding.dto.request.PlaceBidRequest;
+import com.bidnow.bidding.dto.response.BuyNowResponse;
 import com.bidnow.bidding.dto.response.PlaceBidResponse;
 import com.bidnow.bidding.exception.BidTooLowException;
 import com.bidnow.bidding.exception.BiddingExceptionHandler;
@@ -10,6 +12,7 @@ import com.bidnow.bidding.exception.InsufficientBalanceException;
 import com.bidnow.bidding.exception.ServiceUnavailableException;
 import com.bidnow.bidding.service.BidHistoryService;
 import com.bidnow.bidding.service.BidService;
+import com.bidnow.bidding.service.BuyNowService;
 import com.bidnow.bidding.dto.request.BidHistoryQuery;
 import com.bidnow.bidding.dto.response.BidHistoryResponse;
 import com.bidnow.common.dto.PageResponse;
@@ -58,11 +61,14 @@ class BidControllerTest {
     @Mock
     private BidHistoryService bidHistoryService;
 
+    @Mock
+    private BuyNowService buyNowService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BidController(bidService, bidHistoryService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new BidController(bidService, bidHistoryService, buyNowService))
                 .setControllerAdvice(new BiddingExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new UserIdArgumentResolver())
                 .build();
@@ -284,5 +290,72 @@ class BidControllerTest {
         mockMvc.perform(get("/api/v1/bids/auction/" + AUCTION_ID + "/my-bids").header("X-User-Id", BIDDER_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.data[0].bidderId").value(BIDDER_ID.toString()));
+    }
+
+    // ---------------------------------------------------------------------
+    // POST /api/v1/bids/buy-now
+    // ---------------------------------------------------------------------
+
+    private ResultActions postBuyNow(String json) throws Exception {
+        return mockMvc.perform(post("/api/v1/bids/buy-now").header("X-User-Id", BIDDER_ID.toString())
+                .contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    private static String buyNowBody() {
+        return "{\"auctionId\": \"" + AUCTION_ID + "\"}";
+    }
+
+    @Test
+    void buyNow_returns201WithBody() throws Exception {
+        when(buyNowService.buyNow(eq(BIDDER_ID), any(BuyNowRequest.class))).thenReturn(BuyNowResponse.builder()
+                .auctionId(AUCTION_ID).price(new BigDecimal("200.00"))
+                .endedAt(OffsetDateTime.parse("2026-10-01T12:00:00Z")).build());
+
+        postBuyNow(buyNowBody())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.message").value("Auction purchased"))
+                .andExpect(jsonPath("$.data.auctionId").value(AUCTION_ID.toString()))
+                .andExpect(jsonPath("$.data.price").value(200.00))
+                .andExpect(jsonPath("$.data.endedAt").exists());
+
+        ArgumentCaptor<BuyNowRequest> captor = ArgumentCaptor.forClass(BuyNowRequest.class);
+        verify(buyNowService).buyNow(eq(BIDDER_ID), captor.capture());
+        assertThat(captor.getValue().getAuctionId()).isEqualTo(AUCTION_ID);
+    }
+
+    @Test
+    void buyNow_missingAuctionId_returns400() throws Exception {
+        postBuyNow("{}").andExpect(status().isBadRequest());
+        verifyNoInteractions(buyNowService);
+    }
+
+    @Test
+    void buyNow_notAvailable_returns409() throws Exception {
+        when(buyNowService.buyNow(eq(BIDDER_ID), any(BuyNowRequest.class)))
+                .thenThrow(new ConflictException("no", BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE));
+
+        postBuyNow(buyNowBody())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value(BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE));
+    }
+
+    @Test
+    void buyNow_insufficientBalance_returns403WithWalletDetails() throws Exception {
+        when(buyNowService.buyNow(eq(BIDDER_ID), any(BuyNowRequest.class)))
+                .thenThrow(new InsufficientBalanceException(Map.of("availableBalance", "10.00", "required", "20.00")));
+
+        postBuyNow(buyNowBody())
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(BiddingErrorCodes.BID_INSUFFICIENT_BALANCE))
+                .andExpect(jsonPath("$.errors.required").value("20.00"));
+    }
+
+    @Test
+    void buyNow_serviceUnavailable_returns503() throws Exception {
+        when(buyNowService.buyNow(eq(BIDDER_ID), any(BuyNowRequest.class)))
+                .thenThrow(new ServiceUnavailableException("down"));
+
+        postBuyNow(buyNowBody()).andExpect(status().isServiceUnavailable());
     }
 }

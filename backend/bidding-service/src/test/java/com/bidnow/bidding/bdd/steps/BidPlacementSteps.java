@@ -167,10 +167,57 @@ public class BidPlacementSteps {
         assertThat(stored).isEqualTo(count);
     }
 
+    @Given("auction-service has auction {string} with status {string}, price {string}, increment {string}, {int} bids, buy-now price {string} and seller {string}")
+    public void stubBidContextWithBuyNow(String auctionId, String status, String price, String increment,
+                                         int totalBids, String buyNowPrice, String sellerId) {
+        String endTime = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1).toString();
+        String body = """
+                {"status":200,"message":"Success","data":{
+                  "auctionId":"%s","title":"BDD Auction","sellerId":"%s","status":"%s",
+                  "currentPrice":%s,"bidIncrement":%s,"depositAmount":20.00,"buyNowPrice":%s,
+                  "currentWinnerId":null,"totalBids":%d,"endTime":"%s"}}
+                """.formatted(auctionId, sellerId, status, price, increment, buyNowPrice, totalBids, endTime);
+        WireMockSupport.SERVER.stubFor(get(urlEqualTo(contextPath(auctionId)))
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(body)));
+    }
+
+    @Given("auction-service accepts buy-now on auction {string} at price {string}")
+    public void auctionAcceptsBuyNow(String auctionId, String price) {
+        String body = """
+                {"status":200,"message":"Success","data":{"auctionId":"%s","price":%s,"endedAt":"%s"}}
+                """.formatted(auctionId, price, OffsetDateTime.now(ZoneOffset.UTC));
+        WireMockSupport.SERVER.stubFor(post(urlEqualTo(buyNowPath(auctionId)))
+                .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody(body)));
+    }
+
+    @When("user {string} buys now on auction {string}")
+    public void userBuysNow(String userId, String auctionId) {
+        ctx.setLastResponse(client.given()
+                .header("X-User-Id", userId)
+                .body(Map.of("auctionId", auctionId))
+                .post("/api/v1/bids/buy-now"));
+    }
+
+    @Then("auction-service should have received {int} buy-now request(s) for auction {string}")
+    public void verifyBuyNowCalls(int count, String auctionId) {
+        WireMockSupport.SERVER.verify(count, postRequestedFor(urlEqualTo(buyNowPath(auctionId))));
+    }
+
+    @Then("the bid context for auction {string} should not be cached in Redis")
+    public void contextNotCached(String auctionId) {
+        assertThat(redisTemplate.opsForValue().get("bidding:auction:" + auctionId + ":context")).isNull();
+    }
+
     private static final String WALLET_LOCK_PATH = "/api/v1/internal/wallet/deposit-lock";
 
     private static String applyPath(String auctionId) {
         return "/api/v1/internal/auctions/" + auctionId + "/bids";
+    }
+
+    private static String buyNowPath(String auctionId) {
+        return "/api/v1/internal/auctions/" + auctionId + "/buy-now";
     }
 
     private static String contextPath(String auctionId) {

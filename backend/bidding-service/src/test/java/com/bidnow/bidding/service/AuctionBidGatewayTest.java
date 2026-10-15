@@ -3,6 +3,8 @@ package com.bidnow.bidding.service;
 import com.bidnow.bidding.constant.BiddingErrorCodes;
 import com.bidnow.bidding.dto.ApplyBidCommand;
 import com.bidnow.bidding.dto.ApplyBidResult;
+import com.bidnow.bidding.dto.BuyNowCommand;
+import com.bidnow.bidding.dto.BuyNowResult;
 import com.bidnow.bidding.exception.BidTooLowException;
 import com.bidnow.bidding.exception.ConflictException;
 import com.bidnow.bidding.exception.ServiceUnavailableException;
@@ -29,6 +31,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,6 +45,7 @@ class AuctionBidGatewayTest {
     private static final UUID AUCTION_ID = UUID.fromString("b0000000-0000-0000-0000-000000000005");
     private static final ApplyBidCommand COMMAND =
             new ApplyBidCommand(UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("105.00"));
+    private static final BuyNowCommand BUY_NOW = new BuyNowCommand(UUID.randomUUID());
 
     @Mock
     private AuctionServiceClient auctionServiceClient;
@@ -171,5 +175,89 @@ class AuctionBidGatewayTest {
                 error(400, "BID_TOO_LOW", "{\"minimumBid\":\"abc\"}"), Map.of()));
 
         assertThatThrownBy(() -> gateway.apply(AUCTION_ID, COMMAND)).isInstanceOf(ServiceUnavailableException.class);
+    }
+
+    // ---------------------------------------------------------------------
+    // buyNow
+    // ---------------------------------------------------------------------
+
+    @Test
+    void buyNow_success_returnsResult() {
+        BuyNowResult result = BuyNowResult.builder().auctionId(AUCTION_ID).price(new BigDecimal("200.00"))
+                .endedAt(OffsetDateTime.parse("2026-10-01T12:00:00Z")).build();
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenReturn(BaseResponse.success(result));
+
+        assertThat(gateway.buyNow(AUCTION_ID, BUY_NOW)).isEqualTo(result);
+    }
+
+    @Test
+    void buyNow_emptyBody_mapsTo503() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenReturn(BaseResponse.success(null));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW)).isInstanceOf(ServiceUnavailableException.class);
+    }
+
+    @Test
+    void buyNow_partialBody_mapsTo503() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW))
+                .thenReturn(BaseResponse.success(BuyNowResult.builder().auctionId(AUCTION_ID).build()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW)).isInstanceOf(ServiceUnavailableException.class);
+    }
+
+    @Test
+    void buyNow_auctionNotOpen_mapsTo409() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenThrow(
+                new FeignException.Conflict("c", request(), error(409, "AUCTION_NOT_OPEN", null), Map.of()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.AUCTION_NOT_OPEN);
+    }
+
+    @Test
+    void buyNow_notAvailable_mapsTo409() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenThrow(
+                new FeignException.Conflict("c", request(), error(409, "BUY_NOW_NOT_AVAILABLE", null), Map.of()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.BUY_NOW_NOT_AVAILABLE);
+    }
+
+    @Test
+    void buyNow_ownAuction_mapsTo403() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenThrow(
+                new FeignException.Forbidden("f", request(), error(403, "BID_OWN_AUCTION", null), Map.of()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW))
+                .isInstanceOf(ForbiddenException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.BID_OWN_AUCTION);
+    }
+
+    @Test
+    void buyNow_notFound_mapsTo404() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenThrow(
+                new FeignException.NotFound("n", request(), error(404, "AUCTION_NOT_FOUND", null), Map.of()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW))
+                .isInstanceOf(NotFoundException.class)
+                .extracting("errorCode").isEqualTo(BiddingErrorCodes.AUCTION_NOT_FOUND);
+    }
+
+    @Test
+    void buyNow_serverError_mapsTo503() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenThrow(
+                new FeignException.InternalServerError("s", request(), error(500, "X", null), Map.of()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW)).isInstanceOf(ServiceUnavailableException.class);
+    }
+
+    @Test
+    void buyNow_timeout_mapsTo503() {
+        when(auctionServiceClient.buyNow(AUCTION_ID, BUY_NOW)).thenThrow(new RetryableException(
+                -1, "timeout", Request.HttpMethod.POST, (Long) null, request()));
+
+        assertThatThrownBy(() -> gateway.buyNow(AUCTION_ID, BUY_NOW)).isInstanceOf(ServiceUnavailableException.class);
     }
 }
