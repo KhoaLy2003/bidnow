@@ -63,6 +63,8 @@ export interface AuctionDetail {
   extensionCount: number
   completedAt?: Date
   winnerId?: string
+  paymentDeadline?: Date
+  winnerPaidAt?: Date
   images: AuctionImage[]
   seller: AuctionDetailSeller | null
   createdAt: Date
