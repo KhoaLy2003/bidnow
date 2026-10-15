@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, CheckCheck, Loader2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -23,8 +23,15 @@ export function NotificationPanel({ onNavigate }: NotificationPanelProps) {
   const notifications = useNotificationStore((s) => s.notifications)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
   const loading = useNotificationStore((s) => s.loading)
+  const hasMore = useNotificationStore((s) => s.hasMore)
+  const loadingMore = useNotificationStore((s) => s.loadingMore)
+  const loadMore = useNotificationStore((s) => s.loadMore)
   const markRead = useNotificationStore((s) => s.markRead)
   const markAllRead = useNotificationStore((s) => s.markAllRead)
+
+  const more = async () => {
+    if (!(await loadMore())) toast.error('Could not load more notifications. Please try again.')
+  }
 
   const select = (n: Notification) => {
     if (!n.isRead) void markRead(n.id)
@@ -63,7 +70,8 @@ export function NotificationPanel({ onNavigate }: NotificationPanelProps) {
       ) : notifications.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">You&apos;re all caught up!</p>
       ) : (
-        <ScrollArea className="max-h-96">
+        // The viewport is `size-full`, so a max-height on the root alone never bounds it — cap the viewport itself.
+        <ScrollArea className="max-h-96 [&_[data-slot=scroll-area-viewport]]:max-h-96">
           <ul>
             {notifications.map((n, i) => (
               <li key={n.id}>
@@ -72,6 +80,14 @@ export function NotificationPanel({ onNavigate }: NotificationPanelProps) {
               </li>
             ))}
           </ul>
+          {hasMore && (
+            <div className="border-t p-1.5">
+              <Button variant="ghost" size="sm" className="w-full gap-1.5" onClick={more} disabled={loadingMore}>
+                {loadingMore && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </Button>
+            </div>
+          )}
         </ScrollArea>
       )}
 

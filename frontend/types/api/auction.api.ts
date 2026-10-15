@@ -107,6 +107,10 @@ export interface AuctionDetailResponse {
   extensionCount: number;
   completedAt?: string;
   winnerId?: string;
+  /** ISO instant; set once wallet-service creates the winner's payment hold. */
+  paymentDeadline?: string | null;
+  /** ISO instant; set once the winner's payment is confirmed. */
+  winnerPaidAt?: string | null;
   images: AuctionImageResponse[];
   seller: UserSummaryResponse | null;
   createdAt: string;

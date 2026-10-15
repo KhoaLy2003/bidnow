@@ -7,11 +7,18 @@ import type { Notification } from '@/types/ui/notification.ui'
 export const RECENT_LIMIT = 10
 
 interface NotificationState {
-  /** The most recent notifications (≤ RECENT_LIMIT), newest first — the bell dropdown. */
+  /** The most recent notifications, newest first — the bell dropdown (RECENT_LIMIT, plus any pages loaded on demand). */
   notifications: Notification[]
   unreadCount:   number
   loading:       boolean
+  /** Server-side page index the next loadMore() fetches (page 0 is the recent list). */
+  nextPage:      number
+  /** Whether older notifications exist beyond those loaded. */
+  hasMore:       boolean
+  loadingMore:   boolean
   loadRecent:    () => Promise<void>
+  /** Appends the next page of older notifications; resolves false if the request failed. */
+  loadMore:      () => Promise<boolean>
   refreshCount:  () => Promise<void>
   /** Applies a live push; returns the added notification, or null for a duplicate. */
   applyPush:     (msg: UserNotificationMessage) => Notification | null
@@ -52,6 +59,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
     notifications: [],
     unreadCount:   0,
     loading:       false,
+    nextPage:      1,
+    hasMore:       false,
+    loadingMore:   false,
 
     loadRecent: async () => {
       const startEpoch = epoch
@@ -66,11 +76,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
           const merged = fetched.map((n) => (local.get(n.id)?.isRead && pendingRead.has(n.id) ? { ...n, isRead: true } : n))
           const fetchedIds = new Set(fetched.map((n) => n.id))
           const extras = s.notifications.filter((n) => !fetchedIds.has(n.id))
-          return {
-            notifications: [...merged, ...extras]
-              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-              .slice(0, RECENT_LIMIT),
-          }
+          const sorted = [...merged, ...extras].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          // Once older pages were loaded on demand, keep them; otherwise this is the capped recent list.
+          return s.nextPage > 1
+            ? { notifications: sorted }
+            : { notifications: sorted.slice(0, RECENT_LIMIT), hasMore: res.data.pagination?.hasNext === true }
         })
       } catch {
         // keep what we have; the next focus / reconnect retries
@@ -79,6 +89,33 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
           inFlightLoads = Math.max(0, inFlightLoads - 1)
           set({ loading: inFlightLoads > 0 })
         }
+      }
+    },
+
+    loadMore: async () => {
+      const { loadingMore, hasMore, nextPage } = get()
+      if (loadingMore || !hasMore) return true
+      const startEpoch = epoch
+      set({ loadingMore: true })
+      try {
+        const res = await notificationService.list({ page: nextPage, size: RECENT_LIMIT })
+        if (startEpoch !== epoch) return true
+        const fetched = res.data.data.map(toNotification)
+        set((s) => {
+          // Pushes shift server offsets, so a page can overlap what we already hold: dedupe by id.
+          const known = new Set(s.notifications.map((n) => n.id))
+          const older = fetched.filter((n) => !known.has(n.id))
+          return {
+            notifications: [...s.notifications, ...older].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+            nextPage:      s.nextPage + 1,
+            hasMore:       res.data.pagination?.hasNext === true,
+          }
+        })
+        return true
+      } catch {
+        return false // keep the list and the button so the user can retry
+      } finally {
+        if (startEpoch === epoch) set({ loadingMore: false })
       }
     },
 
@@ -96,10 +133,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
     applyPush: (msg) => {
       if (get().notifications.some((n) => n.id === msg.notification.id)) return null
       const added = toNotification(msg.notification)
-      set((s) => ({
-        notifications: [added, ...s.notifications].slice(0, RECENT_LIMIT),
-        unreadCount:   msg.unreadCount,
-      }))
+      set((s) => {
+        const all = [added, ...s.notifications]
+        // Keep everything once the user expanded the list; otherwise cap, and note the pushed-out item is now "older".
+        const capped = s.nextPage > 1 ? all : all.slice(0, RECENT_LIMIT)
+        return {
+          notifications: capped,
+          unreadCount:   msg.unreadCount,
+          hasMore:       s.hasMore || capped.length < all.length,
+        }
+      })
       return added
     },
 
@@ -142,7 +185,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
       epoch++
       inFlightLoads = 0
       pendingRead.clear()
-      set({ notifications: [], unreadCount: 0, loading: false })
+      set({ notifications: [], unreadCount: 0, loading: false, nextPage: 1, hasMore: false, loadingMore: false })
     },
   }
 })

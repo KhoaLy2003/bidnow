@@ -41,7 +41,7 @@ See `.env.example` for all configuration options.
 Four Zustand stores in `store/`:
 - `authStore` — JWT tokens + user, persisted to `localStorage` via `zustand/middleware/persist` (key: `auth-storage`)
 - `auctionStore` — live state (`LiveAuctionState`) of the auction detail page being viewed, updated only through the monotonic reducers in `lib/realtime/auction-live.ts`; reset on unmount
-- `notificationStore` — server-backed recent notifications (10) and unread count; live pushes via `applyPush`; optimistic read/delete with rollback
+- `notificationStore` — server-backed recent notifications (10, more via `loadMore` / "Load more" in the bell panel) and unread count; live pushes via `applyPush`; optimistic read/delete with rollback
 - `walletStore` — balance and transaction history
 
 ### Real-time (WebSocket)

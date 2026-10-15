@@ -78,6 +78,8 @@ export function mapAuctionDetailResponse(dto: AuctionDetailResponse): AuctionDet
     extensionCount:  dto.extensionCount,
     completedAt:     dto.completedAt ? new Date(dto.completedAt) : undefined,
     winnerId:        dto.winnerId,
+    paymentDeadline: dto.paymentDeadline ? new Date(dto.paymentDeadline) : undefined,
+    winnerPaidAt:    dto.winnerPaidAt ? new Date(dto.winnerPaidAt) : undefined,
     images:          dto.images.map((img): AuctionImage => ({
       id:           img.id,
       imageUrl:     img.imageUrl,

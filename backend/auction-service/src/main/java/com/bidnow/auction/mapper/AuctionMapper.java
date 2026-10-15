@@ -117,6 +117,8 @@ public abstract class AuctionMapper {
                 .extensionCount(item.getExtensionCount())
                 .completedAt(item.getCompletedAt())
                 .winnerId(item.getWinnerId())
+                .paymentDeadline(item.getPaymentDeadline())
+                .winnerPaidAt(item.getWinnerPaidAt())
                 .images(images.stream().map(this::toImageResponse).toList())
                 .seller(seller)
                 .createdAt(item.getCreatedAt())
