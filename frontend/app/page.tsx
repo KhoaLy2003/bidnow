@@ -73,7 +73,7 @@ export default async function HomePage() {
   return (
     <>
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-[var(--container-xl)] px-4 pb-14 md:pb-8">
+      <main className="flex-1 mx-auto w-full max-w-[var(--container-xl)] px-4 pb-24 md:pb-8">
 
         {/* Hero */}
         <section className="relative overflow-hidden rounded-2xl mt-8 mb-12 bg-gradient-to-br from-[var(--color-brand-600)] to-[var(--color-brand-900)] px-8 py-16 text-white sm:px-16">

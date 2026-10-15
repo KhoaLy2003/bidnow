@@ -42,7 +42,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   return (
     <>
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-grid)] px-4 py-8 pb-14 md:pb-8">
+      <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-grid)] px-4 py-8 pb-24 md:pb-8">
         <BrowseClient
           key={JSON.stringify(params)}
           items={items}

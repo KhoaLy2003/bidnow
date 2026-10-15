@@ -40,7 +40,7 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   return (
     <>
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-detail)] px-4 py-8 pb-14 md:pb-8">
+      <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-detail)] px-4 py-8 pb-24 md:pb-8">
         <AuctionLiveBridge auction={auction} initialBids={firstBidPage.items} />
 
         {/* Breadcrumb */}

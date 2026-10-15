@@ -9,7 +9,9 @@ interface UserAvatarProps {
   name: string
   avatarUrl?: string
   isOnline?: boolean
-  size?: 'xs' | 'sm' | 'default' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'default' | 'lg' | 'menu' | 'xl'
+  /** 'brand' = soft brand tint with brand initials (navbar); default = hashed colour with white initials */
+  tone?: 'hash' | 'brand'
   className?: string
 }
 
@@ -38,13 +40,15 @@ function getInitials(name: string): string {
 const SIZE_CLASS: Record<NonNullable<UserAvatarProps['size']>, string> = {
   xs: 'size-5 text-[10px]',
   sm: 'size-6 text-xs',
+  md: 'size-[34px] text-[13px]',
   default: 'size-8 text-sm',
   lg: 'size-10 text-sm',
+  menu: 'size-11 text-[15px]',
   xl: 'h-32 w-32 text-2xl',
 }
 
 export function UserAvatar({
-  name, avatarUrl, isOnline, size = 'default', className,
+  name, avatarUrl, isOnline, size = 'default', tone = 'hash', className,
 }: UserAvatarProps) {
   const initials = getInitials(name)
   const bgColor = hashColor(name)
@@ -55,8 +59,11 @@ export function UserAvatar({
       <Avatar className={SIZE_CLASS[size]}>
         {resolvedUrl && <AvatarImage src={resolvedUrl} alt={name} />}
         <AvatarFallback
-          className="font-medium text-white"
-          style={{ backgroundColor: bgColor }}
+          className={cn(
+            'font-medium',
+            tone === 'brand' ? 'bg-brand-100 font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300' : 'text-white',
+          )}
+          style={tone === 'brand' ? undefined : { backgroundColor: bgColor }}
         >
           {initials}
         </AvatarFallback>

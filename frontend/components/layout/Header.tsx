@@ -1,271 +1,171 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { User, LogOut, Settings, ListOrdered, Package } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, Plus, Search } from "lucide-react";
 import { BidNowGavelMark } from "@/components/shared/BidNowGavelMark";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-  DropdownMenuGroup,
-} from "@/components/ui/dropdown-menu";
-import { SearchBar } from "@/components/shared/SearchBar";
-import { UserAvatar } from "@/components/shared/UserAvatar";
-import { ThemeToggle } from "@/components/shared/ThemeToggle";
-import { WalletBadge } from "@/components/wallet/WalletBadge";
 import { NotificationBell } from "@/components/notification/NotificationBell";
+import { AccountMenu } from "@/components/layout/AccountMenu";
+import { NavLinks } from "@/components/layout/NavLinks";
+import { SearchDialog } from "@/components/layout/SearchDialog";
+import { AUTHED_NAV_LINKS, GUEST_NAV_LINKS, ROUTES } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 import { useAuthStore } from "@/store/authStore";
+import { useBalanceVisibilityStore } from "@/store/balanceVisibilityStore";
 import { authService } from "@/services/auth.service";
 import { useProfile } from "@/hooks/useProfile";
-import { useRouter } from "next/navigation";
 
-const NAV_LINKS = [
-  { label: "Browse", href: "/auctions" },
-  { label: "My Bids", href: "/my-bids" },
-  { label: "Sell", href: "/sell" },
-] as const;
+const CONDENSE_AFTER_PX = 8;
+
+function SearchTrigger({ onClick, className }: { onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Search lots, sellers and categories"
+      className={cn(
+        "flex items-center gap-2.5 rounded-[6px] border bg-muted px-3 text-sm text-muted-foreground transition-colors hover:border-foreground/20",
+        className,
+      )}
+    >
+      <Search className="size-[18px] shrink-0" aria-hidden />
+      <span className="flex-1 truncate text-left">Search lots, sellers, categories</span>
+      <kbd className="hidden rounded-[4px] border bg-background px-1.5 py-0.5 font-mono text-[11px] font-medium lg:inline">
+        ⌘K
+      </kbd>
+    </button>
+  );
+}
 
 export function Header() {
   const router = useRouter();
   const { user, isAuthenticated, logout, refreshToken } = useAuthStore();
   const { profile } = useProfile();
   const [scrolled, setScrolled] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => setScrolled(window.scrollY > CONDENSE_AFTER_PX);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const handleLogout = async () => {
     if (refreshToken) {
       await authService.logout(refreshToken, useAuthStore.getState().accessToken);
     }
+    useBalanceVisibilityStore.getState().hide();
     logout();
-    router.push("/login");
+    router.push(ROUTES.login);
   };
 
+  const isAdmin = user?.role === "ADMIN";
+  const displayName = profile?.displayName || user?.email?.split("@")[0] || "User";
+
   return (
-    <>
     <header
       className={cn(
-        "sticky top-0 z-[var(--z-index-sticky)] h-16 bg-background border-b border-border transition-[backdrop-filter] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]",
-        scrolled && "backdrop-blur-sm",
+        "sticky top-0 z-[var(--z-index-sticky)] border-b border-border bg-background transition-shadow duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]",
+        scrolled && "shadow-[0_4px_18px_rgb(20_23_31/0.08)]",
       )}
     >
-      <div className="mx-auto flex h-full max-w-[var(--container-xl)] items-center gap-4 px-4">
-        {/* Wordmark */}
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <BidNowGavelMark size={28} />
-          <span className="hidden font-medium sm:inline-block">
-            Bid<span className="text-[var(--color-text-brand)] font-medium">Now</span>
+      <div
+        className={cn(
+          "flex items-center gap-4 px-4 transition-[height] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] md:gap-7 md:px-8",
+          scrolled ? "h-[60px]" : "h-[72px]",
+        )}
+      >
+        <Link href={ROUTES.home} aria-label="BidNow home" className="flex shrink-0 items-center gap-2.5">
+          <BidNowGavelMark size={32} />
+          <span className="font-display text-xl font-semibold tracking-[-0.01em]">
+            Bid<span className="text-[var(--color-text-brand)]">Now</span>
           </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ label, href }) => (
-            <Button
-              key={href}
-              variant="ghost"
-              size="sm"
-              render={<Link href={href} />}
-              nativeButton={false}
-            >
-              {label}
-            </Button>
-          ))}
-        </nav>
+        <NavLinks links={isAuthenticated && !isAdmin ? AUTHED_NAV_LINKS : GUEST_NAV_LINKS} />
 
-        {/* Search */}
-        <SearchBar className="hidden sm:flex flex-1 max-w-[400px] mx-auto" />
+        <SearchTrigger
+          onClick={() => setSearchOpen(true)}
+          className="mx-auto hidden h-11 max-w-[440px] flex-[1_1_260px] sm:flex"
+        />
 
-        {/* Right controls */}
-        <div className="ml-auto flex items-center gap-1 shrink-0">
-          <ThemeToggle />
-
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
           {isAuthenticated ? (
-            <>
-              {user?.role !== 'ADMIN' && (
-                <>
-                  <WalletBadge />
-                  <NotificationBell />
-                </>
-              )}
-
-              {/* User menu */}
-              {user?.role !== 'ADMIN' ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full"
-                      />
-                    }
-                  >
-                    <UserAvatar
-                      name={profile?.displayName || user?.email || "User"}
-                      avatarUrl={profile?.avatarUrl ?? undefined}
-                      size="sm"
-                    />
-                    <span className="sr-only">Account menu</span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side="bottom"
-                    align="end"
-                    sideOffset={8}
-                    className="w-64 p-2 border-border/50 backdrop-blur-md"
-                  >
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="p-2 font-normal">
-                        <div className="flex flex-col gap-3">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar
-                              name={profile?.displayName || user?.email || "User"}
-                              avatarUrl={profile?.avatarUrl ?? undefined}
-                              size="lg"
-                            />
-                            <div className="flex flex-col min-w-0">
-                              <p className="font-medium text-sm truncate">
-                                {profile?.displayName || user?.email?.split("@")[0]}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {user?.email}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="bg-accent/50 rounded-md p-2 flex items-center justify-between">
-                            <span className="text-[10px] font-medium uppercase text-muted-foreground">
-                              Status
-                            </span>
-                            <span className="text-[10px] font-medium uppercase text-[var(--color-success-default)]">
-                              Verified
-                            </span>
-                          </div>
-                        </div>
-                      </DropdownMenuLabel>
-                    </DropdownMenuGroup>
-
-                    <DropdownMenuSeparator className="my-2" />
-
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        render={
-                          <Link
-                            href="/profile"
-                            className="flex items-center gap-2"
-                          />
-                        }
-                        className="py-2.5"
-                      >
-                        <User className="size-4" /> Profile
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem
-                        render={
-                          <Link
-                            href="/my-bids"
-                            className="flex items-center gap-2"
-                          />
-                        }
-                        className="py-2.5"
-                      >
-                        <ListOrdered className="size-4" /> My Bids
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem
-                        render={
-                          <Link
-                            href="/seller/auctions"
-                            className="flex items-center gap-2"
-                          />
-                        }
-                        className="py-2.5"
-                      >
-                        <Package className="size-4" /> My Auctions
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem
-                        render={
-                          <Link
-                            href="/settings"
-                            className="flex items-center gap-2"
-                          />
-                        }
-                        className="py-2.5"
-                      >
-                        <Settings className="size-4" /> Settings
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-
-                    <DropdownMenuSeparator className="my-2" />
-
-                    <DropdownMenuItem
-                      variant="destructive"
-                      className="gap-2 cursor-pointer py-2.5"
-                      onClick={handleLogout}
-                    >
-                      <LogOut className="size-4" /> Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleLogout}
-                  className="gap-2 text-muted-foreground hover:text-foreground"
-                >
-                  <LogOut className="size-4" />
-                  Sign out
-                </Button>
-              )}
-
-              {/* Sell CTA — desktop */}
-              {user?.role !== 'ADMIN' && (
-                <Button
-                  variant="brand"
-                  size="sm"
-                  className="hidden md:inline-flex ml-1"
-                  render={<Link href="/sell" />}
-                  nativeButton={false}
-                >
-                  Sell
-                </Button>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
+            isAdmin ? (
               <Button
                 variant="ghost"
                 size="sm"
-                render={<Link href="/login" />}
+                onClick={handleLogout}
+                className="gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="size-4" />
+                Sign out
+              </Button>
+            ) : (
+              <>
+                <NotificationBell />
+                <AccountMenu
+                  name={displayName}
+                  email={user?.email ?? ""}
+                  avatarUrl={profile?.avatarUrl ?? undefined}
+                  verified={user?.isEmailVerified ?? false}
+                  onSignOut={handleLogout}
+                />
+                <Button
+                  variant="brand"
+                  className="ml-1 hidden h-11 gap-2 rounded-[6px] px-[18px] text-sm font-semibold md:inline-flex"
+                  render={<Link href={ROUTES.sell} />}
+                  nativeButton={false}
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Sell
+                </Button>
+              </>
+            )
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                className="h-11 rounded-[6px] px-4 text-sm"
+                render={<Link href={ROUTES.login} />}
                 nativeButton={false}
               >
                 Sign in
               </Button>
               <Button
                 variant="brand"
-                size="sm"
-                render={<Link href="/register" />}
+                className="h-11 rounded-[6px] px-5 text-sm font-semibold"
+                render={<Link href={ROUTES.register} />}
                 nativeButton={false}
               >
-                Join
+                Join BidNow
               </Button>
-            </div>
+            </>
           )}
         </div>
       </div>
+
+      {/* Mobile: search gets its own full-width row */}
+      <div className="px-4 pb-3 sm:hidden">
+        <SearchTrigger onClick={() => setSearchOpen(true)} className="h-[46px] w-full text-[15px]" />
+      </div>
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
-    </>
   );
 }
