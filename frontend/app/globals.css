@@ -673,6 +673,79 @@
   100% { transform: translateX(100%); }
 }
 
+/* Homepage hero: a stepping second hand, one tick per second */
+@keyframes hero-sweep {
+  to { transform: rotate(360deg); }
+}
+
+/* Homepage live tape: the marquee loops by sliding one copy of the list */
+@keyframes home-marquee {
+  to { transform: translateX(-50%); }
+}
+
+.home-tape-track {
+  animation: home-marquee 60s linear infinite;
+}
+
+.home-tape-track:hover {
+  animation-play-state: paused;
+}
+
+/* A watch-bezel ruler: a tick every 12px, a taller one every 60px */
+.home-ruler {
+  height: 0.875rem;
+  background-image:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.3) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.55) 0 1px, transparent 1px 60px);
+  background-size: 100% 6px, 100% 14px;
+  background-position: 0 100%, 0 100%;
+  background-repeat: repeat-x;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-tape-track {
+    animation: none;
+  }
+}
+
+/* Homepage hero dial: concentric rings, a 60-tick bezel and the second hand */
+.hero-dial-ring {
+  position: absolute;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.hero-dial-ticks {
+  position: absolute;
+  inset: 2.5rem;
+  border-radius: 9999px;
+  background: repeating-conic-gradient(from -0.3deg, rgb(255 255 255 / 0.34) 0 0.6deg, transparent 0.6deg 6deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 93%, #000 93.4%);
+  mask-image: radial-gradient(circle, transparent 93%, #000 93.4%);
+}
+
+.hero-dial-hand {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 50%;
+  margin-left: -1px;
+  transform-origin: 50% 100%;
+  animation: hero-sweep 60s steps(60, end) infinite;
+}
+
+.hero-dial-hand::before {
+  content: '';
+  position: absolute;
+  top: 2.75rem;
+  left: 0;
+  width: 2px;
+  height: 4.5rem;
+  border-radius: 1px;
+  background: var(--color-warning-default);
+}
+
 /* ============================================================
    Global base styles
    ============================================================ */
