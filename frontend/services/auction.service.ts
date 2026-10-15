@@ -96,6 +96,22 @@ export const auctionService = {
     }
   },
 
+  /**
+   * Cancels a draft, scheduled or active auction (POST /{id}/cancel). The reason is optional on the server
+   * (max 500 characters); the body is omitted when none is given.
+   */
+  async cancelAuction(id: string, reason?: string): Promise<void> {
+    const trimmed = reason?.trim()
+    const response = await apiFetch(`/api/v1/auctions/${id}/cancel`, {
+      method: 'POST',
+      ...(trimmed ? { body: JSON.stringify({ reason: trimmed }) } : {}),
+    })
+    if (!response.ok && response.status !== 204) {
+      const error = await response.json()
+      throw error
+    }
+  },
+
   async getBrowseAuctions(params: BrowseAuctionParams): Promise<{
     items: AuctionBrowseItem[]
     total: number
