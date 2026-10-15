@@ -9,12 +9,14 @@ import { PayNowDialog } from '@/components/payment/PayNowDialog'
 import { usePendingPayments } from '@/hooks/usePendingPayments'
 import { formatCurrency } from '@/lib/format'
 import {
+  IDLE_LOOKUP,
   PREPARING_POLL_MS,
   PREPARING_WINDOW_MS,
   derivePaymentPanelState,
   formatHoursLeft,
   isRecentWin,
 } from '@/lib/payment-utils'
+import { usePaymentStore } from '@/store/paymentStore'
 
 interface PaymentStatusBlockProps {
   auctionId:    string
@@ -24,9 +26,15 @@ interface PaymentStatusBlockProps {
 
 export function PaymentStatusBlock({ auctionId, title, completedAt }: PaymentStatusBlockProps) {
   const { holds, paidIds, hasFetched, loadFailed, refetch } = usePendingPayments()
+  // IDLE_LOOKUP is a module constant on purpose: a selector returning a fresh object makes zustand re-render forever.
+  const statusLookup = usePaymentStore((s) => s.statuses[auctionId] ?? IDLE_LOOKUP)
+  const loadStatus = usePaymentStore((s) => s.loadStatus)
   const [dialogOpen, setDialogOpen] = useState(false)
   // Only a fresh win can still be waiting for its hold; an old win with no hold is simply "nothing due".
   const [windowOpen, setWindowOpen] = useState(() => isRecentWin(completedAt))
+
+  const holdPresent = holds.some((h) => h.auctionId === auctionId)
+  const paidHere = paidIds.has(auctionId)
 
   useEffect(() => {
     if (!windowOpen) return
@@ -34,8 +42,14 @@ export function PaymentStatusBlock({ auctionId, title, completedAt }: PaymentSta
     return () => clearTimeout(t)
   }, [windowOpen])
 
+  // With no pending hold for this auction, ask wallet-service what became of it. Runs once the pending list has
+  // loaded and again whenever the hold disappears (paid elsewhere, forfeited), not on every poll tick.
+  useEffect(() => {
+    if (hasFetched && !holdPresent && !paidHere) void loadStatus(auctionId)
+  }, [auctionId, hasFetched, holdPresent, paidHere, loadStatus])
+
   const { state, hold } = derivePaymentPanelState({
-    holds, auctionId, paidIds, hasFetched, loadFailed, pollWindowOpen: windowOpen,
+    holds, auctionId, paidIds, hasFetched, loadFailed, pollWindowOpen: windowOpen, statusLookup,
   })
 
   useEffect(() => {
@@ -52,7 +66,14 @@ export function PaymentStatusBlock({ auctionId, title, completedAt }: PaymentSta
       return (
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">We couldn&apos;t load your payment details.</p>
-          <Button variant="outline" className="w-full" onClick={() => void refetch()}>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              void refetch()
+              void loadStatus(auctionId)
+            }}
+          >
             Retry
           </Button>
         </div>
@@ -94,6 +115,30 @@ export function PaymentStatusBlock({ auctionId, title, completedAt }: PaymentSta
         <div className="flex items-center gap-2 text-sm font-medium" role="status">
           <CheckCircle2 className="size-4 text-[var(--color-success-default)]" />
           Payment complete
+        </div>
+      )
+
+    case 'forfeited':
+      return (
+        <div role="status" className="flex flex-col gap-1 text-sm">
+          <p className="text-[var(--color-danger-text)]">
+            The payment deadline passed and your deposit was forfeited.
+          </p>
+          <Link href="/wallet" className="text-muted-foreground underline underline-offset-2">
+            View wallet history
+          </Link>
+        </div>
+      )
+
+    case 'cancelled':
+      return (
+        <div role="status" className="flex flex-col gap-1 text-sm">
+          <p className="text-muted-foreground">
+            This sale was cancelled. Your deposit and any held funds were returned.
+          </p>
+          <Link href="/wallet" className="text-muted-foreground underline underline-offset-2">
+            View wallet history
+          </Link>
         </div>
       )
 

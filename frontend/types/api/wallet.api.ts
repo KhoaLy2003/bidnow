@@ -61,3 +61,11 @@ export interface ConfirmPaymentResponse {
   availableBalance: number;
   lockedBalance: number;
 }
+
+export type PaymentHoldStatus = 'PENDING_PAYMENT' | 'COMPLETED' | 'CANCELLED' | 'FORFEITED';
+
+export interface PaymentStatusResponse {
+  auctionId: string;
+  status: PaymentHoldStatus;
+  totalAmount: number;
+}

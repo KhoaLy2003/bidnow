@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/services/wallet.service', () => ({
-  walletService: { getPendingPayments: vi.fn() },
+  walletService: { getPendingPayments: vi.fn(), getPaymentStatus: vi.fn() },
 }))
 
 import { walletService } from '@/services/wallet.service'
-import type { PendingPaymentResponse } from '@/types/api/wallet.api'
+import type { PaymentHoldStatus, PaymentStatusResponse, PendingPaymentResponse } from '@/types/api/wallet.api'
 import { usePaymentStore } from './paymentStore'
 
 const service = vi.mocked(walletService)
@@ -149,5 +149,104 @@ describe('paymentStore', () => {
     expect(store().paidIds.size).toBe(0)
     expect(store().hasFetched).toBe(false)
     expect(store().isLoading).toBe(false)
+  })
+})
+
+function statusDto(status: PaymentHoldStatus, auctionId = 'a-1'): PaymentStatusResponse {
+  return { auctionId, status, totalAmount: 500 }
+}
+
+describe('paymentStore.loadStatus', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    store().reset()
+  })
+
+  it('records a found status', async () => {
+    service.getPaymentStatus.mockResolvedValue(statusDto('FORFEITED'))
+
+    await store().loadStatus('a-1')
+
+    expect(service.getPaymentStatus).toHaveBeenCalledWith('a-1')
+    expect(store().statuses['a-1']).toEqual({ kind: 'found', status: 'FORFEITED' })
+  })
+
+  it('records not-found when there is no hold for the caller', async () => {
+    service.getPaymentStatus.mockResolvedValue(null)
+
+    await store().loadStatus('a-1')
+
+    expect(store().statuses['a-1']).toEqual({ kind: 'not-found' })
+  })
+
+  it('records failed when the request throws', async () => {
+    service.getPaymentStatus.mockRejectedValue(new Error('down'))
+
+    await store().loadStatus('a-1')
+
+    expect(store().statuses['a-1']).toEqual({ kind: 'failed' })
+  })
+
+  it('shows loading while the request is in flight', async () => {
+    let resolve!: (v: PaymentStatusResponse | null) => void
+    service.getPaymentStatus.mockReturnValueOnce(new Promise<PaymentStatusResponse | null>((r) => { resolve = r }))
+
+    const pending = store().loadStatus('a-1')
+    expect(store().statuses['a-1']).toEqual({ kind: 'loading' })
+    resolve(statusDto('COMPLETED'))
+    await pending
+
+    expect(store().statuses['a-1']).toEqual({ kind: 'found', status: 'COMPLETED' })
+  })
+
+  it('keeps a separate lookup per auction', async () => {
+    service.getPaymentStatus
+      .mockResolvedValueOnce(statusDto('COMPLETED', 'a-1'))
+      .mockResolvedValueOnce(null)
+
+    await store().loadStatus('a-1')
+    await store().loadStatus('a-2')
+
+    expect(store().statuses['a-1']).toEqual({ kind: 'found', status: 'COMPLETED' })
+    expect(store().statuses['a-2']).toEqual({ kind: 'not-found' })
+  })
+
+  it('ignores a superseded lookup for the same auction', async () => {
+    let resolveFirst!: (v: PaymentStatusResponse | null) => void
+    service.getPaymentStatus
+      .mockReturnValueOnce(new Promise<PaymentStatusResponse | null>((r) => { resolveFirst = r }))
+      .mockResolvedValueOnce(statusDto('COMPLETED'))
+
+    const first = store().loadStatus('a-1')
+    await store().loadStatus('a-1')
+    resolveFirst(null)
+    await first
+
+    expect(store().statuses['a-1']).toEqual({ kind: 'found', status: 'COMPLETED' })
+  })
+
+  it('markPaid records COMPLETED and ignores a lookup that started before it', async () => {
+    let resolveSlow!: (v: PaymentStatusResponse | null) => void
+    service.getPaymentStatus.mockReturnValueOnce(new Promise<PaymentStatusResponse | null>((r) => { resolveSlow = r }))
+
+    const slow = store().loadStatus('a-1')
+    store().markPaid('a-1')
+    resolveSlow(null)
+    await slow
+
+    expect(store().statuses['a-1']).toEqual({ kind: 'found', status: 'COMPLETED' })
+    expect(store().paidIds.has('a-1')).toBe(true)
+  })
+
+  it('reset clears the lookups and ignores a lookup still in flight', async () => {
+    let resolveSlow!: (v: PaymentStatusResponse | null) => void
+    service.getPaymentStatus.mockReturnValueOnce(new Promise<PaymentStatusResponse | null>((r) => { resolveSlow = r }))
+    const slow = store().loadStatus('a-1')
+
+    store().reset()
+    resolveSlow(statusDto('FORFEITED'))
+    await slow
+
+    expect(store().statuses).toEqual({})
   })
 })

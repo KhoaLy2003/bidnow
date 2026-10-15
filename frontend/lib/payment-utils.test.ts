@@ -10,7 +10,8 @@ import {
   type PaymentPanelInput,
 } from './payment-utils'
 import type { AuctionImage } from '@/types/ui/auction.ui'
-import type { PendingPayment } from '@/types/ui/wallet.ui'
+import type { PaymentHoldStatus } from '@/types/api/wallet.api'
+import type { PaymentStatusLookup, PendingPayment } from '@/types/ui/wallet.ui'
 
 function hold(over: Partial<PendingPayment> = {}): PendingPayment {
   return {
@@ -97,6 +98,7 @@ describe('derivePaymentPanelState', () => {
   const base: PaymentPanelInput = {
     holds: [], auctionId: 'a-1', paidIds: new Set<string>(),
     hasFetched: true, loadFailed: false, pollWindowOpen: false,
+    statusLookup: { kind: 'not-found' },
   }
 
   it('is loading before the first fetch', () => {
@@ -168,5 +170,62 @@ describe('toAuctionPreview', () => {
 
   it('has no image when the auction has none', () => {
     expect(toAuctionPreview({ title: 'Watch', images: [] })).toEqual({ title: 'Watch', imageUrl: undefined })
+  })
+})
+
+describe('derivePaymentPanelState: status lookup', () => {
+  const found = (status: PaymentHoldStatus): PaymentStatusLookup => ({ kind: 'found', status })
+  const base: PaymentPanelInput = {
+    holds: [], auctionId: 'a-1', paidIds: new Set<string>(),
+    hasFetched: true, loadFailed: false, pollWindowOpen: false,
+    statusLookup: { kind: 'idle' },
+  }
+  const state = (over: Partial<PaymentPanelInput>) => derivePaymentPanelState({ ...base, ...over }).state
+
+  it('is loading while the lookup has not answered', () => {
+    expect(state({ statusLookup: { kind: 'idle' } })).toBe('loading')
+    expect(state({ statusLookup: { kind: 'loading' } })).toBe('loading')
+  })
+
+  it('is error when the lookup failed', () => {
+    expect(state({ statusLookup: { kind: 'failed' } })).toBe('error')
+  })
+
+  it('maps each found status', () => {
+    expect(state({ statusLookup: found('COMPLETED') })).toBe('paid')
+    expect(state({ statusLookup: found('FORFEITED') })).toBe('forfeited')
+    expect(state({ statusLookup: found('CANCELLED') })).toBe('cancelled')
+  })
+
+  it('treats a PENDING_PAYMENT lookup as preparing, whether or not the poll window is open', () => {
+    expect(state({ statusLookup: found('PENDING_PAYMENT'), pollWindowOpen: true })).toBe('preparing')
+    expect(state({ statusLookup: found('PENDING_PAYMENT'), pollWindowOpen: false })).toBe('preparing')
+  })
+
+  it('is preparing for not-found while the window is open and none once it has closed', () => {
+    expect(state({ statusLookup: { kind: 'not-found' }, pollWindowOpen: true })).toBe('preparing')
+    expect(state({ statusLookup: { kind: 'not-found' }, pollWindowOpen: false })).toBe('none')
+  })
+
+  it('a pending hold beats the lookup, so an unforfeited expired hold still reads expired', () => {
+    const hold = {
+      auctionId: 'a-1', totalAmount: 500, depositApplied: 100, remaining: 400,
+      fundsHeld: false, hoursLeft: 0, expired: true,
+    }
+    expect(derivePaymentPanelState({ ...base, holds: [hold], statusLookup: found('FORFEITED') }))
+      .toEqual({ state: 'expired', hold })
+  })
+
+  it('the paid marker beats the lookup', () => {
+    expect(state({ paidIds: new Set(['a-1']), statusLookup: found('FORFEITED') })).toBe('paid')
+  })
+
+  it('ignores the lookup until the pending list has loaded', () => {
+    expect(state({ hasFetched: false, statusLookup: found('COMPLETED') })).toBe('loading')
+    expect(state({ hasFetched: false, loadFailed: true, statusLookup: found('COMPLETED') })).toBe('error')
+  })
+
+  it('falls back to none for a status this build does not know', () => {
+    expect(state({ statusLookup: found('REFUNDED' as PaymentHoldStatus) })).toBe('none')
   })
 })
