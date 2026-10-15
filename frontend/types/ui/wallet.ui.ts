@@ -23,3 +23,14 @@ export interface WalletBalance {
   held:      number          // dollars — reserved for active bids
   total:     number          // dollars — available + held
 }
+
+/** A winner's unpaid payment hold. All amounts are dollars. */
+export interface PendingPayment {
+  auctionId:      string
+  totalAmount:    number   // winning price
+  depositApplied: number   // auction deposit counted toward the price
+  remaining:      number   // totalAmount − depositApplied
+  fundsHeld:      boolean  // remaining is already moved to locked in the wallet
+  hoursLeft:      number   // server-computed, floored; 0 means under one hour
+  expired:        boolean  // server-computed
+}

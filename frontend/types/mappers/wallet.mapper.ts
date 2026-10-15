@@ -1,5 +1,10 @@
-import type { WalletResponse, TransactionResponse, WalletTransactionType } from '@/types/api/wallet.api'
-import type { WalletBalance, Transaction, TransactionType } from '@/types/ui/wallet.ui'
+import type {
+  WalletResponse,
+  TransactionResponse,
+  WalletTransactionType,
+  PendingPaymentResponse,
+} from '@/types/api/wallet.api'
+import type { WalletBalance, Transaction, TransactionType, PendingPayment } from '@/types/ui/wallet.ui'
 
 const TYPE_MAP: Record<WalletTransactionType, TransactionType> = {
   DEPOSIT:     'deposit',
@@ -31,5 +36,17 @@ export function mapTransactionResponse(dto: TransactionResponse): Transaction {
     amount:      signedAmount,
     description: dto.description,
     createdAt:   new Date(dto.createdAt),
+  }
+}
+
+export function mapPendingPaymentResponse(dto: PendingPaymentResponse): PendingPayment {
+  return {
+    auctionId:      dto.auctionId,
+    totalAmount:    dto.totalAmount,
+    depositApplied: dto.depositApplied,
+    remaining:      dto.remaining,
+    fundsHeld:      dto.fundsHeld,
+    hoursLeft:      dto.hoursLeft,
+    expired:        dto.expired,
   }
 }

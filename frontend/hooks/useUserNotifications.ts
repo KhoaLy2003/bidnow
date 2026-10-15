@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { Client, ReconnectionTimeMode, type IMessage } from '@stomp/stompjs'
 import { useAuthStore } from '@/store/authStore'
 import { useNotificationStore } from '@/store/notificationStore'
+import { usePaymentStore } from '@/store/paymentStore'
+import { isPaymentPush } from '@/lib/payment-utils'
 import { getFreshAccessToken } from '@/lib/apiClient'
 import { parseUserNotificationMessage } from '@/lib/realtime/dispatch'
 import { resolveWsEndpoint, withAccessToken } from '@/lib/realtime/ws-url'
@@ -26,6 +28,7 @@ export function useUserNotifications(): void {
     const store = useNotificationStore.getState()
     if (!userId || isAdmin) {
       store.reset()
+      usePaymentStore.getState().reset()
       return
     }
 
@@ -35,6 +38,7 @@ export function useUserNotifications(): void {
       const s = useNotificationStore.getState()
       void s.loadRecent()
       void s.refreshCount()
+      void usePaymentStore.getState().refresh() // no-op when the payment store was never loaded
     }
     resync()
     const onFocus = () => {
@@ -52,6 +56,7 @@ export function useUserNotifications(): void {
       if (!parsed) return
       const added = useNotificationStore.getState().applyPush(parsed)
       if (added && shouldToast(added)) showNotificationToast(added)
+      if (added && isPaymentPush(added.serverType)) void usePaymentStore.getState().refresh()
     }
 
     const client = new Client({
@@ -80,6 +85,7 @@ export function useUserNotifications(): void {
       window.removeEventListener('focus', onFocus)
       void client.deactivate()
       useNotificationStore.getState().reset() // drop this user's data; late responses are ignored (epoch)
+      usePaymentStore.getState().reset() // same for the previous user's payment holds
     }
   }, [userId, isAdmin])
 }
