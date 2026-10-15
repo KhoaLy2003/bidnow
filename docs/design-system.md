@@ -385,7 +385,7 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | `--container-xl` | `1280px` | Standard desktop |
 | `--container-2xl` | `1440px` | Wide desktop |
 | `--container-auction-grid` | `1200px` | Auction listing grid max-width |
-| `--container-auction-detail` | `960px` | Single auction detail page |
+| `--container-auction-detail` | `1240px` | Single auction detail page |
 | `--container-sidebar` | `320px` | Bid history / filter sidebar |
 
 ### Auction Grid Breakpoints
@@ -397,9 +397,14 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | 1280px+ | 4 | 24px |
 
 ### Auction Detail Page Layout
-- Mobile: single column stack
-- Tablet+: images + details 60% / bid panel 40%
-- Desktop: images + details 65% / bid panel 35% (sticky)
+Storefront-style: photo on the left, title and bidding on the right.
+
+- Mobile / tablet (< 1024px): single column. Photo (thumbnails below it), then eyebrow, title, seller line and bid panel, then About, Specifications, Seller and Bid History.
+- Desktop (1024px+): two columns, photo `1fr` / title + bid panel `460px`, 56px gap. Below a divider, About / Specifications / Seller on the left and the Bid History card (`460px`) on the right.
+- `AuctionGallery`: thumbnail rail (76px) to the left of a square photo on `md+`; Save and Share sit on the photo, the `n / total` counter bottom-left.
+- Bid panel (`BidPanelLive`): `rounded-[20px]` card with a soft shadow. Order: "Current bid" + status badge, price + bid count link, "You're winning" / "You've been outbid" banner, `BidCountdown` (units, end time, elapsed-time bar), `BidForm` (−/+ input, quick-bid chips, Place bid), buy-now block, then wallet balance, deposit and auto-bid rows.
+- Deliberate departure from the Tesla migration notes in section 6: this page uses 20px card radii, 12px inputs/buttons and a soft shadow on the bid panel.
+- Display helpers (countdown units, elapsed progress, end-time label, quick-bid amounts) live in `lib/auction-display.ts`.
 
 ### Z-Index Scale
 | Token | Value | Usage |
@@ -517,7 +522,8 @@ shadcn's `--radius` drives its components. BidNow extends with a full scale:
 | BidHistory | **Custom** | Composes ScrollArea + Avatar |
 | StatusBadge | **Custom** | Extends shadcn Badge with auction variants |
 | AuctionCard | **Custom** | Composes shadcn Card + custom elements |
-| WalletBadge | **Custom** | Header wallet display |
+| SearchDialog | **Custom** | Header search: shadcn Dialog with recents and live results |
+| AccountMenu | **Custom** | Avatar menu: balance card, grouped links, theme, sign out |
 | NotificationBell | **Custom** | Base UI Popover with an unread badge (9+) |
 | BidForm | **Custom** | Composes shadcn Input + Button + Switch |
 | AuctionGrid | **Custom** | Responsive grid layout |
@@ -587,12 +593,11 @@ Format: `HH:MM:SS` (< 1 day), `Xd Xh` (longer). Anti-snipe label at critical: `"
 - Dividers: shadcn `<Separator>`
 - "Load more": shadcn `<Button variant="link" size="sm">`
 
-### WalletBadge (Header)
+### Wallet balance (Account menu)
 
-- Pill: `<Button variant="ghost">` styled as pill with wallet icon + mono balance
-- Low balance: swap to `text-[--color-warning-text] bg-[--color-warning-subtle]` + pulse
-- Deposit animation: `price-roll` on balance number
-- Click: opens shadcn `<Sheet side="right">` (WalletPanel)
+- The header has no balance chip. The balance lives in the account menu's balance card (label "Available", mono amount, icon-only eye button)
+- Privacy: the amount is masked (`••••••`) until the user clicks the eye. `useBalanceVisibilityStore` holds the choice; it is not persisted and is reset on sign out
+- Add Funds lives on `/wallet`, reached from the menu's Wallet item
 
 ### StatusBadge
 
@@ -635,18 +640,19 @@ Built on shadcn `<Avatar>`:
 
 ### Header / Navigation
 
-**Desktop (> 1024px):**
-- Sticky `<header>` — `h-16 bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
-- Scrolled: `backdrop-blur-sm` (add via scroll listener)
-- shadcn `<NavigationMenu>` for nav links
-- Center: shadcn `<Input>` with `<Search>` icon adornment, `max-w-[400px]`
-- Right: `<WalletBadge>` + `<NotificationBell>` + shadcn `<DropdownMenu>` (avatar) + `<Button>` ("Sell")
+**Desktop (≥ 768px):**
+- Sticky `<header>` — `bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
+- Bar: `h-[72px]`, `h-[60px]` once scrolled, plus a soft shadow. Logo | `NavLinks` | search trigger | actions
+- `NavLinks`: Browse and My bids (signed in) or Browse and How it works (guests). There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
+- Search trigger (`⌘K` / `Ctrl+K`) opens `SearchDialog`: recent searches and ending-soon lots when empty, debounced live results while typing
+- Right: `NotificationBell` + `AccountMenu` + `<Button variant="brand">` ("Sell", `/seller/auctions/new`). Guests get "Sign in" and "Join BidNow"
+- `AccountMenu`: identity, balance card (eye toggle), then My bids, Purchase history, My auctions | Wallet, Profile, Settings | theme switch | Sign out
 
-**Mobile (< 1024px):**
-- Compressed top bar; icon-only right side
-- Bottom nav: fixed `h-14 bg-background border-t border-border` with 5 tabs
-- Center "Sell" tab: `<Button variant="brand" size="icon" className="rounded-full -mt-4">` (no shadow)
-- Safe area: `pb-[env(safe-area-inset-bottom)]`
+**Mobile (< 768px):**
+- Top bar: logo, bell, avatar; the search trigger gets its own full-width row below
+- Bottom nav is a floating dock: `fixed inset-x-3 bottom-3 h-16 rounded-2xl border shadow-lg` with 5 tabs; the active tab gets a top bar
+- Center "Sell" tab: raised `<Button variant="brand">` circle (`-mt-6`)
+- Safe area: `bottom-[calc(0.75rem+env(safe-area-inset-bottom))]`; pages using the dock need `pb-24`
 
 ---
 
