@@ -63,7 +63,7 @@ A bidder who wins an auction, by bid or by Buy It Now, already gets a 48-hour pa
 - Any backend, migration or gateway change (including a payment status on the auction detail)
 - Real gateway (VNPay), withdrawals, platform fees
 - "Contact seller" stub, shipping and delivery steps in `BidPanelEnded`
-- Showing a paid auction as "Paid" after a page reload (see Known Limitations)
+- Showing a paid auction as "Paid" after a page reload (done in `2026-10-15-winner-payment-status-design.md`)
 
 ---
 
@@ -163,8 +163,8 @@ The "Contact seller" stub and the shipping steps are left as they are.
 
 ## Known Limitations (deliberate)
 
-- After a page reload, a paid auction reads "No payment due" instead of "Paid": the pending endpoint returns only unpaid holds and wallet transactions expose no auction reference. Fixing it needs a backend change (for example a payment status on the auction or hold lookup), which is out of scope.
-- "Preparing" and "paid or forfeited" are indistinguishable from the pending endpoint once the 30 s poll window ends; both fall through to `none`.
+- (Resolved by `2026-10-15-winner-payment-status-design.md`.) After a page reload a paid auction used to read "No payment due"; the panel now reads the hold's final state from the wallet status endpoint.
+- "Preparing" and "no hold exists" are indistinguishable once the 30 s poll window ends; both fall through to `none`. Paid, forfeited and cancelled are now told apart by the status endpoint.
 - The Payments due list issues one auction fetch per hold. The number of unpaid holds per user is expected to be small.
 - Top-up uses the mock deposit, which credits instantly with no limits. Real gateway behaviour (redirect, IPN callback, pending deposits) is Phase 2.
 - Auction-service still does not learn that the winner paid (`winner_paid_at`); this is an existing follow-up from WALLET-305.
