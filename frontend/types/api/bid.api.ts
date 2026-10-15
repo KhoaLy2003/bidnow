@@ -15,6 +15,16 @@ export interface PlaceBidResponse {
   extended: boolean
 }
 
+export interface BuyNowRequest {
+  auctionId: string
+}
+
+export interface BuyNowResponse {
+  auctionId: string
+  price: number
+  endedAt: string
+}
+
 export interface BidHistoryResponse {
   id: string
   auctionId: string
@@ -32,6 +42,7 @@ export type BidErrorCode =
   | 'AUCTION_NOT_OPEN'
   | 'BID_TOO_LOW'
   | 'BID_OWN_AUCTION'
+  | 'BUY_NOW_NOT_AVAILABLE'
   | 'SERVICE_UNAVAILABLE'
   | 'BID_INSUFFICIENT_BALANCE'
   | 'WALLET_NOT_ACTIVE'
