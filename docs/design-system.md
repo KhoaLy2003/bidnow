@@ -669,6 +669,24 @@ Filtering is live: there is no Search or Apply button. The URL is the source of 
 - **Category counts** are catalogue-wide live counts from `/public/category-counts`. They do not yet narrow with the other filters.
 - **Empty state:** offers one "Remove …" button per applied filter plus "Clear all filters".
 
+### Homepage (`/`)
+
+Concept: "The clock is the auctioneer." The page shows real-time bidding instead of describing it. Sections, top to bottom:
+
+- **Hero (`components/home/hero/`):** full-bleed, always dark (the section carries the `dark` class so the dark tokens apply in either theme). Left: pill, display headline, lead, CTAs, three facts. Right (`HeroLive`): a 3D watch (`WatchStage` > `WatchScene`, React Three Fiber) over a frosted `HeroLotCard`. Behind it, a CSS dial (`.hero-dial-*` in `globals.css`) with a 60-tick bezel and a stepping second hand.
+- **Live data:** the hero follows the soonest-ending running auction (`pickHeroLot`). `useLiveLot` subscribes to `/topic/auctions/{id}` and applies the same reducers as the detail page, but keeps its state local (no `auctionStore`, no toasts). The price and countdown use NumberFlow; a new bid shows a "bidder bid $X" chip, and an end-time extension shows "+5:00 added".
+- **Watch behaviour:** the three hands follow the lot's countdown (or the wall clock when no lot is running). A 60-segment LED ring is full until the final 5 minutes, then drains, coloured calm, warning (≤5 min) or critical (≤1 min) like `useCountdown`. A new bid swells the watch and sends a ring out; an extension spins it once. It leans toward the pointer.
+- **Loading and fallbacks:** three.js is loaded with `next/dynamic` (`ssr: false`) and kept out of the initial bundle. A static SVG dial (`WatchPoster`) shows while loading and replaces the scene for `prefers-reduced-motion`, no WebGL 2, or a scene error. The scene pauses while off screen. Lighting is procedural (`Lightformer`), so there is no HDR download.
+- **Live tape (`LiveTape`):** a bezel-style ruler and a marquee of the next lots to close (title, current bid, bid count). It pauses on hover and for reduced motion; repeated entries are `inert`.
+- **Closing next (`ClosingQueue`):** the five soonest-ending lots as rows (thumbnail, title, current bid, live clock with a time bar, action). The tone is written out as well as coloured: Live, Ending soon (≤5 min), Final minute (≤1 min), Closed. Logic lives in `lib/home-queue.ts`.
+- **How a live auction works (`HowItWorks`):** a timeline of open bidding, the last 2 minutes (anti-snipe zone) and the +5:00 extension, then four numbered steps. Widths are illustrative. The 2 minute and 5 minute values are the documented defaults of `auction.anti-snipe.*`; the 48 hour payment window is also from the docs.
+- **Categories (`CategoryRooms`):** a bento grid, one tile per category with its live count from `/public/category-counts` (falls back to "Browse"). Icons are Lucide.
+- **Closing CTA (`CTASection`):** "Bid. Win. Repeat." with a bidder card (guests only) and a seller card.
+- **FAQ (`FAQAccordion`):** the shared Base UI accordion, display-font questions, first item open.
+- `Section` / `SectionHeading` (`components/home/Section.tsx`) give every band the same container (`--container-xl`), vertical rhythm, mono eyebrow with an amber dot, and optional tinted background.
+- The old stats strip (50K+ users, $2.5M+, 4.8 rating), "Featured Picks" grid and "Why Trust BidNow?" cards were removed.
+- **Libraries:** `three`, `@react-three/fiber`, `@react-three/drei`, `motion`, `@number-flow/react`.
+
 ---
 
 ## 9. Icons
