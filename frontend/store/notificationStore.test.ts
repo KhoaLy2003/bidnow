@@ -160,6 +160,83 @@ describe('notificationStore', () => {
     expect(store().unreadCount).toBe(1)
   })
 
+  describe('loadMore', () => {
+    const page = (ids: string[], hasNext: boolean) =>
+      ({ data: { data: ids.map((id, i) => ({ ...dto(id), createdAt: new Date(Date.UTC(2026, 9, 1, 10 - i)).toISOString() })), pagination: { hasNext } } }) as never
+
+    it('loadRecent records whether older notifications exist', async () => {
+      service.list.mockResolvedValue(page(['a'], true))
+      await store().loadRecent()
+      expect(store().hasMore).toBe(true)
+    })
+
+    it('appends the next page, dedupes overlap and tracks hasNext', async () => {
+      service.list.mockResolvedValueOnce(page(['a', 'b'], true))
+      await store().loadRecent()
+      service.list.mockResolvedValueOnce({ data: { data: [dto('b'), { ...dto('c'), createdAt: '2026-09-01T00:00:00Z' }], pagination: { hasNext: false } } } as never)
+
+      expect(await store().loadMore()).toBe(true)
+
+      expect(service.list).toHaveBeenLastCalledWith({ page: 1, size: RECENT_LIMIT })
+      expect(store().notifications.map((n) => n.id)).toEqual(['a', 'b', 'c'])
+      expect(store().nextPage).toBe(2)
+      expect(store().hasMore).toBe(false)
+      expect(store().loadingMore).toBe(false)
+    })
+
+    it('does nothing when there is no more', async () => {
+      expect(await store().loadMore()).toBe(true)
+      expect(service.list).not.toHaveBeenCalled()
+    })
+
+    it('keeps the list and resolves false on failure so the user can retry', async () => {
+      useNotificationStore.setState({ hasMore: true })
+      service.list.mockRejectedValue({ status: 500 })
+
+      expect(await store().loadMore()).toBe(false)
+      expect(store().hasMore).toBe(true)
+      expect(store().loadingMore).toBe(false)
+    })
+
+    it('keeps loaded pages through a resync and uncapped pushes', async () => {
+      service.list.mockResolvedValueOnce(page(Array.from({ length: RECENT_LIMIT }, (_, i) => `r${i}`), true))
+      await store().loadRecent()
+      service.list.mockResolvedValueOnce({ data: { data: [{ ...dto('old'), createdAt: '2026-09-01T00:00:00Z' }], pagination: { hasNext: false } } } as never)
+      await store().loadMore()
+
+      store().applyPush({ type: 'NOTIFICATION', notification: { ...dto('new'), createdAt: '2026-10-02T00:00:00Z' }, unreadCount: 1 })
+      service.list.mockResolvedValueOnce(page(Array.from({ length: RECENT_LIMIT }, (_, i) => `r${i}`), true))
+      await store().loadRecent()
+
+      expect(store().notifications).toHaveLength(RECENT_LIMIT + 2)
+      expect(store().hasMore).toBe(false)
+    })
+
+    it('a push that pushes an item out of the capped list marks more available', () => {
+      useNotificationStore.setState({
+        notifications: Array.from({ length: RECENT_LIMIT }, (_, i) => ({
+          id: `old-${i}`, type: 'system' as const, serverType: 'X', title: '', message: '', isRead: true, createdAt: new Date(),
+        })),
+      })
+      store().applyPush({ type: 'NOTIFICATION', notification: dto('new'), unreadCount: 1 })
+      expect(store().hasMore).toBe(true)
+    })
+
+    it('ignores a response that resolves after reset()', async () => {
+      useNotificationStore.setState({ hasMore: true })
+      let resolve!: (v: never) => void
+      service.list.mockReturnValue(new Promise<never>((r) => { resolve = r }))
+
+      const pending = store().loadMore()
+      store().reset()
+      resolve(page(['a'], false))
+      await pending
+
+      expect(store().notifications).toEqual([])
+      expect(store().nextPage).toBe(1)
+    })
+  })
+
   describe('loadRecent merge', () => {
     it('keeps a push applied while the load is pending', async () => {
       let resolve: (v: unknown) => void = () => {}
