@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown } from 'lucide-react'
+import { ArrowUpDown, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -21,11 +21,13 @@ export function SortButton({ value, onChange }: SortButtonProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" className="gap-1.5 shrink-0" />
+          <Button variant="outline" className="h-10 shrink-0 gap-2 px-3.5" aria-label={`Sort: ${SORT_LABELS[value]}`} />
         }
       >
-        <span className="hidden sm:inline">Sort:</span> {SORT_LABELS[value]}
-        <ChevronDown className="size-3.5 text-muted-foreground" />
+        <ArrowUpDown aria-hidden className="size-4 text-muted-foreground" />
+        <span className="hidden font-normal text-muted-foreground sm:inline">Sort</span>
+        <span>{SORT_LABELS[value]}</span>
+        <ChevronDown aria-hidden className="size-4" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">

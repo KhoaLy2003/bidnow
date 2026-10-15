@@ -523,6 +523,7 @@ shadcn's `--radius` drives its components. BidNow extends with a full scale:
 | StatusBadge | **Custom** | Extends shadcn Badge with auction variants |
 | AuctionCard | **Custom** | Composes shadcn Card + custom elements |
 | SearchDialog | **Custom** | Header search: shadcn Dialog with recents and live results |
+| BrowseClient + filter bar | **Custom** | Browse page controls: `BrowseSearchField`, `CategoryChips`, `PriceFilter` (Popover), `FilterToggle`, `SortButton`, `ActiveFilters`, `BrowseFiltersSheet` (mobile Sheet) |
 | AccountMenu | **Custom** | Avatar menu: balance card, grouped links, theme, sign out |
 | NotificationBell | **Custom** | Base UI Popover with an unread badge (9+) |
 | BidForm | **Custom** | Composes shadcn Input + Button + Switch |
@@ -653,6 +654,20 @@ Built on shadcn `<Avatar>`:
 - Bottom nav is a floating dock: `fixed inset-x-3 bottom-3 h-16 rounded-2xl border shadow-lg` with 5 tabs; the active tab gets a top bar
 - Center "Sell" tab: raised `<Button variant="brand">` circle (`-mt-6`)
 - Safe area: `bottom-[calc(0.75rem+env(safe-area-inset-bottom))]`; pages using the dock need `pb-24`
+
+### Browse page (`/auctions`)
+
+Filtering is live: there is no Search or Apply button. The URL is the source of truth and the page is server-rendered; `useBrowseQuery` (`hooks/useBrowseQuery.ts`) keeps the controls in step with it.
+
+- **Draft vs URL:** controls read a local draft so they respond instantly. The draft is pushed with `router.replace(url, { scroll: false })` inside a transition, then the server re-renders the results. URL changes made elsewhere (back button, header search, links) replace the draft. `BrowseClient` must not be given a `key`, or typing would lose focus.
+- **Timing:** search text, the price slider and typed prices commit after a 300 ms pause (`BROWSE_DEBOUNCE_MS`); category, toggles, sort, presets and removing a chip commit at once; Enter in the search box commits at once.
+- **Layout, top to bottom:** title and live count; large search field (spinner while updating, clear button); category chips with counts; filter bar (Price popover, Ending soon, Buy Now, sort, grid/list switch); result count with one removable chip per applied filter and "Clear all"; results.
+- **Loading:** while updating, a 2px brand progress bar slides across the top of the filter bar and the results dim to 60%. No skeleton flash.
+- **Price filter:** cubic slider (`lib/browse-price.ts`, 0-100 maps to $0-$20,000, top handle = no maximum), typed min/max boxes, and four preset ranges. A maximum of `DEFAULT_MAX_PRICE` means "no maximum" and is omitted from the URL.
+- **Ending soon** means ends within the hour (`endingSoon=true` to the API).
+- **Mobile (< 768px):** the Price control moves into a bottom Sheet opened by a "Filters (n)" pill (n counts price, ending soon and buy now). The sheet's "Show N auctions" button only closes it; changes already applied behind it. Category chips scroll horizontally.
+- **Category counts** are catalogue-wide live counts from `/public/category-counts`. They do not yet narrow with the other filters.
+- **Empty state:** offers one "Remove …" button per applied filter plus "Clear all filters".
 
 ---
 

@@ -667,6 +667,12 @@
   100% { transform: scale(1.6); opacity: 0; }
 }
 
+/* Indeterminate progress bar sliding across the browse filter bar */
+@keyframes progress-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* ============================================================
    Global base styles
    ============================================================ */
