@@ -42,11 +42,11 @@ Describe all roles that interact with the system.
 - A bidder's **first bid** on an auction locks the auction's deposit in their wallet (implicit registration); it fails with an insufficient-balance error if the wallet cannot cover it.
 - **Auto-bidding** (Phase 2, not yet implemented): Users can set a maximum bid value for the system to bid automatically.
 - **Anti-Sniping**: An accepted bid placed with **strictly less than 120 seconds** remaining extends the auction end time by **300 seconds** (added to the current end time). There is no cap on the number of extensions; each one is recorded and broadcast live.
-- **Buy It Now**: Users can instantly purchase an item at the specified price, immediately ending the auction.
+- **Buy It Now**: While an auction is active and its current price is below the seller's optional Buy It Now price, a buyer can confirm a purchase at that price. It locks the auction deposit, ends the auction immediately with the buyer as winner, and starts the normal 48-hour payment window. Other bidders' deposits are refunded.
 
 ### 5. Auction Lifecycle & Closing
 - System must automatically close auctions when the timer expires.
-- System must identify the winner (highest bidder) and notify them.
+- System must identify the winner (the highest bidder, or the Buy It Now buyer) and notify them.
 - The winner is given a specific window (e.g., 24-48 hours) to complete the full payment from their wallet.
 - If payment is not made, the system marks the auction as "Failed" and deducts the deposit.
 
