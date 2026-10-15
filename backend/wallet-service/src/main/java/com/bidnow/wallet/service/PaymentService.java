@@ -1,6 +1,7 @@
 package com.bidnow.wallet.service;
 
 import com.bidnow.wallet.dto.response.ConfirmPaymentResponse;
+import com.bidnow.wallet.dto.response.PaymentStatusResponse;
 import com.bidnow.wallet.dto.response.PendingPaymentResponse;
 
 import java.math.BigDecimal;
@@ -14,6 +15,9 @@ public interface PaymentService {
     void cancelPaymentHold(UUID auctionId);
 
     List<PendingPaymentResponse> getPendingPayments(UUID userId);
+
+    /** Status of the hold for an auction, for its winner or seller; anyone else, or no hold, is a 404. Read-only. */
+    PaymentStatusResponse getPaymentStatus(UUID callerUserId, UUID auctionId);
 
     ConfirmPaymentResponse confirmPayment(UUID callerUserId, UUID auctionId);
 

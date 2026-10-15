@@ -16,6 +16,7 @@ import com.bidnow.wallet.domain.enums.PaymentHoldStatus;
 import com.bidnow.wallet.domain.enums.TransactionStatus;
 import com.bidnow.wallet.domain.enums.TransactionType;
 import com.bidnow.wallet.domain.enums.WalletStatus;
+import com.bidnow.wallet.dto.response.PaymentStatusResponse;
 import com.bidnow.wallet.dto.response.PendingPaymentResponse;
 import com.bidnow.wallet.kafka.PaymentApplicationEvent;
 import com.bidnow.wallet.repository.AuctionCancellationRepository;
@@ -420,6 +421,70 @@ class PaymentServiceImplTest {
         assertThat(second.getHoursLeft()).isEqualTo(10);
         assertThat(second.isExpired()).isFalse();
         assertThat(second.getDeadline()).isEqualTo(open.getDeadline());
+    }
+
+    // ── getPaymentStatus ──────────────────────────────────────────────────────
+
+    @Test
+    void getPaymentStatus_winnerSeesEveryStatus() {
+        for (PaymentHoldStatus s : PaymentHoldStatus.values()) {
+            PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                    LocalDateTime.now().plusHours(1), s);
+            when(paymentHoldRepository.findByAuctionId(auctionId)).thenReturn(Optional.of(h));
+
+            PaymentStatusResponse result = paymentService.getPaymentStatus(winnerUserId, auctionId);
+
+            assertThat(result.getAuctionId()).isEqualTo(auctionId);
+            assertThat(result.getStatus()).isEqualTo(s);
+            assertThat(result.getTotalAmount()).isEqualByComparingTo("500.00");
+        }
+    }
+
+    @Test
+    void getPaymentStatus_sellerSeesStatus() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().plusHours(1), PaymentHoldStatus.COMPLETED);
+        when(paymentHoldRepository.findByAuctionId(auctionId)).thenReturn(Optional.of(h));
+
+        PaymentStatusResponse result = paymentService.getPaymentStatus(sellerUserId, auctionId);
+
+        assertThat(result.getStatus()).isEqualTo(PaymentHoldStatus.COMPLETED);
+        assertThat(result.getTotalAmount()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void getPaymentStatus_otherUser_isNotFoundAndLeaksNothing() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().plusHours(1), PaymentHoldStatus.PENDING_PAYMENT);
+        when(paymentHoldRepository.findByAuctionId(auctionId)).thenReturn(Optional.of(h));
+        UUID stranger = UUID.randomUUID();
+
+        assertThatThrownBy(() -> paymentService.getPaymentStatus(stranger, auctionId))
+                .isInstanceOf(NotFoundException.class)
+                .extracting("errorCode").isEqualTo("PAYMENT_HOLD_NOT_FOUND");
+    }
+
+    @Test
+    void getPaymentStatus_noHold_isNotFound() {
+        when(paymentHoldRepository.findByAuctionId(auctionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> paymentService.getPaymentStatus(winnerUserId, auctionId))
+                .isInstanceOf(NotFoundException.class)
+                .extracting("errorCode").isEqualTo("PAYMENT_HOLD_NOT_FOUND");
+    }
+
+    @Test
+    void getPaymentStatus_isAPlainRead_takesNoLockAndWritesNothing() {
+        PaymentHold h = hold("500.00", "50.00", "450.00", true, null,
+                LocalDateTime.now().plusHours(1), PaymentHoldStatus.COMPLETED);
+        when(paymentHoldRepository.findByAuctionId(auctionId)).thenReturn(Optional.of(h));
+
+        paymentService.getPaymentStatus(winnerUserId, auctionId);
+
+        verify(paymentHoldRepository, never()).findByAuctionIdForUpdate(any());
+        verify(paymentHoldRepository, never()).findByAuctionIdForUpdateSkipLocked(any());
+        verify(paymentHoldRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(walletRepository, transactionRepository, eventPublisher);
     }
 
     // ── confirmPayment ────────────────────────────────────────────────────────
