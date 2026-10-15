@@ -1,6 +1,6 @@
 'use client'
 
-import { Trophy, Bot } from 'lucide-react'
+import { Trophy, Bot, Loader2 } from 'lucide-react'
 import { useHasMounted } from '@/hooks/useHasMounted'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
@@ -12,12 +12,15 @@ import { cn } from '@/lib/utils'
 
 interface BidHistoryProps {
   items:      BidHistoryItem[]
+  /** Total bids on the auction, for the "Showing X of Y" line. */
+  total?:     number
   onLoadMore?: () => void
   hasMore?:   boolean
+  isLoading?: boolean
   className?: string
 }
 
-export function BidHistory({ items, onLoadMore, hasMore, className }: BidHistoryProps) {
+export function BidHistory({ items, total, onLoadMore, hasMore, isLoading, className }: BidHistoryProps) {
   // Relative time depends on Date.now(); render it only after hydration to avoid a server/client mismatch.
   const hasMounted = useHasMounted()
 
@@ -77,10 +80,23 @@ export function BidHistory({ items, onLoadMore, hasMore, className }: BidHistory
         </ul>
       </ScrollArea>
 
-      {hasMore && (
-        <Button variant="link" size="sm" onClick={onLoadMore} className="self-center">
-          Load more
-        </Button>
+      {(hasMore || isLoading) && (
+        <div className="flex flex-col items-center gap-2 border-t pt-3 pb-1">
+          {total !== undefined && total >= items.length && (
+            <p className="font-mono text-xs text-muted-foreground" aria-live="polite">
+              Showing {items.length} of {total} bids
+            </p>
+          )}
+          <Button
+            variant="outline"
+            onClick={onLoadMore}
+            disabled={isLoading}
+            className="h-10 rounded-full px-5 text-[13px] font-medium"
+          >
+            {isLoading && <Loader2 className="size-4 animate-spin" aria-hidden />}
+            {isLoading ? 'Loading…' : 'Load more'}
+          </Button>
+        </div>
       )}
     </div>
   )

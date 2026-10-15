@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { BadgeCheck } from 'lucide-react'
 import { Header }   from '@/components/layout/Header'
 import { Footer }   from '@/components/layout/Footer'
 import { BottomNav } from '@/components/layout/BottomNav'
-import { Separator } from '@/components/ui/separator'
-import { StatusBadge }      from '@/components/auction/StatusBadge'
 import { AuctionGallery }   from '@/components/auction/AuctionGallery'
 import { BidPanel }         from '@/components/auction/BidPanel'
 import { ItemSpecs }        from '@/components/auction/ItemSpecs'
@@ -40,45 +40,59 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
   return (
     <>
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-detail)] px-4 py-8 pb-24 md:pb-8">
+      <main className="flex-1 mx-auto w-full max-w-[var(--container-auction-detail)] px-4 py-5 pb-24 md:px-6 md:pb-14">
         <AuctionLiveBridge auction={auction} initialBids={firstBidPage.items} />
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6" aria-label="Breadcrumb">
-          <span>Browse</span>
-          <span>›</span>
-          <span>{auction.categoryName}</span>
-          <span>›</span>
-          <span className="text-foreground truncate max-w-[200px]">{auction.title}</span>
+        <nav className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="Breadcrumb">
+          <Link href="/auctions" className="hover:text-foreground">Browse</Link>
+          <span aria-hidden>›</span>
+          <Link href={`/auctions?category=${auction.categoryId}`} className="hover:text-foreground">
+            {auction.categoryName}
+          </Link>
+          <span aria-hidden>›</span>
+          <span className="text-foreground truncate max-w-[240px]">{auction.title}</span>
         </nav>
 
-        {/* Title row */}
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <h1 className="font-display font-medium text-[length:var(--font-size-2xl)] md:text-[2.25rem] leading-tight tracking-tight">
-            {auction.title}
-          </h1>
-          <StatusBadge status={effectiveStatus} className="shrink-0 mt-1" />
-        </div>
-
-        {/* Meta row */}
-        <p className="text-[11px] font-mono uppercase tracking-wide text-muted-foreground mb-6">
-          {auction.categoryName} · Listed {formatRelativeTime(auction.startsAt)}
-        </p>
-
-        {/* Gallery */}
-        <div className="mb-8">
+        {/* Photo on the left, title and bidding on the right */}
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:items-start lg:gap-14">
           <AuctionGallery images={auction.images} title={auction.title} />
+
+          <div className="flex min-w-0 flex-col">
+            <p className="mb-2.5 text-[11px] font-mono uppercase tracking-wide text-muted-foreground">
+              {auction.categoryName} · Listed {formatRelativeTime(auction.startsAt)}
+            </p>
+            <h1 className="font-display font-semibold text-[length:var(--font-size-2xl)] md:text-[2rem] leading-[1.15] tracking-tight">
+              {auction.title}
+            </h1>
+
+            {auction.seller ? (
+              <p className="mt-3.5 mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+                <span>
+                  Sold by{' '}
+                  <a href="#seller" className="font-semibold text-foreground hover:underline">
+                    {auction.seller.name}
+                  </a>
+                </span>
+                <span className="flex items-center gap-1 font-medium text-[var(--color-success-text)]">
+                  <BadgeCheck className="size-3.5" aria-hidden />
+                  Verified Seller
+                </span>
+              </p>
+            ) : (
+              <div className="h-5" />
+            )}
+
+            <BidPanel auction={auction} />
+          </div>
         </div>
 
-        {/* Two-column body */}
-        <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_360px] md:gap-8 md:items-start mb-8">
-
-          <div className="order-2 md:order-1 flex flex-col gap-8">
-            <section>
-              <p className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground mb-3">
-                About this item
-              </p>
-              <p className="text-sm leading-relaxed text-muted-foreground max-w-prose">
+        {/* Details on the left, bid history on the right */}
+        <div className="mt-14 grid gap-12 border-t pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:items-start lg:gap-14">
+          <div className="flex flex-col gap-12">
+            <section id="details">
+              <h2 className="font-display text-2xl font-semibold tracking-tight mb-3.5">About this item</h2>
+              <p className="max-w-prose whitespace-pre-line text-[15px] leading-[1.7] text-muted-foreground">
                 {auction.description}
               </p>
             </section>
@@ -87,14 +101,8 @@ export default async function AuctionDetailPage({ params }: AuctionDetailPagePro
             <SellerCard seller={auction.seller} />
           </div>
 
-          <div className="order-1 md:order-2 md:sticky md:top-20 md:self-start">
-            <BidPanel auction={auction} />
-          </div>
+          <LiveBidHistory auction={auction} initialBids={firstBidPage.items} initialHasMore={firstBidPage.hasNext} />
         </div>
-
-        <Separator className="mb-8" />
-
-        <LiveBidHistory auction={auction} initialBids={firstBidPage.items} initialHasMore={firstBidPage.hasNext} />
       </main>
       <Footer />
       <BottomNav />

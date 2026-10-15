@@ -8,7 +8,6 @@ import { useCountdown } from '@/hooks/useCountdown'
 import { formatCurrency } from '@/lib/format'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { cn } from '@/lib/utils'
-import { PanelFooter } from './PanelFooter'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelUpcomingProps {
@@ -25,7 +24,7 @@ export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
   })
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden flex flex-col">
+    <div className="rounded-[20px] border bg-card overflow-hidden flex flex-col shadow-[0_1px_2px_rgb(20_22_26/0.04),0_12px_32px_rgb(20_22_26/0.06)]">
       {/* Panel header */}
       <div className="flex items-center justify-between px-[18px] pt-[14px]">
         <StatusBadge status={AuctionStatus.Scheduled} />
@@ -93,8 +92,6 @@ export function BidPanelUpcoming({ auction }: BidPanelUpcomingProps) {
           }
         </button>
       </div>
-
-      <PanelFooter />
     </div>
   )
 }
