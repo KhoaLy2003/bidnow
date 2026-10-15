@@ -18,7 +18,9 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        // max-h-[inherit] lets a max-height set on the root actually clip the viewport; `size-full` alone
+        // resolves against an auto-height root, so the content just grows and never scrolls.
+        className="size-full max-h-[inherit] rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
@@ -39,14 +41,14 @@ function ScrollBar({
       data-orientation={orientation}
       orientation={orientation}
       className={cn(
-        "flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
+        "absolute flex touch-none p-px transition-colors select-none data-horizontal:bottom-0 data-horizontal:left-0 data-horizontal:h-2.5 data-horizontal:w-full data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:top-0 data-vertical:right-0 data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
         className
       )}
       {...props}
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
+        className="relative flex-1 rounded-full bg-muted-foreground/40"
       />
     </ScrollAreaPrimitive.Scrollbar>
   )
