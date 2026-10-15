@@ -1,65 +1,66 @@
 # Winner Payment & Forfeit Flow
 
+Applies to a win by bid or by Buy It Now. Phase 1: wallet top-up is a mock (instant credit); real gateway is Phase 2. There is no platform fee on a sale.
+
 ```mermaid
 sequenceDiagram
     autonumber
     actor Winner
     participant App as Frontend
     participant GW as API Gateway
-    participant WS as Wallet Service
-    participant DB_WS as Wallet DB
     participant AS as Auction Service
-    participant MQ as Message Broker
+    participant MQ as Kafka
+    participant WS as Wallet Service
     participant NS as Media Service
 
-    Note over Winner, NS: Winner Payment Flow (within 48h deadline)
-    
-    Winner->>App: Clicks "Pay Now" for won auction
-    App->>GW: POST /api/v1/payments/auctions/{id}
-    GW->>WS: Route request
-    
-    WS->>DB_WS: Check HOLD transaction for Winner/Auction
-    WS->>DB_WS: Check Winner available balance >= winning_bid_amount
-    
-    alt Insufficient Balance
-        WS-->>GW: 400 Bad Request (Insufficient funds)
-        GW-->>App: Prompt to Top-up Wallet
-    else Sufficient Balance
-        %% Process Payment
-        WS->>DB_WS: Deduct winning_bid_amount from Winner Wallet
-        WS->>DB_WS: Calculate Platform Fee (e.g., 5%)
-        WS->>DB_WS: Transfer (winning_bid_amount - fee) to Seller Wallet
-        WS->>DB_WS: Transfer fee to Platform Wallet
-        WS->>DB_WS: Update HOLD transaction to COMPLETED
-        WS->>AS: PUT /api/v1/auctions/{id}/status (Update status to COMPLETED)
-        AS->>DB_AS: Update Auction Status = COMPLETED
-        AS-->>WS: 200 OK
-        WS->>MQ: Publish PAYMENT_COMPLETED event
-        
-        WS-->>GW: 200 OK (Payment Success)
-        GW-->>App: Display Success UI
-        
-        %% Async Notifications
-        par Async Notifications
-            MQ-->>NS: Consume PAYMENT_COMPLETED
-            NS->>NS: Send Emails (Payment Receipt to Winner, Payout Alert to Seller)
-        end
-    
-    Note over WS, AS: Automated Forfeit Flow (If deadline missed)
-    
-    loop Every Minute (CRON in Wallet Service)
-        WS->>DB_WS: Find PENDING_PAYMENT transactions past deadline
-        
-        opt Expired Payment Found
-            WS->>DB_WS: Deduct locked deposit from Winner Wallet (Penalty)
-            WS->>DB_WS: Create FORFEIT transaction (Transfer to Seller or Platform)
-            WS->>DB_WS: Update transaction status = FAILED
-            WS->>AS: PUT /api/v1/auctions/{id}/status (Update status to FAILED/SELECT_NEXT)
-            AS->>DB_AS: Update Auction Status
-            AS-->>WS: 200 OK
-            WS->>MQ: Publish PAYMENT_FAILED / DEPOSIT_FORFEITED
-            
-            MQ-->>NS: Consume event -> Notify Winner (Penalty applied), Notify Seller (Auction failed)
-        end
+    Note over Winner, NS: A. Auction closes (scheduler, admin or Buy It Now)
+    AS->>MQ: AuctionEndedEvent (auction-ended-topic): winnerId, winningBidAmount
+    MQ->>WS: Consume
+    WS->>WS: Refund every other LOCKED deposit (AUCTION_LOST), the winner's deposit stays LOCKED
+    WS->>WS: Create payment hold: deposit applied, remaining = price − deposit, deadline = now + 48h
+    alt available balance ≥ remaining
+        WS->>WS: Move remaining from available to locked (HOLD), fundsHeld = true
+    else balance too low
+        WS->>WS: No money moves, fundsHeld = false
+    end
+    WS->>MQ: PaymentEvent REQUIRED (payment-event-topic)
+    MQ->>NS: Consume
+    NS-->>Winner: Payment-required email and in-app PAYMENT_REQUIRED push
+
+    Note over Winner, NS: B. Winner pays (auction page "Proceed to payment" or /wallet "Payments due")
+    Winner->>App: Opens the auction page or /wallet
+    App->>GW: GET /api/v1/wallets/payments/pending
+    GW->>WS: Route
+    WS-->>App: Holds: remaining, fundsHeld, hoursLeft, expired
+    opt fundsHeld = false and available < remaining
+        Winner->>App: Adds funds in the pay dialog (mock top-up)
+        App->>GW: POST /api/v1/wallets/deposit
+        GW->>WS: Route
+        WS-->>App: Balance credited immediately
+    end
+    Winner->>App: Clicks Pay
+    App->>GW: POST /api/v1/wallets/payments/confirm {auctionId}
+    GW->>WS: Route
+    alt expired, already paid, or insufficient balance
+        WS-->>App: 400 PAYMENT_DEADLINE_EXPIRED / 409 PAYMENT_NOT_PENDING / 400 INSUFFICIENT_BALANCE
+    else valid
+        WS->>WS: Lock hold, then both wallets in ascending id order
+        WS->>WS: Winner pays the remainder, deposit lock RELEASED, any deposit excess refunded
+        WS->>WS: Seller credited the full winning price (no fee), hold COMPLETED
+        WS->>MQ: PaymentEvent COMPLETED
+        WS-->>App: 200 ConfirmPaymentResponse
+        MQ->>NS: Consume
+        NS-->>Winner: Payment receipt (email, in-app PAYMENT_RECEIVED push)
+    end
+
+    Note over WS, NS: C. Deadline missed (ForfeitScheduler, every 5 minutes)
+    loop each PENDING_PAYMENT hold past its deadline
+        WS->>WS: Release the held remainder back to available (HOLD_CANCEL)
+        WS->>WS: Forfeit the winner's deposit to the platform wallet (FORFEIT), hold FORFEITED
+        WS->>MQ: PaymentEvent FAILED
+        MQ->>NS: Consume
+        NS-->>Winner: Payment-failed notice (in-app PAYMENT_FAILED push)
     end
 ```
+
+The frontend refetches pending payments when a `PAYMENT_REQUIRED`, `PAYMENT_RECEIVED` or `PAYMENT_FAILED` push arrives. Auction-service does not yet learn that the winner paid (`winner_paid_at`); see the WALLET-305 follow-ups.

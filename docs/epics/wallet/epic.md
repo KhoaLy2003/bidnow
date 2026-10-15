@@ -654,6 +654,19 @@ At the end of this epic (Phase 1), the BidNow platform will have:
 - **Auction Epic:** [epic-1.md](../auction/epic-1.md) — Wallet integration points
 - **Draft Discussion:** [draft.md](./draft.md) — Vietnamese design exploration (reference only)
 
+## Frontend: Winner Payment UI (as built, Phase 1)
+
+A winner pays from either of two places, both backed by `GET /api/v1/wallets/payments/pending` and `POST /api/v1/wallets/payments/confirm`:
+
+- **Auction page:** in the Won panel, `PaymentStatusBlock` shows the remainder and a "Proceed to payment" button that opens `PayNowDialog`. States: loading, error (retry), preparing (fresh win, hold not created yet; polls 3 s for up to 30 s), due, expired, paid, none.
+- **Wallet page:** a "Payments due" list (auction image and title, remainder, time left, Pay).
+
+`PayNowDialog` shows price, deposit applied, remainder and time left. When the funds are not yet held and the available balance is short, it shows the shortfall and an inline mock top-up (`POST /api/v1/wallets/deposit`) before Pay is enabled. State is shared through `paymentStore`, kept fresh by `PAYMENT_REQUIRED` / `PAYMENT_RECEIVED` / `PAYMENT_FAILED` notification pushes.
+
+**Known limitation:** after a page reload a paid auction reads "No payment due" rather than "Paid", because the pending endpoint returns only unpaid holds and wallet transactions expose no auction reference. Fixing it needs a backend change.
+
+Design: `docs/superpowers/specs/2026-10-15-winner-payment-ui-design.md`.
+
 ---
 
 ## Document History
