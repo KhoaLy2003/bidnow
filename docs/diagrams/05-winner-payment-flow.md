@@ -74,3 +74,5 @@ sequenceDiagram
 ```
 
 The frontend refetches pending payments when a `PAYMENT_REQUIRED`, `PAYMENT_RECEIVED` or `PAYMENT_FAILED` push arrives. A returning winner's panel reads the final state from `GET /api/v1/wallets/payments/{auctionId}`: wallet-service owns the payment facts; auction-service keeps a projection of them. `PaymentEventConsumer` consumes `payment-event-topic`: `REQUIRED` sets `payment_deadline`, `COMPLETED` sets `winner_paid_at`, and `FAILED` (forfeit) moves the auction `COMPLETED → FAILED`.
+
+**Seller view.** `GET /api/v1/auctions/public/{id}` (`AuctionDetailResponse`) returns `paymentDeadline` and `winnerPaidAt` (ISO instants, `null` until set), so the seller's manage page can show how long the winner has left to pay. The seller's payment status (`PENDING_PAYMENT`, `COMPLETED`, `CANCELLED`, `FORFEITED`) still comes from `GET /api/v1/wallets/payments/{auctionId}`, which also answers for the auction's seller; the page prefers it over `winnerPaidAt`, a projection. Both new fields are readable by anyone who can read the auction detail, because the endpoint is public.

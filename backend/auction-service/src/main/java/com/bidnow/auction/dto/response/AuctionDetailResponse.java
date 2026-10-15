@@ -75,6 +75,12 @@ public class AuctionDetailResponse {
     @Schema(description = "Final winner user ID")
     private UUID winnerId;
 
+    @Schema(description = "Deadline for the winner to pay; set once wallet-service creates the payment hold, null before then")
+    private OffsetDateTime paymentDeadline;
+
+    @Schema(description = "When the winner's payment was confirmed; null until paid")
+    private OffsetDateTime winnerPaidAt;
+
     @Schema(description = "Auction images")
     private List<AuctionImageResponse> images;
 
