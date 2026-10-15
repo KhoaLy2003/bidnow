@@ -33,8 +33,8 @@ This document defines the database schema for the Auction Service in the BidNow 
 | `extension_count`     | `INTEGER`                  | `NOT NULL, DEFAULT 0`                          | Number of times auction was extended due to anti-sniping        |
 | `completed_at`        | `TIMESTAMP WITH TIME ZONE` | `NULL`                                         | Actual completion timestamp                                     |
 | `winner_id`           | `BIGINT`                   | `NULL`                                         | Final winner user ID (set when auction closes)                  |
-| `winner_paid_at`      | `TIMESTAMP WITH TIME ZONE` | `NULL`                                         | Timestamp when winner completed payment                         |
-| `payment_deadline`    | `TIMESTAMP WITH TIME ZONE` | `NULL`                                         | Deadline for winner to pay (e.g., 24-48 hours after completion) |
+| `winner_paid_at`      | `TIMESTAMP WITH TIME ZONE` | `NULL`                                         | Set when wallet-service's PaymentEvent COMPLETED is consumed (consume time, not the payment instant) |
+| `payment_deadline`    | `TIMESTAMP WITH TIME ZONE` | `NULL`                                         | Set from the deadline of wallet-service's PaymentEvent REQUIRED |
 | `cancellation_reason` | `TEXT`                     | `NULL`                                         | Reason for cancellation (if status = CANCELLED)                 |
 | `cancelled_by`        | `BIGINT`                   | `NULL`                                         | Admin user ID who cancelled the auction                         |
 | `cancelled_at`        | `TIMESTAMP WITH TIME ZONE` | `NULL`                                         | Timestamp of cancellation                                       |
@@ -217,7 +217,7 @@ auction_items ←──┐
 - `DRAFT`: Created but not yet published
 - `ACTIVE`: Live and accepting bids
 - `COMPLETED`: Ended successfully with a winner
-- `FAILED`: Ended with no bids or winner didn't pay
+- `FAILED`: Ended with no bids (`winner_id` null), or the winner did not pay (`winner_id` set; moved from `COMPLETED` when wallet-service's `PaymentEvent` `FAILED` is consumed)
 - `CANCELLED`: Manually terminated by admin
 
 ### 6. **Deposit Amount**

@@ -31,7 +31,7 @@ You asked for auction-service to learn about payments (consume `PaymentEvent`, s
 | Work | Consumer + config, `occurredAt` on shared `PaymentEvent`, endpoint | One repository method, one service method, one endpoint | As B |
 | States | Pending and paid only (no forfeit column) | All four hold states | As B |
 | Consistency | Eventual (Kafka lag) | Immediate, system of record | As B |
-| Cost | Duplicates payment facts in a second database | Auction columns `winner_paid_at` / `payment_deadline` stay unused, as today | As B |
+| Cost | Duplicates payment facts in a second database | Auction columns `winner_paid_at` / `payment_deadline` stay unused (superseded: see `2026-10-15-auction-payment-event-consumer-design.md`) | As B |
 
 **Chosen: B.** Smaller, keeps payment facts in the service that owns them (`AGENTS.md`: respect microservice boundaries), and adds the forfeit and cancel states. A is worth revisiting only if auction-service needs the paid fact for its own features (admin lists, a seller dashboard); nothing does today.
 
@@ -207,5 +207,5 @@ Deploy wallet-service first, then the frontend. This order is mandatory: an olde
 - A fresh win gets 404 until the Kafka-driven hold exists; the existing 3 s / 30 s "preparing" poll covers that window.
 - `none` now means no hold exists for the auction (for example it predates wallet payments, or the hold-creation event was lost); it no longer hides paid auctions.
 - The status endpoint returns no timestamps, so the UI shows states, not dates ("paid on ...").
-- Auction-service's `winner_paid_at` and `payment_deadline` columns remain unused, as today.
+- Auction-service's `winner_paid_at` and `payment_deadline` columns were unused when this shipped; they are now written by the payment event consumer (`2026-10-15-auction-payment-event-consumer-design.md`).
 - No seller screen; the endpoint already authorizes the seller, so one is a frontend-only addition later.
