@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import {
   appendOlderBids, applyAuctionCancelled, applyAuctionEnded, applyAuctionExtended,
-  applyBidPlaced, applyOwnBid, mergeSnapshot, seedLiveState,
+  applyBidPlaced, applyOwnBid, applyOwnBuyNow, mergeSnapshot, seedLiveState,
   type LiveAuctionState,
 } from '@/lib/realtime/auction-live'
 import type { AuctionDetail, BidEntry } from '@/types/ui/auction.ui'
-import type { PlaceBidResponse } from '@/types/api/bid.api'
+import type { BuyNowResponse, PlaceBidResponse } from '@/types/api/bid.api'
 import type {
   AuctionEndedPayload, AuctionExtendedPayload, BidPlacedPayload,
 } from '@/types/api/realtime.api'
@@ -15,6 +15,7 @@ interface AuctionState {
   hydrate:         (auction: AuctionDetail, bids: BidEntry[]) => void
   bidPlaced:       (auctionId: string, p: BidPlacedPayload, meId: string | null) => void
   ownBidPlaced:    (r: PlaceBidResponse, me: { id: string; name: string }) => void
+  ownBuyNowCompleted: (r: BuyNowResponse, me: { id: string }) => void
   extended:        (auctionId: string, p: AuctionExtendedPayload) => void
   ended:           (auctionId: string, p: AuctionEndedPayload) => void
   cancelled:       (auctionId: string) => void
@@ -39,6 +40,7 @@ export const useAuctionStore = create<AuctionState>((set) => {
 
     bidPlaced:       (id, p, meId) => update(id, (live) => applyBidPlaced(live, p, meId)),
     ownBidPlaced:    (r, me) => update(r.auctionId, (live) => applyOwnBid(live, r, me)),
+    ownBuyNowCompleted: (r, me) => update(r.auctionId, (live) => applyOwnBuyNow(live, r, me)),
     extended:        (id, p) => update(id, (live) => applyAuctionExtended(live, p)),
     ended:           (id, p) => update(id, (live) => applyAuctionEnded(live, p)),
     cancelled:       (id) => update(id, applyAuctionCancelled),

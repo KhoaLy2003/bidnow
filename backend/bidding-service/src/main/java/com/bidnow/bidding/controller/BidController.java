@@ -1,11 +1,14 @@
 package com.bidnow.bidding.controller;
 
 import com.bidnow.bidding.dto.request.BidHistoryQuery;
+import com.bidnow.bidding.dto.request.BuyNowRequest;
 import com.bidnow.bidding.dto.request.PlaceBidRequest;
 import com.bidnow.bidding.dto.response.BidHistoryResponse;
+import com.bidnow.bidding.dto.response.BuyNowResponse;
 import com.bidnow.bidding.dto.response.PlaceBidResponse;
 import com.bidnow.bidding.service.BidHistoryService;
 import com.bidnow.bidding.service.BidService;
+import com.bidnow.bidding.service.BuyNowService;
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.common.dto.PageResponse;
@@ -33,6 +36,7 @@ public class BidController {
 
     private final BidService bidService;
     private final BidHistoryService bidHistoryService;
+    private final BuyNowService buyNowService;
 
     @Operation(summary = "Place a bid",
             description = "Validates the bid, locks the bidder's auction deposit on their first bid, and applies the "
@@ -46,6 +50,22 @@ public class BidController {
                         .status(HttpStatus.CREATED.value())
                         .message("Bid placed")
                         .data(placed)
+                        .build());
+    }
+
+    @Operation(summary = "Buy It Now",
+            description = "Ends the auction immediately at its buy-now price: validates, locks the buyer's auction "
+                    + "deposit, and completes the auction atomically in auction-service. The buyer becomes the "
+                    + "winner and follows the normal 48h payment flow.")
+    @PostMapping("/buy-now")
+    public ResponseEntity<BaseResponse<BuyNowResponse>> buyNow(@AuthenticatedUserId UUID buyerId,
+                                                               @Valid @RequestBody BuyNowRequest request) {
+        BuyNowResponse purchased = buyNowService.buyNow(buyerId, request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.<BuyNowResponse>builder()
+                        .status(HttpStatus.CREATED.value())
+                        .message("Auction purchased")
+                        .data(purchased)
                         .build());
     }
 

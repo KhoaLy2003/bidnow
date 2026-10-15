@@ -3,6 +3,8 @@ package com.bidnow.bidding.feign;
 import com.bidnow.bidding.dto.ApplyBidCommand;
 import com.bidnow.bidding.dto.ApplyBidResult;
 import com.bidnow.bidding.dto.BidContext;
+import com.bidnow.bidding.dto.BuyNowCommand;
+import com.bidnow.bidding.dto.BuyNowResult;
 import com.bidnow.common.dto.BaseResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,4 +22,7 @@ public interface AuctionServiceClient {
 
     @PostMapping("/api/v1/internal/auctions/{id}/bids")
     BaseResponse<ApplyBidResult> applyBid(@PathVariable("id") UUID auctionId, @RequestBody ApplyBidCommand command);
+
+    @PostMapping("/api/v1/internal/auctions/{id}/buy-now")
+    BaseResponse<BuyNowResult> buyNow(@PathVariable("id") UUID auctionId, @RequestBody BuyNowCommand command);
 }

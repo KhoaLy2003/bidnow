@@ -7,6 +7,7 @@ export type BidFailure =
   | { kind: 'too-low'; minimumBid: number | null }
   | { kind: 'not-open' }
   | { kind: 'own-auction' }
+  | { kind: 'buy-now-unavailable' }
   | { kind: 'wallet-problem'; message: string }
   | { kind: 'unavailable' }
   | { kind: 'invalid'; message: string }
@@ -41,6 +42,8 @@ export function classifyBidError(err: unknown): BidFailure {
       case 'AUCTION_NOT_OPEN':
       case 'AUCTION_NOT_FOUND':
         return { kind: 'not-open' }
+      case 'BUY_NOW_NOT_AVAILABLE':
+        return { kind: 'buy-now-unavailable' }
       case 'BID_OWN_AUCTION':
         return { kind: 'own-auction' }
       case 'WALLET_NOT_ACTIVE':
@@ -82,6 +85,11 @@ export function describeBidFailure(failure: BidFailure): BidFailureView {
       return { message: 'This auction is not open for bidding.', disablesForm: true }
     case 'own-auction':
       return { message: "You can't bid on your own auction.", disablesForm: true }
+    case 'buy-now-unavailable':
+      return {
+        message: 'Buy It Now is no longer available — the price has been reached or the auction has ended.',
+        disablesForm: true,
+      }
     case 'wallet-problem':
       return { message: failure.message, action: { href: '/wallet', label: 'Go to wallet' }, disablesForm: false }
     case 'unavailable':

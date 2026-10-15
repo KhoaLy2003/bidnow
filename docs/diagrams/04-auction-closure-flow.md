@@ -46,3 +46,34 @@ sequenceDiagram
         NS->>Users: Send Email "You Lost" (to Losers)
     end
 ```
+
+## Closure via Buy It Now
+
+A buyer can end an `ACTIVE` auction early at its `buy_now_price`. The closure source is `BUY_NOW` (alongside `SCHEDULER` and `ADMIN`); the downstream flow (refund losers, 48 h payment hold, notifications) is identical.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Buyer
+    participant BS as Bidding Service
+    participant WS as Wallet Service
+    participant AS as Auction Service
+    participant MQ as Message Broker
+    participant NS as Media Service
+
+    Buyer->>BS: POST /api/v1/bids/buy-now {auctionId}
+    BS->>BS: Pre-validate (cached context: ACTIVE, price < buy-now price, not seller)
+    BS->>WS: Lock auction deposit (idempotent)
+    BS->>AS: POST /internal/auctions/{id}/buy-now {buyerId}
+    AS->>AS: Row lock, re-validate, winner = buyer, price = buy-now price, status COMPLETED
+    AS-->>BS: {auctionId, price, endedAt}
+    BS->>BS: Evict cached context
+    BS-->>Buyer: 201 {auctionId, price, endedAt}
+    AS->>MQ: Publish AUCTION_ENDED (closureSource=BUY_NOW) after commit
+    par Downstream
+        MQ-->>WS: Refund other deposits, create 48 h payment hold for buyer
+        MQ-->>NS: Realtime AUCTION_ENDED, won / lost / unsold notifications
+    end
+```
+
+If the auction-service call loses a race (another buy-now, a bid reaching the price, a scheduled close or a cancel), the buyer gets `AUCTION_NOT_OPEN` or `BUY_NOW_NOT_AVAILABLE`; the deposit lock stays as a registration and is refunded by the auction-ended or auction-cancelled consumer, provided the lock landed before that sweep.

@@ -4,6 +4,8 @@ import type { ApiResponse, PageResponse } from '@/types/api/common.api'
 import type {
   ApiErrorResponse,
   BidHistoryResponse,
+  BuyNowRequest,
+  BuyNowResponse,
   PlaceBidRequest,
   PlaceBidResponse,
 } from '@/types/api/bid.api'
@@ -46,6 +48,17 @@ export const bidService = {
     })
     if (!response.ok) throw await toBidRequestError(response)
     const body: ApiResponse<PlaceBidResponse> = await response.json()
+    return body.data
+  },
+
+  async buyNow(auctionId: string): Promise<BuyNowResponse> {
+    const request: BuyNowRequest = { auctionId }
+    const response = await apiFetch('/api/v1/bids/buy-now', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    })
+    if (!response.ok) throw await toBidRequestError(response)
+    const body: ApiResponse<BuyNowResponse> = await response.json()
     return body.data
   },
 

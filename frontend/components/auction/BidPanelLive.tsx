@@ -4,7 +4,9 @@ import { CountdownTimer } from './CountdownTimer'
 import { CurrentBidDisplay } from './CurrentBidDisplay'
 import { BidForm } from './BidForm'
 import { StatusBadge } from './StatusBadge'
+import { BuyNowButton } from './BuyNowButton'
 import { formatCurrency } from '@/lib/format'
+import { isLessThan } from '@/lib/money'
 import { useWalletStore } from '@/store/walletStore'
 import { PanelFooter } from './PanelFooter'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
@@ -59,8 +61,8 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
           totalBids={auction.totalBids}
         />
 
-        {/* Buy Now block — only when buyNowPrice is set */}
-        {auction.buyNowPrice !== undefined && (
+        {/* Buy Now block — only while a buy-now price is set and the live price is still below it */}
+        {auction.buyNowPrice !== undefined && isLessThan(auction.currentBid, auction.buyNowPrice) && (
           <div className="border border-[var(--color-success-border)] rounded-lg p-3 bg-[var(--color-success-subtle)] flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-success-text)]">
@@ -70,13 +72,12 @@ export function BidPanelLive({ auction, isCurrentUserWinning }: BidPanelLiveProp
                 {formatCurrency(auction.buyNowPrice)}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => { /* TODO: wire Buy Now flow */ }}
-              className="w-full h-9 rounded text-sm font-medium bg-[var(--color-success-default)] text-white flex items-center justify-center transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:opacity-90"
-            >
-              Buy Now →
-            </button>
+            <BuyNowButton
+              auctionId={auction.id}
+              title={auction.title}
+              buyNowPrice={auction.buyNowPrice}
+              depositAmount={auction.depositAmount}
+            />
           </div>
         )}
       </div>

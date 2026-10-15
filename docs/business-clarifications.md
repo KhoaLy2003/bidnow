@@ -4,8 +4,8 @@ This document tracks the key business decisions and clarifications made during t
 
 ## 1. Auction Mechanism
 - **Model:** English Auction (Ascending price).
-- **Winner:** The highest bidder at the end of the auction time wins the product.
-- **Buy It Now:** Supported. Users can purchase the item immediately at a fixed price, terminating the auction.
+- **Winner:** The highest bidder at the end of the auction time wins the product (or the buyer who uses Buy It Now, which ends the auction immediately).
+- **Buy It Now:** Supported when the seller sets a Buy It Now price (must exceed the starting price). A buyer can purchase while the auction is active and the current price is still below that price; bids already placed do not remove the option. Clicking it locks the auction's deposit (same as a first bid), ends the auction at once with the buyer as winner at the Buy It Now price, and starts the normal 48-hour payment window (the deposit counts toward the price and is forfeited if the buyer never pays). Existing bidders are treated as losers and their deposits are refunded. The seller cannot buy their own item.
 
 ## 2. Bidding Features
 - **Minimum bid:** The first bid may equal the starting price; each later bid must be at least the current price plus the bid increment.
@@ -51,4 +51,4 @@ This document tracks the key business decisions and clarifications made during t
     - Only `ACTIVE` accounts can log in and participate in auctions.
 
 ---
-*Last updated: 2026-04-18*
+*Last updated: 2026-10-14*

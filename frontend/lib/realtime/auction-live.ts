@@ -3,7 +3,7 @@ import { getAuctionStatus } from '@/lib/auction-utils'
 import { toCents } from '@/lib/money'
 import { UNKNOWN_BIDDER } from '@/types/mappers/bid.mapper'
 import type { AuctionDetail, BidEntry } from '@/types/ui/auction.ui'
-import type { PlaceBidResponse } from '@/types/api/bid.api'
+import type { BuyNowResponse, PlaceBidResponse } from '@/types/api/bid.api'
 import type {
   AuctionEndedPayload,
   AuctionExtendedPayload,
@@ -127,6 +127,19 @@ export function applyOwnBid(
       id: r.bidId, auctionId: s.auctionId, bidderId: me.id, bidderName: me.name,
       amount: r.amount, placedAt: new Date(r.placedAt), isAutoBid: false,
     }]),
+  }
+}
+
+/** The caller's own Buy It Now succeeded: the auction is over and they won it. Idempotent with the later AUCTION_ENDED. */
+export function applyOwnBuyNow(s: LiveAuctionState, r: BuyNowResponse, me: { id: string }): LiveAuctionState {
+  if (r.auctionId !== s.auctionId) return s
+  return {
+    ...s,
+    status: AuctionStatus.Closed,
+    winnerId: me.id,
+    currentWinnerId: me.id,
+    currentBid: maxDollars(s.currentBid, r.price),
+    isOutbid: false,
   }
 }
 

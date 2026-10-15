@@ -10,6 +10,7 @@ public final class BiddingErrorCodes {
     public static final String WALLET_NOT_ACTIVE = "WALLET_NOT_ACTIVE";
     public static final String WALLET_NOT_FOUND = "WALLET_NOT_FOUND";
     public static final String DEPOSIT_LOCK_CLOSED = "DEPOSIT_LOCK_CLOSED";
+    public static final String BUY_NOW_NOT_AVAILABLE = "BUY_NOW_NOT_AVAILABLE";
 
     private BiddingErrorCodes() {
     }

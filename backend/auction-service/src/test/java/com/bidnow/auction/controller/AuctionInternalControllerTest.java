@@ -3,7 +3,9 @@ package com.bidnow.auction.controller;
 import com.bidnow.auction.constant.AuctionErrorCodes;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.ApplyBidRequest;
+import com.bidnow.auction.dto.request.BuyNowRequest;
 import com.bidnow.auction.dto.response.ApplyBidResponse;
+import com.bidnow.auction.dto.response.BuyNowResponse;
 import com.bidnow.auction.dto.response.BidContextResponse;
 import com.bidnow.auction.exception.AuctionExceptionHandler;
 import com.bidnow.auction.exception.BidTooLowException;
@@ -150,5 +152,60 @@ class AuctionInternalControllerTest {
         mockMvc.perform(post(BASE + "/bids").contentType(MediaType.APPLICATION_JSON).content(validBidJson()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errorCode").value(AuctionErrorCodes.AUCTION_NOT_OPEN));
+    }
+
+    @Test
+    void buyNow_returns200WithResult() throws Exception {
+        UUID buyerId = UUID.randomUUID();
+        when(auctionBidService.applyBuyNow(eq(AUCTION_ID), any(BuyNowRequest.class)))
+                .thenReturn(BuyNowResponse.builder().auctionId(AUCTION_ID).price(new BigDecimal("200.00"))
+                        .endedAt(OffsetDateTime.parse("2026-10-01T12:00:00Z")).build());
+
+        mockMvc.perform(post(BASE + "/buy-now").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"buyerId\": \"" + buyerId + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.auctionId").value(AUCTION_ID.toString()))
+                .andExpect(jsonPath("$.data.price").value(200.00))
+                .andExpect(jsonPath("$.data.endedAt").exists());
+    }
+
+    @Test
+    void buyNow_missingBuyerId_returns400() throws Exception {
+        mockMvc.perform(post(BASE + "/buy-now").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(auctionBidService);
+    }
+
+    @Test
+    void buyNow_notAvailable_returns409WithCode() throws Exception {
+        when(auctionBidService.applyBuyNow(eq(AUCTION_ID), any(BuyNowRequest.class)))
+                .thenThrow(new ConflictException("no", AuctionErrorCodes.BUY_NOW_NOT_AVAILABLE));
+
+        mockMvc.perform(post(BASE + "/buy-now").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"buyerId\": \"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value(AuctionErrorCodes.BUY_NOW_NOT_AVAILABLE));
+    }
+
+    @Test
+    void buyNow_ownAuction_returns403() throws Exception {
+        when(auctionBidService.applyBuyNow(eq(AUCTION_ID), any(BuyNowRequest.class)))
+                .thenThrow(new ForbiddenException("own", AuctionErrorCodes.BID_OWN_AUCTION));
+
+        mockMvc.perform(post(BASE + "/buy-now").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"buyerId\": \"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(AuctionErrorCodes.BID_OWN_AUCTION));
+    }
+
+    @Test
+    void buyNow_unknownAuction_returns404() throws Exception {
+        when(auctionBidService.applyBuyNow(eq(AUCTION_ID), any(BuyNowRequest.class)))
+                .thenThrow(new NotFoundException("missing", AuctionErrorCodes.AUCTION_NOT_FOUND));
+
+        mockMvc.perform(post(BASE + "/buy-now").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"buyerId\": \"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value(AuctionErrorCodes.AUCTION_NOT_FOUND));
     }
 }

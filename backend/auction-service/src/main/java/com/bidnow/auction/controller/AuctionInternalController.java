@@ -1,7 +1,9 @@
 package com.bidnow.auction.controller;
 
 import com.bidnow.auction.dto.request.ApplyBidRequest;
+import com.bidnow.auction.dto.request.BuyNowRequest;
 import com.bidnow.auction.dto.response.ApplyBidResponse;
+import com.bidnow.auction.dto.response.BuyNowResponse;
 import com.bidnow.auction.dto.response.BidContextResponse;
 import com.bidnow.auction.service.AuctionBidService;
 import com.bidnow.common.dto.BaseResponse;
@@ -40,5 +42,14 @@ public class AuctionInternalController {
     public ResponseEntity<BaseResponse<ApplyBidResponse>> applyBid(@PathVariable UUID id,
                                                                    @Valid @RequestBody ApplyBidRequest request) {
         return ResponseEntity.ok(BaseResponse.success(auctionBidService.applyBid(id, request)));
+    }
+
+    @Operation(summary = "Apply Buy It Now (Internal)",
+            description = "Atomically re-validates under a row lock, completes the auction at its buy-now price "
+                    + "with the buyer as winner, and publishes AuctionEndedEvent (closureSource=BUY_NOW).")
+    @PostMapping("/{id}/buy-now")
+    public ResponseEntity<BaseResponse<BuyNowResponse>> buyNow(@PathVariable UUID id,
+                                                               @Valid @RequestBody BuyNowRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(auctionBidService.applyBuyNow(id, request)));
     }
 }
