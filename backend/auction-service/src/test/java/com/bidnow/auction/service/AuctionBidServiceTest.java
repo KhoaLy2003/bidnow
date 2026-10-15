@@ -4,15 +4,20 @@ import com.bidnow.auction.config.AntiSnipeProperties;
 import com.bidnow.auction.constant.AuctionErrorCodes;
 import com.bidnow.auction.domain.entity.AuctionExtension;
 import com.bidnow.auction.domain.entity.AuctionItem;
+import com.bidnow.auction.domain.entity.AuctionStatusHistory;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.ApplyBidRequest;
 import com.bidnow.auction.dto.response.ApplyBidResponse;
+import com.bidnow.auction.dto.request.BuyNowRequest;
 import com.bidnow.auction.dto.response.BidContextResponse;
+import com.bidnow.auction.dto.response.BuyNowResponse;
 import com.bidnow.auction.exception.BidTooLowException;
 import com.bidnow.auction.exception.ConflictException;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.repository.AuctionExtensionRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
+import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
+import com.bidnow.common.dto.event.AuctionEndedEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.exception.ForbiddenException;
 import com.bidnow.common.exception.NotFoundException;
@@ -22,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +39,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -57,6 +64,8 @@ class AuctionBidServiceTest {
     @Mock
     private AuctionExtensionRepository auctionExtensionRepository;
     @Mock
+    private AuctionStatusHistoryRepository auctionStatusHistoryRepository;
+    @Mock
     private AuctionKafkaProducer kafkaProducer;
 
     private AuctionBidService service;
@@ -64,7 +73,8 @@ class AuctionBidServiceTest {
     @BeforeEach
     void setUp() {
         TransactionSynchronizationManager.initSynchronization();
-        service = new AuctionBidService(auctionItemRepository, auctionExtensionRepository, kafkaProducer,
+        service = new AuctionBidService(auctionItemRepository, auctionExtensionRepository,
+                auctionStatusHistoryRepository, kafkaProducer,
                 new AntiSnipeProperties(120, 300), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -405,5 +415,193 @@ class AuctionBidServiceTest {
         assertThat(response.isExtended()).isFalse();
         assertThat(auction.getEndTime()).isEqualTo(previousEnd);
         verify(auctionExtensionRepository, never()).save(any());
+    }
+
+    // ---------------------------------------------------------------------
+    // getBidContext - buyNowPrice
+    // ---------------------------------------------------------------------
+
+    @Test
+    void getBidContext_includesBuyNowPrice() {
+        AuctionItem auction = buyNowAuction(2, "110.00");
+        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThat(service.getBidContext(auction.getId()).getBuyNowPrice()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    void getBidContext_withoutBuyNowPrice_isNull() {
+        AuctionItem auction = activeAuction(2, "110.00");
+        when(auctionItemRepository.findByIdAndDeletedAtIsNull(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThat(service.getBidContext(auction.getId()).getBuyNowPrice()).isNull();
+    }
+
+    // ---------------------------------------------------------------------
+    // applyBuyNow
+    // ---------------------------------------------------------------------
+
+    private AuctionItem buyNowAuction(int totalBids, String currentPrice) {
+        AuctionItem auction = activeAuction(totalBids, currentPrice);
+        auction.setBuyNowPrice(new BigDecimal("200.00"));
+        return auction;
+    }
+
+    private static BuyNowRequest buyNow(UUID buyerId) {
+        return new BuyNowRequest(buyerId);
+    }
+
+    @Test
+    void applyBuyNow_closesAuctionAtBuyNowPriceAndPublishesEndedEventAfterCommit() {
+        AuctionItem auction = buyNowAuction(3, "120.00");
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+        OffsetDateTime now = OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC);
+
+        BuyNowResponse response = service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID));
+
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.COMPLETED);
+        assertThat(auction.getCurrentPrice()).isEqualByComparingTo("200.00");
+        assertThat(auction.getCurrentWinnerId()).isEqualTo(BIDDER_ID);
+        assertThat(auction.getWinnerId()).isEqualTo(BIDDER_ID);
+        assertThat(auction.getCompletedAt()).isEqualTo(now);
+        assertThat(auction.getTotalBids()).isEqualTo(3);
+        assertThat(response.getAuctionId()).isEqualTo(auction.getId());
+        assertThat(response.getPrice()).isEqualByComparingTo("200.00");
+        assertThat(response.getEndedAt()).isEqualTo(now);
+        verify(auctionItemRepository).save(auction);
+
+        ArgumentCaptor<AuctionStatusHistory> history = ArgumentCaptor.forClass(AuctionStatusHistory.class);
+        verify(auctionStatusHistoryRepository).save(history.capture());
+        assertThat(history.getValue().getAuction()).isSameAs(auction);
+        assertThat(history.getValue().getFromStatus()).isEqualTo("ACTIVE");
+        assertThat(history.getValue().getToStatus()).isEqualTo("COMPLETED");
+        assertThat(history.getValue().getTriggeredBy()).isEqualTo(BIDDER_ID);
+        assertThat(history.getValue().getReason()).isEqualTo("Buy It Now");
+
+        verify(kafkaProducer, never()).publishAuctionEnded(any());
+        triggerAfterCommit();
+        ArgumentCaptor<AuctionEndedEvent> event = ArgumentCaptor.forClass(AuctionEndedEvent.class);
+        verify(kafkaProducer).publishAuctionEnded(event.capture());
+        assertThat(event.getValue().getAuctionId()).isEqualTo(auction.getId());
+        assertThat(event.getValue().getAuctionTitle()).isEqualTo("Vintage Watch");
+        assertThat(event.getValue().getSellerId()).isEqualTo(SELLER_ID);
+        assertThat(event.getValue().getWinnerId()).isEqualTo(BIDDER_ID);
+        assertThat(event.getValue().getWinningBidAmount()).isEqualByComparingTo("200.00");
+        assertThat(event.getValue().getLoserIds()).isEqualTo(List.of());
+        assertThat(event.getValue().getTotalBids()).isEqualTo(3);
+        assertThat(event.getValue().getEndedAt()).isEqualTo(NOW);
+        assertThat(event.getValue().getClosureSource()).isEqualTo("BUY_NOW");
+    }
+
+    @Test
+    void applyBuyNow_readsWithRowLockOnly() {
+        AuctionItem auction = buyNowAuction(0, "100.00");
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID));
+
+        verify(auctionItemRepository, never()).findByIdAndDeletedAtIsNull(any());
+    }
+
+    @Test
+    void applyBuyNow_currentLeaderCanBuy() {
+        AuctionItem auction = buyNowAuction(2, "150.00");
+        auction.setCurrentWinnerId(BIDDER_ID);
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        BuyNowResponse response = service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID));
+
+        assertThat(response.getPrice()).isEqualByComparingTo("200.00");
+        assertThat(auction.getWinnerId()).isEqualTo(BIDDER_ID);
+    }
+
+    @Test
+    void applyBuyNow_unknownAuction_throwsNotFound() {
+        UUID id = UUID.randomUUID();
+        when(auctionItemRepository.findByIdForUpdate(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.applyBuyNow(id, buyNow(BIDDER_ID)))
+                .isInstanceOf(NotFoundException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.AUCTION_NOT_FOUND);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = AuctionStatus.class, names = {"DRAFT", "SCHEDULED", "COMPLETED", "FAILED", "CANCELLED", "REJECTED"})
+    void applyBuyNow_notActive_throwsConflict(AuctionStatus status) {
+        AuctionItem auction = buyNowAuction(0, "100.00");
+        auction.setStatus(status);
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThatThrownBy(() -> service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID)))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.AUCTION_NOT_OPEN);
+        verify(auctionItemRepository, never()).save(any());
+        verify(kafkaProducer, never()).publishAuctionEnded(any());
+    }
+
+    @Test
+    void applyBuyNow_exactlyAtEndTime_throwsConflict() {
+        AuctionItem auction = buyNowAuction(0, "100.00");
+        auction.setEndTime(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThatThrownBy(() -> service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID)))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.AUCTION_NOT_OPEN);
+    }
+
+    @Test
+    void applyBuyNow_sellerBuyingOwnAuction_throwsForbidden() {
+        AuctionItem auction = buyNowAuction(0, "100.00");
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThatThrownBy(() -> service.applyBuyNow(auction.getId(), buyNow(SELLER_ID)))
+                .isInstanceOf(ForbiddenException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.BID_OWN_AUCTION);
+        verify(auctionItemRepository, never()).save(any());
+    }
+
+    @Test
+    void applyBuyNow_noBuyNowPrice_throwsBuyNowNotAvailable() {
+        AuctionItem auction = activeAuction(0, "100.00");
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThatThrownBy(() -> service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID)))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.BUY_NOW_NOT_AVAILABLE);
+        verify(auctionItemRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"200.00", "200.01", "350.00"})
+    void applyBuyNow_priceReachedOrPassed_throwsBuyNowNotAvailable(String currentPrice) {
+        AuctionItem auction = buyNowAuction(4, currentPrice);
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        assertThatThrownBy(() -> service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID)))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.BUY_NOW_NOT_AVAILABLE);
+        verify(auctionItemRepository, never()).save(any());
+    }
+
+    @Test
+    void applyBuyNow_oneCentBelowBuyNowPrice_isAccepted() {
+        AuctionItem auction = buyNowAuction(4, "199.99");
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+
+        BuyNowResponse response = service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID));
+
+        assertThat(response.getPrice()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    void applyBuyNow_secondCallAfterSuccess_isRejectedAsNotOpen() {
+        AuctionItem auction = buyNowAuction(1, "100.00");
+        when(auctionItemRepository.findByIdForUpdate(auction.getId())).thenReturn(Optional.of(auction));
+        service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID));
+
+        assertThatThrownBy(() -> service.applyBuyNow(auction.getId(), buyNow(BIDDER_ID)))
+                .isInstanceOf(ConflictException.class)
+                .extracting("errorCode").isEqualTo(AuctionErrorCodes.AUCTION_NOT_OPEN);
     }
 }

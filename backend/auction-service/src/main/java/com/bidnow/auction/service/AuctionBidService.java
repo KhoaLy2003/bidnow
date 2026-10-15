@@ -4,16 +4,21 @@ import com.bidnow.auction.config.AntiSnipeProperties;
 import com.bidnow.auction.constant.AuctionErrorCodes;
 import com.bidnow.auction.domain.entity.AuctionExtension;
 import com.bidnow.auction.domain.entity.AuctionItem;
+import com.bidnow.auction.domain.entity.AuctionStatusHistory;
 import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.ApplyBidRequest;
 import com.bidnow.auction.dto.response.ApplyBidResponse;
+import com.bidnow.auction.dto.request.BuyNowRequest;
 import com.bidnow.auction.dto.response.BidContextResponse;
+import com.bidnow.auction.dto.response.BuyNowResponse;
 import com.bidnow.auction.exception.BidTooLowException;
 import com.bidnow.auction.exception.ConflictException;
 import com.bidnow.auction.kafka.AuctionKafkaProducer;
 import com.bidnow.auction.repository.AuctionExtensionRepository;
 import com.bidnow.auction.repository.AuctionItemRepository;
+import com.bidnow.auction.repository.AuctionStatusHistoryRepository;
 import com.bidnow.auction.util.AfterCommit;
+import com.bidnow.common.dto.event.AuctionEndedEvent;
 import com.bidnow.common.dto.event.AuctionExtendedEvent;
 import com.bidnow.common.exception.ForbiddenException;
 import com.bidnow.common.exception.NotFoundException;
@@ -26,6 +31,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -40,6 +46,7 @@ public class AuctionBidService {
 
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionExtensionRepository auctionExtensionRepository;
+    private final AuctionStatusHistoryRepository auctionStatusHistoryRepository;
     private final AuctionKafkaProducer kafkaProducer;
     private final AntiSnipeProperties antiSnipe;
     private final Clock clock;
@@ -56,6 +63,7 @@ public class AuctionBidService {
                 .currentPrice(auction.getCurrentPrice())
                 .bidIncrement(auction.getBidIncrement())
                 .depositAmount(auction.getDepositAmount())
+                .buyNowPrice(auction.getBuyNowPrice())
                 .currentWinnerId(auction.getCurrentWinnerId())
                 .totalBids(auction.getTotalBids())
                 .endTime(auction.getEndTime())
@@ -66,8 +74,10 @@ public class AuctionBidService {
      * Applies a bid atomically. Idempotent on {@code bidId}: replaying the last applied bid returns
      * the current state without re-validating or changing anything.
      */
-    // Timeout must stay below bidding-service's 2 s Feign read timeout; it bounds the row-lock wait.
-    @Transactional(timeout = 1)
+    // Bounds the row-lock wait. Must be >= 2: Hibernate 6.4 truncates the remaining time to whole
+    // seconds, so timeout = 1 expires at the first statement. That leaves ~1 s of effective budget,
+    // under bidding-service's 2 s Feign read timeout.
+    @Transactional(timeout = 2)
     public ApplyBidResponse applyBid(UUID auctionId, ApplyBidRequest request) {
         AuctionItem auction = auctionItemRepository.findByIdForUpdate(auctionId)
                 .orElseThrow(() -> notFound(auctionId));
@@ -100,6 +110,67 @@ public class AuctionBidService {
         log.info("Applied bid {} on auction {}: price={}, bidder={}, totalBids={}, extended={}",
                 request.getBidId(), auctionId, request.getAmount(), request.getBidderId(), auction.getTotalBids(), extended);
         return toResponse(auction, previousWinnerId, extended);
+    }
+
+    /**
+     * Buy It Now: completes the auction at its buy-now price with the buyer as winner. Re-validates
+     * under the same row lock as {@link #applyBid}, closure and cancellation, so only one of them can win.
+     * The ended event goes out after commit; wallet then refunds the other deposits and creates the
+     * winner's payment hold.
+     */
+    // Same timeout rationale as applyBid: must be >= 2 on Hibernate 6.4.
+    @Transactional(timeout = 2)
+    public BuyNowResponse applyBuyNow(UUID auctionId, BuyNowRequest request) {
+        AuctionItem auction = auctionItemRepository.findByIdForUpdate(auctionId)
+                .orElseThrow(() -> notFound(auctionId));
+
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        if (auction.getStatus() != AuctionStatus.ACTIVE || !now.isBefore(auction.getEndTime())) {
+            throw new ConflictException("Auction is not open for bidding", AuctionErrorCodes.AUCTION_NOT_OPEN);
+        }
+        if (auction.getSellerId().equals(request.getBuyerId())) {
+            throw new ForbiddenException("Sellers cannot buy their own auction", AuctionErrorCodes.BID_OWN_AUCTION);
+        }
+        BigDecimal buyNowPrice = auction.getBuyNowPrice();
+        if (buyNowPrice == null || auction.getCurrentPrice().compareTo(buyNowPrice) >= 0) {
+            throw new ConflictException("Buy It Now is not available for this auction",
+                    AuctionErrorCodes.BUY_NOW_NOT_AVAILABLE);
+        }
+
+        auction.setCurrentPrice(buyNowPrice);
+        auction.setCurrentWinnerId(request.getBuyerId());
+        auction.setWinnerId(request.getBuyerId());
+        auction.setStatus(AuctionStatus.COMPLETED);
+        auction.setCompletedAt(now);
+        auctionItemRepository.save(auction);
+
+        auctionStatusHistoryRepository.save(AuctionStatusHistory.builder()
+                .auction(auction)
+                .fromStatus(AuctionStatus.ACTIVE.name())
+                .toStatus(AuctionStatus.COMPLETED.name())
+                .triggeredBy(request.getBuyerId())
+                .reason("Buy It Now")
+                .build());
+
+        AuctionEndedEvent event = AuctionEndedEvent.builder()
+                .auctionId(auction.getId())
+                .auctionTitle(auction.getTitle())
+                .sellerId(auction.getSellerId())
+                .winnerId(request.getBuyerId())
+                .winningBidAmount(buyNowPrice)
+                .loserIds(List.of())
+                .totalBids(auction.getTotalBids())
+                .endedAt(now.toInstant())
+                .closureSource("BUY_NOW")
+                .build();
+        AfterCommit.run(() -> kafkaProducer.publishAuctionEnded(event));
+
+        log.info("Buy It Now on auction {}: buyer={}, price={}", auctionId, request.getBuyerId(), buyNowPrice);
+        return BuyNowResponse.builder()
+                .auctionId(auction.getId())
+                .price(buyNowPrice)
+                .endedAt(now)
+                .build();
     }
 
     /**

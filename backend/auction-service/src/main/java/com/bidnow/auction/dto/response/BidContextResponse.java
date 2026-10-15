@@ -18,6 +18,7 @@ public class BidContextResponse {
     private BigDecimal currentPrice;
     private BigDecimal bidIncrement;
     private BigDecimal depositAmount;
+    private BigDecimal buyNowPrice;
     private UUID currentWinnerId;
     private int totalBids;
     private OffsetDateTime endTime;
