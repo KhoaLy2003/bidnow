@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AuctionResultBanner } from './AuctionResultBanner'
 import { AuctionStatus } from '@/lib/design-tokens'
 import { PanelFooter } from './PanelFooter'
+import { PaymentStatusBlock } from '@/components/payment/PaymentStatusBlock'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
 
 interface BidPanelEndedProps {
@@ -11,7 +12,7 @@ interface BidPanelEndedProps {
 }
 
 export function BidPanelEnded({ auction }: BidPanelEndedProps) {
-  const { status, categoryId, currentBid } = auction
+  const { id, title, status, categoryId, currentBid, completedAt } = auction
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden flex flex-col">
@@ -39,13 +40,7 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
               <span>Track delivery in My Bids</span>
             </li>
           </ol>
-          <button
-            type="button"
-            className="w-full h-11 rounded px-4 text-sm font-medium bg-[var(--color-text-brand)] text-white border border-[var(--color-text-brand)] transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]"
-            onClick={() => {}}
-          >
-            Proceed to payment →
-          </button>
+          <PaymentStatusBlock auctionId={id} title={title} completedAt={completedAt} />
           <button
             type="button"
             className="w-full h-11 rounded px-4 text-sm font-medium bg-background border border-[var(--color-border-default)] text-foreground transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)]"

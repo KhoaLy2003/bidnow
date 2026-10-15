@@ -36,3 +36,28 @@ export interface TransactionResponse {
   status: string;
   createdAt: string;
 }
+
+export interface PendingPaymentResponse {
+  auctionId: string;
+  totalAmount: number;
+  depositApplied: number;
+  remaining: number;
+  fundsHeld: boolean;
+  /** Server LocalDateTime without a timezone: display-only, never parse in the browser. */
+  deadline: string;
+  hoursLeft: number;
+  expired: boolean;
+}
+
+export interface ConfirmPaymentRequest {
+  auctionId: string;
+}
+
+export interface ConfirmPaymentResponse {
+  auctionId: string;
+  amountPaid: number;
+  depositApplied: number;
+  remainingPaid: number;
+  availableBalance: number;
+  lockedBalance: number;
+}
