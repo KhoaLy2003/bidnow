@@ -73,4 +73,4 @@ sequenceDiagram
     App-->>Winner: Payment complete, deposit forfeited, or sale cancelled
 ```
 
-The frontend refetches pending payments when a `PAYMENT_REQUIRED`, `PAYMENT_RECEIVED` or `PAYMENT_FAILED` push arrives. A returning winner's panel reads the final state from `GET /api/v1/wallets/payments/{auctionId}`: wallet-service owns the payment facts and auction-service does not record payment (its `winner_paid_at` and `payment_deadline` columns stay unused). Revisit only if auction-service needs the paid fact for its own features.
+The frontend refetches pending payments when a `PAYMENT_REQUIRED`, `PAYMENT_RECEIVED` or `PAYMENT_FAILED` push arrives. A returning winner's panel reads the final state from `GET /api/v1/wallets/payments/{auctionId}`: wallet-service owns the payment facts; auction-service keeps a projection of them. `PaymentEventConsumer` consumes `payment-event-topic`: `REQUIRED` sets `payment_deadline`, `COMPLETED` sets `winner_paid_at`, and `FAILED` (forfeit) moves the auction `COMPLETED → FAILED`.

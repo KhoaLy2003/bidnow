@@ -128,11 +128,11 @@ The Wallet Service acts as the **escrow and financial hub** that:
 - [ ] Errors: `404 PAYMENT_HOLD_NOT_FOUND`, `400 PAYMENT_DEADLINE_EXPIRED`, `409 PAYMENT_NOT_PENDING`, `400 INSUFFICIENT_BALANCE`, `409 DEPOSIT_LOCK_CLOSED`, `404 SELLER_WALLET_NOT_FOUND`
 - [ ] `PaymentEvent` on `payment-event-topic`: `REQUIRED` on hold creation, `COMPLETED` on confirm
 - [ ] On `auction-cancelled-topic`, a `PENDING_PAYMENT` hold is voided (held funds returned, HOLD_CANCEL ledger row, status CANCELLED)
-- [ ] Follow-ups: auction-service consumes `PaymentEvent` (`REQUIRED` → `payment_deadline`, `COMPLETED` → `winner_paid_at`, `FAILED` → mark the sale failed)
+- [x] auction-service consumes `PaymentEvent` (`REQUIRED` → `payment_deadline`, `COMPLETED` → `winner_paid_at`, `FAILED` → auction `COMPLETED → FAILED`); see `docs/superpowers/specs/2026-10-15-auction-payment-event-consumer-design.md`
 
 **Known gaps (follow-up tickets, outside WALLET-304):**
 
-- Auction-service publishes `AuctionCancelledEvent` (admin and seller cancel) and the admin force-close `AuctionEndedEvent` *before* its DB transaction commits; a rollback after the send would refund deposits on a still-ACTIVE auction. Only `AuctionClosureService` publishes after commit.
+- ~~Auction-service published `AuctionCancelledEvent` (admin and seller cancel) and the admin force-close `AuctionEndedEvent` before its DB transaction commits.~~ Fixed: all auction event publishers (cancel, force-close, buy-now, scheduled closure) now publish after commit (`AfterCommit.run(...)` / `afterCommit` hooks).
 - `AuctionItem` has no optimistic lock and close/cancel don't lock the auction row, so an auction can emit both ended and cancelled events. WALLET-305 handles either order: a cancel voids any pending hold and records an `auction_cancellations` marker; a later end event creates no hold when the marker exists or the winner's deposit was already released. A cancel after the payment was COMPLETED is logged at ERROR for manual reconciliation. Residual: if both events are processed at the same instant on different consumer threads, a hold can still be created (needs a per-auction lock or auction-service serialization).
 - A deposit lock created after the refund sweep (or after the auction closed) stays LOCKED: wallet does not know auction state. Needs a closed-auction guard in `lockDeposit` or a reconciliation job.
 - Lock ordering rule for any future flow touching payment holds: lock the `payment_holds` row before wallets, and order wallet locks with Java `UUID.compareTo` (as confirm, cancel and forfeit do). Forfeited deposits go entirely to the platform wallet; a seller share is an open question.
