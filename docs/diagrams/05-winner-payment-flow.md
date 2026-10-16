@@ -27,8 +27,8 @@ sequenceDiagram
     MQ->>NS: Consume
     NS-->>Winner: Payment-required email and in-app PAYMENT_REQUIRED push
 
-    Note over Winner, NS: B. Winner pays (auction page "Proceed to payment" or /wallet "Payments due")
-    Winner->>App: Opens the auction page or /wallet
+    Note over Winner, NS: B. Winner pays (auction page "Proceed to payment" or /purchases "Pay")
+    Winner->>App: Opens the auction page or /purchases
     App->>GW: GET /api/v1/wallets/payments/pending
     GW->>WS: Route
     WS-->>App: Holds: remaining, fundsHeld, hoursLeft, expired

@@ -655,6 +655,10 @@ Built on shadcn `<Avatar>`:
 - Center "Sell" tab: raised `<Button variant="brand">` circle (`-mt-6`)
 - Safe area: `bottom-[calc(0.75rem+env(safe-area-inset-bottom))]`; pages using the dock need `pb-24`
 
+### Purchase history page (`/purchases`)
+
+Dashboard shell, `max-w-5xl`. Title (`font-display text-3xl font-semibold tracking-tight`) and a one-line subtitle; a "payments due" banner (amber `--color-auction-ending-*` tokens, 20px radius) only on the unfiltered first page when the wallet reports holds; filter pills (All, Pending payment, Paid, Forfeited) styled like the browse `FilterToggle`; then one `rounded-[20px]` card of rows. The filter and page live in the URL (`?status=pending&page=2`, page is 1-based) and the list refetches on change, dimming to 60% while a new page loads. A row is thumbnail, title link and "Won <date>", a `Badge` (`ending-soon` / `won` / `critical`) with a note (time left, paid date or missed deadline), a mono amount and a Pay button (pending rows only, opens `PayNowDialog`; the wallet hold supplies the exact remainder). Empty, filtered-empty, error (Retry) and skeleton states follow the browse page patterns. The Claude Design prototype is the source for the layout.
+
 ### Browse page (`/auctions`)
 
 Filtering is live: there is no Search or Apply button. The URL is the source of truth and the page is server-rendered; `useBrowseQuery` (`hooks/useBrowseQuery.ts`) keeps the controls in step with it.

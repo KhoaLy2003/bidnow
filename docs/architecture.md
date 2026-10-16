@@ -115,6 +115,8 @@ Each refund is its own DB transaction. The retry/DLT policy applies to **all** w
 
 **Winner payment endpoints (public, via gateway):** `GET /api/v1/wallets/payments/pending`, `GET /api/v1/wallets/payments/{auctionId}` (status of the auction's hold, `PENDING_PAYMENT | COMPLETED | CANCELLED | FORFEITED`, plus `totalAmount`; readable by the winner and the seller only, anyone else or a missing hold gets 404 `PAYMENT_HOLD_NOT_FOUND`; a malformed id gets 400), `POST /api/v1/wallets/payments/confirm { auctionId }`. Confirm settles atomically: hold row locked first, then winner and seller wallets in ascending id order. The status read takes no lock and writes nothing.
 
+**Purchase history endpoint (auction-service, via gateway):** `GET /api/v1/auctions/me/purchases?status=PENDING_PAYMENT|PAID|FORFEITED&page&size` lists the auctions the caller won (bid win or Buy It Now), newest first (`completed_at` desc). Status is derived from the auction row alone (no cross-service call): `COMPLETED` with no `winner_paid_at` is `PENDING_PAYMENT`, `COMPLETED` with `winner_paid_at` is `PAID`, `FAILED` with a `winner_id` is `FORFEITED` (a `FAILED` auction without a winner is unsold and never listed). `winner_paid_at` and the `FAILED` flip are projected from the wallet's `PaymentEvent`s, so the list is eventually consistent with the wallet; the wallet stays authoritative for the exact amount due and for paying. An unknown `status` is a 400. Bid win versus Buy It Now is not persisted, so the list does not distinguish them.
+
 **Wallet admin API (ADMIN role, via gateway `/api/v1/admin/wallets/**`):**
 
 | Method | Path | Purpose |
