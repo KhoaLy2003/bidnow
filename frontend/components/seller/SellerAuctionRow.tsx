@@ -103,10 +103,10 @@ export function SellerAuctionRow({ auction, now, onDeleted }: SellerAuctionRowPr
           <Button
             variant="outline"
             className="h-10 px-3.5 text-[13px]"
-            render={<Link href={isDraft ? `/seller/auctions/${auction.id}/manage` : group === 'ended' ? `/auctions/${auction.id}` : `/seller/auctions/${auction.id}/manage`} />}
+            render={<Link href={`/seller/auctions/${auction.id}/manage`} />}
             nativeButton={false}
           >
-            {isDraft ? 'Finish setup' : group === 'ended' ? 'View' : 'Manage'}
+            {isDraft ? 'Finish setup' : 'Manage'}
           </Button>
 
           <DropdownMenu>
