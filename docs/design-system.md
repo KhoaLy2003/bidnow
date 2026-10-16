@@ -669,6 +669,21 @@ Filtering is live: there is no Search or Apply button. The URL is the source of 
 - **Category counts** are catalogue-wide live counts from `/public/category-counts`. They do not yet narrow with the other filters.
 - **Empty state:** offers one "Remove …" button per applied filter plus "Clear all filters".
 
+### Seller auctions (`/seller/auctions`)
+
+One list, no tabs. Every auction the seller owns is on the page at once, split into bands by what needs attention. The old Active / Historical switch is gone. Logic lives in `lib/seller-auctions.ts` (pure, covered by `seller-auctions.test.ts`).
+
+- **Bands (`sellerGroupOf`):** Live now (status Active, closing soonest first), Upcoming (Scheduled by start time, then Drafts), Ended (Sold, No sale, Cancelled, Rejected; most recent first). Empty bands are not drawn. Each band header names the order and the columns that apply to it (Current bid / Starting bid / Final price, Time left / Starts in / Ended).
+- **Live filtering:** nothing to press. The page fetches both lists once and filters on the client, so search, category and chips respond instantly. Search matches the title; category matches `categoryId`.
+- **Status chips:** All, Live, Scheduled, Drafts, Sold, Unsold (No sale, Cancelled, Rejected). Counts are narrowed by the current search and category, so a chip never leads to an empty list. Picking the chip that is already on goes back to All.
+- **Sort:** Time (default), Highest price, Most bids. It applies inside each band, and the band hint says so.
+- **Results bar:** "Showing N of M" with one removable chip per applied filter and "Clear all" (keeps the sort). No matches shows a dashed panel with "Clear all filters".
+- **Ended band:** shows the first 4 rows (`SELLER_ENDED_PREVIEW`) with "Show N more ended" / "Show fewer". This replaces the old 20-per-page pagination.
+- **Header:** the summary line ("14 auctions · 5 live · 2 scheduled · 1 draft · 6 ended") and "Next to close" with a live clock.
+- **Row (`SellerAuctionRow`):** thumbnail, title and category, price, bids, time, status, actions. Live rows tick once a second from one shared `useNow` and show a thin time bar. The tone is written out as well as coloured: Live, Ending soon (5 min or less), Final minute (1 min or less), the same thresholds as the homepage queue (`queueState`). Actions are "Manage" (live, scheduled), "Finish setup" (draft) or "View" (ended), plus a menu with View public page, Edit details and Delete auction where allowed.
+- **Responsive:** `SELLER_ROW_GRID` is shared by band headers and rows. Below `md` a row becomes a two-line card (thumbnail, title, actions, then price, time and status with their own captions) and the Bids column is hidden. Status chips scroll sideways.
+- **Removed:** the Export button (it did nothing) and the server-side category refetch.
+
 ### Homepage (`/`)
 
 Concept: "The clock is the auctioneer." The page shows real-time bidding instead of describing it. Sections, top to bottom:
