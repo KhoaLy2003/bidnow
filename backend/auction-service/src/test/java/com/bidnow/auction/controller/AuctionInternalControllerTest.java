@@ -5,12 +5,14 @@ import com.bidnow.auction.domain.enums.AuctionStatus;
 import com.bidnow.auction.dto.request.ApplyBidRequest;
 import com.bidnow.auction.dto.request.BuyNowRequest;
 import com.bidnow.auction.dto.response.ApplyBidResponse;
+import com.bidnow.auction.dto.response.AuctionBidSummaryResponse;
 import com.bidnow.auction.dto.response.BuyNowResponse;
 import com.bidnow.auction.dto.response.BidContextResponse;
 import com.bidnow.auction.exception.AuctionExceptionHandler;
 import com.bidnow.auction.exception.BidTooLowException;
 import com.bidnow.auction.exception.ConflictException;
 import com.bidnow.auction.service.AuctionBidService;
+import com.bidnow.auction.service.AuctionBidSummaryService;
 import com.bidnow.common.exception.ForbiddenException;
 import com.bidnow.common.exception.GlobalExceptionHandler;
 import com.bidnow.common.exception.NotFoundException;
@@ -25,7 +27,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,13 +49,15 @@ class AuctionInternalControllerTest {
 
     @Mock
     private AuctionBidService auctionBidService;
+    @Mock
+    private AuctionBidSummaryService auctionBidSummaryService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AuctionInternalController(auctionBidService))
+                .standaloneSetup(new AuctionInternalController(auctionBidService, auctionBidSummaryService))
                 .setControllerAdvice(new AuctionExceptionHandler(), new GlobalExceptionHandler())
                 .build();
     }
@@ -77,6 +84,45 @@ class AuctionInternalControllerTest {
                 .andExpect(jsonPath("$.data.auctionId").value(AUCTION_ID.toString()))
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.data.totalBids").value(2));
+    }
+
+    @Test
+    void bidSummaries_returns200WithActiveAuctions() throws Exception {
+        UUID winner = UUID.randomUUID();
+        when(auctionBidSummaryService.getActiveSummaries(List.of(AUCTION_ID))).thenReturn(List.of(
+                AuctionBidSummaryResponse.builder().auctionId(AUCTION_ID).title("Watch")
+                        .primaryImageUrl("https://cdn/w.jpg").currentPrice(new BigDecimal("100.00"))
+                        .currentWinnerId(winner).totalBids(2)
+                        .endTime(OffsetDateTime.parse("2026-10-01T12:00:00Z")).build()));
+
+        mockMvc.perform(post("/api/v1/internal/auctions/bid-summaries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"auctionIds\": [\"" + AUCTION_ID + "\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].auctionId").value(AUCTION_ID.toString()))
+                .andExpect(jsonPath("$.data[0].primaryImageUrl").value("https://cdn/w.jpg"))
+                .andExpect(jsonPath("$.data[0].currentWinnerId").value(winner.toString()))
+                .andExpect(jsonPath("$.data[0].totalBids").value(2));
+    }
+
+    @Test
+    void bidSummaries_emptyIds_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/internal/auctions/bid-summaries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"auctionIds\": []}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.auctionIds").exists());
+        verifyNoInteractions(auctionBidSummaryService);
+    }
+
+    @Test
+    void bidSummaries_moreThan100Ids_returns400() throws Exception {
+        String ids = IntStream.range(0, 101).mapToObj(i -> "\"" + UUID.randomUUID() + "\"")
+                .collect(Collectors.joining(","));
+
+        mockMvc.perform(post("/api/v1/internal/auctions/bid-summaries").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"auctionIds\": [" + ids + "]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.auctionIds").exists());
+        verifyNoInteractions(auctionBidSummaryService);
     }
 
     @Test

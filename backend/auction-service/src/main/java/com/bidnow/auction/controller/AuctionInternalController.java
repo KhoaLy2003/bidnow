@@ -1,11 +1,14 @@
 package com.bidnow.auction.controller;
 
 import com.bidnow.auction.dto.request.ApplyBidRequest;
+import com.bidnow.auction.dto.request.AuctionBidSummariesRequest;
 import com.bidnow.auction.dto.request.BuyNowRequest;
 import com.bidnow.auction.dto.response.ApplyBidResponse;
+import com.bidnow.auction.dto.response.AuctionBidSummaryResponse;
 import com.bidnow.auction.dto.response.BuyNowResponse;
 import com.bidnow.auction.dto.response.BidContextResponse;
 import com.bidnow.auction.service.AuctionBidService;
+import com.bidnow.auction.service.AuctionBidSummaryService;
 import com.bidnow.common.dto.BaseResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -28,6 +32,16 @@ import java.util.UUID;
 public class AuctionInternalController {
 
     private final AuctionBidService auctionBidService;
+    private final AuctionBidSummaryService auctionBidSummaryService;
+
+    @Operation(summary = "Bid summaries of active auctions (Internal)",
+            description = "Batch read (≤100 ids) of title, image, price, winner, bid count and end time. "
+                    + "Only ACTIVE, non-deleted auctions are returned; other ids are omitted.")
+    @PostMapping("/bid-summaries")
+    public ResponseEntity<BaseResponse<List<AuctionBidSummaryResponse>>> getBidSummaries(
+            @Valid @RequestBody AuctionBidSummariesRequest request) {
+        return ResponseEntity.ok(BaseResponse.success(auctionBidSummaryService.getActiveSummaries(request.getAuctionIds())));
+    }
 
     @Operation(summary = "Get bid context (Internal)",
             description = "Price, increment, deposit, status and end time used by bidding-service to pre-validate bids.")

@@ -6,12 +6,15 @@ const CRITICAL_THRESHOLD_SECONDS = 60
 
 export type TimerState = 'normal' | 'warning' | 'critical'
 
-export function deriveTimerState(endsAt: Date): TimerState {
-  const secondsLeft = Math.floor((endsAt.getTime() - Date.now()) / 1000)
+export function timerStateFromSeconds(secondsLeft: number): TimerState {
   if (secondsLeft <= 0)                            return 'normal'
   if (secondsLeft <= CRITICAL_THRESHOLD_SECONDS)   return 'critical'
   if (secondsLeft <= WARNING_THRESHOLD_SECONDS)    return 'warning'
   return 'normal'
+}
+
+export function deriveTimerState(endsAt: Date): TimerState {
+  return timerStateFromSeconds(Math.floor((endsAt.getTime() - Date.now()) / 1000))
 }
 
 export function getAuctionStatus(auction: { status: AuctionStatus; endsAt: Date }): AuctionStatus {

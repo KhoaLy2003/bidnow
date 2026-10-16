@@ -3,6 +3,8 @@ package com.bidnow.bidding.service;
 import com.bidnow.bidding.constant.BiddingErrorCodes;
 import com.bidnow.bidding.dto.ApplyBidCommand;
 import com.bidnow.bidding.dto.ApplyBidResult;
+import com.bidnow.bidding.dto.AuctionBidSummariesCommand;
+import com.bidnow.bidding.dto.AuctionBidSummary;
 import com.bidnow.bidding.dto.BuyNowCommand;
 import com.bidnow.bidding.dto.BuyNowResult;
 import com.bidnow.bidding.exception.BidTooLowException;
@@ -20,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /** Calls auction-service's authoritative, row-locked apply-bid and maps its errors to bidding errors. */
@@ -27,6 +31,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AuctionBidGateway {
+
+    /** auction-service rejects bid-summaries requests with more ids than this. */
+    static final int SUMMARY_BATCH_SIZE = 100;
 
     private final AuctionServiceClient auctionServiceClient;
     private final ObjectMapper objectMapper;
@@ -65,6 +72,31 @@ public class AuctionBidGateway {
             throw new ServiceUnavailableException("Auction service is unavailable");
         }
         return data;
+    }
+
+    /**
+     * The live state of whichever of {@code auctionIds} are still ACTIVE. auction-service caps a request
+     * at {@link #SUMMARY_BATCH_SIZE} ids, so longer lists are sent in chunks.
+     */
+    public List<AuctionBidSummary> activeSummaries(List<UUID> auctionIds) {
+        List<AuctionBidSummary> summaries = new ArrayList<>();
+        for (int from = 0; from < auctionIds.size(); from += SUMMARY_BATCH_SIZE) {
+            List<UUID> chunk = auctionIds.subList(from, Math.min(from + SUMMARY_BATCH_SIZE, auctionIds.size()));
+            BaseResponse<List<AuctionBidSummary>> response;
+            try {
+                response = auctionServiceClient.getBidSummaries(new AuctionBidSummariesCommand(chunk));
+            } catch (FeignException ex) {
+                DownstreamError error = DownstreamError.of(ex, objectMapper);
+                log.error("auction-service bid-summaries failed (status {}, code {})", error.status(), error.errorCode());
+                throw new ServiceUnavailableException("Auction service is unavailable");
+            }
+            if (response == null || response.getData() == null) {
+                log.error("auction-service returned an empty bid-summaries result");
+                throw new ServiceUnavailableException("Auction service is unavailable");
+            }
+            summaries.addAll(response.getData());
+        }
+        return summaries;
     }
 
     private RuntimeException toBuyNowException(DownstreamError error, UUID auctionId, UUID buyerId) {

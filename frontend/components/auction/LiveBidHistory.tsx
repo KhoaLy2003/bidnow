@@ -44,11 +44,18 @@ export function LiveBidHistory({ auction: base, initialBids, initialHasMore }: L
   }
 
   return (
-    <section>
-      <h2 className="text-[10.5px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
+    <section id="bids" className="overflow-hidden rounded-[20px] border">
+      <h2 className="border-b px-5 py-[18px] font-display text-lg font-semibold">
         Bid History · {auction.totalBids}
       </h2>
-      <BidHistory items={items} hasMore={hasMore && !isLoading} onLoadMore={loadMore} />
+      <BidHistory
+        items={items}
+        total={auction.totalBids}
+        hasMore={hasMore}
+        isLoading={isLoading}
+        onLoadMore={loadMore}
+        className="p-2"
+      />
     </section>
   )
 }

@@ -10,7 +10,7 @@ interface SellerOwnedPanelProps {
 
 export function SellerOwnedPanel({ auctionId }: SellerOwnedPanelProps) {
   return (
-    <div className="rounded-xl border bg-card overflow-hidden flex flex-col gap-4 px-[18px] py-[18px]">
+    <div className="rounded-[20px] border bg-card overflow-hidden flex flex-col gap-4 px-[22px] py-[22px] shadow-[0_1px_2px_rgb(20_22_26/0.04),0_12px_32px_rgb(20_22_26/0.06)]">
       <div className="flex items-center gap-2">
         <Tag className="size-4 text-muted-foreground" />
         <span className="font-medium text-sm">Your auction</span>

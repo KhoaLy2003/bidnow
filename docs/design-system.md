@@ -385,7 +385,7 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | `--container-xl` | `1280px` | Standard desktop |
 | `--container-2xl` | `1440px` | Wide desktop |
 | `--container-auction-grid` | `1200px` | Auction listing grid max-width |
-| `--container-auction-detail` | `960px` | Single auction detail page |
+| `--container-auction-detail` | `1240px` | Single auction detail page |
 | `--container-sidebar` | `320px` | Bid history / filter sidebar |
 
 ### Auction Grid Breakpoints
@@ -397,9 +397,14 @@ Each status also has `--color-auction-{status}-accent` for glow (e.g. `won-accen
 | 1280px+ | 4 | 24px |
 
 ### Auction Detail Page Layout
-- Mobile: single column stack
-- Tablet+: images + details 60% / bid panel 40%
-- Desktop: images + details 65% / bid panel 35% (sticky)
+Storefront-style: photo on the left, title and bidding on the right.
+
+- Mobile / tablet (< 1024px): single column. Photo (thumbnails below it), then eyebrow, title, seller line and bid panel, then About, Specifications, Seller and Bid History.
+- Desktop (1024px+): two columns, photo `1fr` / title + bid panel `460px`, 56px gap. Below a divider, About / Specifications / Seller on the left and the Bid History card (`460px`) on the right.
+- `AuctionGallery`: thumbnail rail (76px) to the left of a square photo on `md+`; Save and Share sit on the photo, the `n / total` counter bottom-left.
+- Bid panel (`BidPanelLive`): `rounded-[20px]` card with a soft shadow. Order: "Current bid" + status badge, price + bid count link, "You're winning" / "You've been outbid" banner, `BidCountdown` (units, end time, elapsed-time bar), `BidForm` (−/+ input, quick-bid chips, Place bid), buy-now block, then wallet balance, deposit and auto-bid rows.
+- Deliberate departure from the Tesla migration notes in section 6: this page uses 20px card radii, 12px inputs/buttons and a soft shadow on the bid panel.
+- Display helpers (countdown units, elapsed progress, end-time label, quick-bid amounts) live in `lib/auction-display.ts`.
 
 ### Z-Index Scale
 | Token | Value | Usage |
@@ -517,7 +522,9 @@ shadcn's `--radius` drives its components. BidNow extends with a full scale:
 | BidHistory | **Custom** | Composes ScrollArea + Avatar |
 | StatusBadge | **Custom** | Extends shadcn Badge with auction variants |
 | AuctionCard | **Custom** | Composes shadcn Card + custom elements |
-| WalletBadge | **Custom** | Header wallet display |
+| SearchDialog | **Custom** | Header search: shadcn Dialog with recents and live results |
+| BrowseClient + filter bar | **Custom** | Browse page controls: `BrowseSearchField`, `CategoryChips`, `PriceFilter` (Popover), `FilterToggle`, `SortButton`, `ActiveFilters`, `BrowseFiltersSheet` (mobile Sheet) |
+| AccountMenu | **Custom** | Avatar menu: balance card, grouped links, theme, sign out |
 | NotificationBell | **Custom** | Base UI Popover with an unread badge (9+) |
 | BidForm | **Custom** | Composes shadcn Input + Button + Switch |
 | AuctionGrid | **Custom** | Responsive grid layout |
@@ -587,12 +594,11 @@ Format: `HH:MM:SS` (< 1 day), `Xd Xh` (longer). Anti-snipe label at critical: `"
 - Dividers: shadcn `<Separator>`
 - "Load more": shadcn `<Button variant="link" size="sm">`
 
-### WalletBadge (Header)
+### Wallet balance (Account menu)
 
-- Pill: `<Button variant="ghost">` styled as pill with wallet icon + mono balance
-- Low balance: swap to `text-[--color-warning-text] bg-[--color-warning-subtle]` + pulse
-- Deposit animation: `price-roll` on balance number
-- Click: opens shadcn `<Sheet side="right">` (WalletPanel)
+- The header has no balance chip. The balance lives in the account menu's balance card (label "Available", mono amount, icon-only eye button)
+- Privacy: the amount is masked (`••••••`) until the user clicks the eye. `useBalanceVisibilityStore` holds the choice; it is not persisted and is reset on sign out
+- Add Funds lives on `/wallet`, reached from the menu's Wallet item
 
 ### StatusBadge
 
@@ -635,18 +641,62 @@ Built on shadcn `<Avatar>`:
 
 ### Header / Navigation
 
-**Desktop (> 1024px):**
-- Sticky `<header>` — `h-16 bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
-- Scrolled: `backdrop-blur-sm` (add via scroll listener)
-- shadcn `<NavigationMenu>` for nav links
-- Center: shadcn `<Input>` with `<Search>` icon adornment, `max-w-[400px]`
-- Right: `<WalletBadge>` + `<NotificationBell>` + shadcn `<DropdownMenu>` (avatar) + `<Button>` ("Sell")
+**Desktop (≥ 768px):**
+- Sticky `<header>` — `bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
+- Bar: `h-[72px]`, `h-[60px]` once scrolled, plus a soft shadow. Logo | `NavLinks` | search trigger | actions
+- `NavLinks`: Browse and My bids (signed in) or Browse and How it works (guests). There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
+- Search trigger (`⌘K` / `Ctrl+K`) opens `SearchDialog`: recent searches and ending-soon lots when empty, debounced live results while typing
+- Right: `NotificationBell` + `AccountMenu` + `<Button variant="brand">` ("Sell", `/seller/auctions/new`). Guests get "Sign in" and "Join BidNow"
+- `AccountMenu`: identity, balance card (eye toggle), then My bids, Purchase history, My auctions | Wallet, Profile, Settings | theme switch | Sign out
 
-**Mobile (< 1024px):**
-- Compressed top bar; icon-only right side
-- Bottom nav: fixed `h-14 bg-background border-t border-border` with 5 tabs
-- Center "Sell" tab: `<Button variant="brand" size="icon" className="rounded-full -mt-4">` (no shadow)
-- Safe area: `pb-[env(safe-area-inset-bottom)]`
+**Mobile (< 768px):**
+- Top bar: logo, bell, avatar; the search trigger gets its own full-width row below
+- Bottom nav is a floating dock: `fixed inset-x-3 bottom-3 h-16 rounded-2xl border shadow-lg` with 5 tabs; the active tab gets a top bar
+- Center "Sell" tab: raised `<Button variant="brand">` circle (`-mt-6`)
+- Safe area: `bottom-[calc(0.75rem+env(safe-area-inset-bottom))]`; pages using the dock need `pb-24`
+
+### Browse page (`/auctions`)
+
+Filtering is live: there is no Search or Apply button. The URL is the source of truth and the page is server-rendered; `useBrowseQuery` (`hooks/useBrowseQuery.ts`) keeps the controls in step with it.
+
+- **Draft vs URL:** controls read a local draft so they respond instantly. The draft is pushed with `router.replace(url, { scroll: false })` inside a transition, then the server re-renders the results. URL changes made elsewhere (back button, header search, links) replace the draft. `BrowseClient` must not be given a `key`, or typing would lose focus.
+- **Timing:** search text, the price slider and typed prices commit after a 300 ms pause (`BROWSE_DEBOUNCE_MS`); category, toggles, sort, presets and removing a chip commit at once; Enter in the search box commits at once.
+- **Layout, top to bottom:** title and live count; large search field (spinner while updating, clear button); category chips with counts; filter bar (Price popover, Ending soon, Buy Now, sort, grid/list switch); result count with one removable chip per applied filter and "Clear all"; results.
+- **Loading:** while updating, a 2px brand progress bar slides across the top of the filter bar and the results dim to 60%. No skeleton flash.
+- **Price filter:** cubic slider (`lib/browse-price.ts`, 0-100 maps to $0-$20,000, top handle = no maximum), typed min/max boxes, and four preset ranges. A maximum of `DEFAULT_MAX_PRICE` means "no maximum" and is omitted from the URL.
+- **Ending soon** means ends within the hour (`endingSoon=true` to the API).
+- **Mobile (< 768px):** the Price control moves into a bottom Sheet opened by a "Filters (n)" pill (n counts price, ending soon and buy now). The sheet's "Show N auctions" button only closes it; changes already applied behind it. Category chips scroll horizontally.
+- **Category counts** are catalogue-wide live counts from `/public/category-counts`. They do not yet narrow with the other filters.
+- **Empty state:** offers one "Remove …" button per applied filter plus "Clear all filters".
+
+### My Bids page (`/my-bids`)
+
+The active auctions the signed-in user has bid on. Data comes from `GET /api/v1/bids/me/active` through `bidService.getMyActiveBids()` and `useMyActiveBids` (`hooks/useMyActiveBids.ts`); the page itself is a server component that only renders the title and `MyBidsClient`. The Claude Design prototype is described in `docs/prompt/my-bids-design-prompt.md`.
+
+- **Layout:** title and subtitle, a line `Tabs` bar (All / Winning / Outbid, each with a mono count), then the list. Tabs filter client-side (`lib/my-bids.ts`); there is no paging. The list is soonest-ending first, as the server returns it.
+- **Row (`MyBidRow`):** thumbnail, title with bid count, status pill, "Your bid", "Current bid", time left, action. From `md` up it is a seven-column grid under a header row; below `md` it is a card (image and title, a three-figure strip with 10px labels, a full-width action). One markup serves both: the strip uses `md:contents`.
+- **Status:** `BidStatusPill` is "Winning" (`--color-success-*`) or "Outbid" (`--color-auction-outbid-*`), with an icon so colour is not the only cue. Winning rows get an outline "View" button, outbid rows a brand "Bid again" button. Both go to `/auctions/{id}`; action buttons are 44px tall.
+- **Time left (`BidTimeLeft`):** plain mono text, amber under 5 minutes and red under 1 minute (same thresholds as `useCountdown`). It does not use the pill-shaped `CountdownTimer`, which would be too heavy in a row.
+- **Freshness:** the list refetches every 30 s while the tab is visible (`MY_BIDS_POLL_MS`), when the tab becomes visible again, and when an outbid, won or lost notification arrives in `notificationStore`. Prices and times between refetches can lag by up to 30 s; the countdown ticks locally.
+- **States:** first load shows `MyBidsSkeleton`. A failed refetch keeps the last list and shows an amber banner with Retry; a failed first load shows the banner alone. Empty copy depends on the tab, and only "All" offers "Browse auctions".
+
+### Homepage (`/`)
+
+Concept: "The clock is the auctioneer." The page shows real-time bidding instead of describing it. Sections, top to bottom:
+
+- **Hero (`components/home/hero/`):** full-bleed, always dark (the section carries the `dark` class so the dark tokens apply in either theme). Left: pill, display headline, lead, CTAs, three facts. Right (`HeroLive`): a 3D watch (`WatchStage` > `WatchScene`, React Three Fiber) over a frosted `HeroLotCard`. Behind it, a CSS dial (`.hero-dial-*` in `globals.css`) with a 60-tick bezel and a stepping second hand.
+- **Live data:** the hero follows the soonest-ending running auction (`pickHeroLot`). `useLiveLot` subscribes to `/topic/auctions/{id}` and applies the same reducers as the detail page, but keeps its state local (no `auctionStore`, no toasts). The price and countdown use NumberFlow; a new bid shows a "bidder bid $X" chip, and an end-time extension shows "+5:00 added".
+- **Watch behaviour:** the three hands follow the lot's countdown (or the wall clock when no lot is running). A 60-segment LED ring is full until the final 5 minutes, then drains, coloured calm, warning (≤5 min) or critical (≤1 min) like `useCountdown`. A new bid swells the watch and sends a ring out; an extension spins it once. It leans toward the pointer.
+- **Loading and fallbacks:** three.js is loaded with `next/dynamic` (`ssr: false`) and kept out of the initial bundle. A static SVG dial (`WatchPoster`) shows while loading and replaces the scene for `prefers-reduced-motion`, no WebGL 2, or a scene error. The scene pauses while off screen. Lighting is procedural (`Lightformer`), so there is no HDR download.
+- **Live tape (`LiveTape`):** a bezel-style ruler and a marquee of the next lots to close (title, current bid, bid count). It pauses on hover and for reduced motion; repeated entries are `inert`.
+- **Closing next (`ClosingQueue`):** the five soonest-ending lots as rows (thumbnail, title, current bid, live clock with a time bar, action). The tone is written out as well as coloured: Live, Ending soon (≤5 min), Final minute (≤1 min), Closed. Logic lives in `lib/home-queue.ts`.
+- **How a live auction works (`HowItWorks`):** a timeline of open bidding, the last 2 minutes (anti-snipe zone) and the +5:00 extension, then four numbered steps. Widths are illustrative. The 2 minute and 5 minute values are the documented defaults of `auction.anti-snipe.*`; the 48 hour payment window is also from the docs.
+- **Categories (`CategoryRooms`):** a bento grid, one tile per category with its live count from `/public/category-counts` (falls back to "Browse"). Icons are Lucide.
+- **Closing CTA (`CTASection`):** "Bid. Win. Repeat." with a bidder card (guests only) and a seller card.
+- **FAQ (`FAQAccordion`):** the shared Base UI accordion, display-font questions, first item open.
+- `Section` / `SectionHeading` (`components/home/Section.tsx`) give every band the same container (`--container-xl`), vertical rhythm, mono eyebrow with an amber dot, and optional tinted background.
+- The old stats strip (50K+ users, $2.5M+, 4.8 rating), "Featured Picks" grid and "Why Trust BidNow?" cards were removed.
+- **Libraries:** `three`, `@react-three/fiber`, `@react-three/drei`, `motion`, `@number-flow/react`.
 
 ---
 

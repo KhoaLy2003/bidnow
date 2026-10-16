@@ -90,7 +90,7 @@ export function BuyNowButton({ auctionId, title, buyNowPrice, depositAmount }: B
       <button
         type="button"
         onClick={handleOpen}
-        className="w-full h-9 rounded text-sm font-medium bg-[var(--color-success-default)] text-white flex items-center justify-center transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:opacity-90"
+        className="w-full h-[46px] rounded-[10px] text-sm font-semibold bg-[var(--color-success-text)] text-[var(--color-success-subtle)] flex items-center justify-center transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:opacity-90"
       >
         Buy Now →
       </button>

@@ -7,7 +7,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <AuthGuard>
       <Header />
-      <div className="flex-1 mx-auto w-full max-w-[var(--container-xl)] px-4 py-8 pb-14 md:pb-8">
+      <div className="flex-1 mx-auto w-full max-w-[var(--container-xl)] px-4 py-8 pb-24 md:pb-8">
         {children}
       </div>
       <Footer />

@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,8 @@ import java.util.UUID;
 public interface AuctionItemRepository extends JpaRepository<AuctionItem, UUID>, JpaSpecificationExecutor<AuctionItem> {
 
     Optional<AuctionItem> findByIdAndDeletedAtIsNull(UUID id);
+
+    List<AuctionItem> findByIdInAndStatusAndDeletedAtIsNull(Collection<UUID> ids, AuctionStatus status);
 
     /**
      * Loads a non-deleted auction with a {@code SELECT … FOR UPDATE} row lock. Every write that depends

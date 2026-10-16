@@ -293,7 +293,9 @@ Stories 1 and 2 run in parallel, and so do 4, 5 and 6 once 3 has landed.
 
 **Plan:** `docs/superpowers/plans/2026-09-30-frontend-bidding.md`
 
-**Not done:** My-bids tab / dashboard (needs a cross-auction endpoint); auto-bid UI disabled until auto-bid ships.
+**Not done:** auto-bid UI disabled until auto-bid ships.
+
+**Done later:** the My Bids page (`/my-bids`) and its cross-auction endpoint `GET /api/v1/bids/me/active` (spec `docs/superpowers/specs/2026-10-16-my-active-bids-design.md`).
 
 **Tasks:**
 - [x] **7.1 Settle money units.** `BidForm` documents cents, but `auction.mapper.ts` passes `dto.currentPrice` (dollars) straight through. Pick one unit (recommended: keep dollars end-to-end to match the API, and drop the ×100 in `BidForm`). Fix the mapper, `BidForm` and `formatCurrency` usage together, with a unit test on the mapper.

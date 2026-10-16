@@ -7,19 +7,24 @@ import {
 
 const FAQ_ITEMS = [
   {
-    question: 'How does bidding work?',
+    question: 'When does an auction actually end?',
     answer:
-      'Place a bid above the current price. If no one outbids you before the timer ends, you win.',
+      'At its end time, unless an accepted bid arrives with less than two minutes left. Then five minutes are added to the end time. This can repeat with no cap, and every extension appears live for everyone watching.',
   },
   {
-    question: 'Is my payment information secure?',
+    question: 'What happens to my deposit?',
     answer:
-      'Yes. All transactions are encrypted and processed through verified payment providers.',
+      "It's locked automatically when you place your first bid on an auction. If you don't win, it goes back to your wallet as soon as the auction ends.",
   },
   {
-    question: 'What happens when I win an auction?',
+    question: "Can I bid while I'm away?",
     answer:
-      "You'll receive an email with payment instructions. Complete payment within 48 hours to claim your item.",
+      'Yes. Set a maximum bid and auto-bid will outbid rivals for you, up to your limit and no further.',
+  },
+  {
+    question: 'What happens when I win?',
+    answer:
+      "You'll be notified straight away and have 48 hours to pay from your wallet. Your deposit counts toward the price. If payment isn't made in time, the deposit is forfeited and the result is cancelled.",
   },
   {
     question: 'How do I verify my account?',
@@ -29,19 +34,19 @@ const FAQ_ITEMS = [
   {
     question: 'Can I sell on BidNow?',
     answer:
-      'Yes. Verified sellers can list items from the dashboard. Click "Start Selling" to get started.',
+      'Yes. Verified sellers can list items from the dashboard. Click "Start selling" to get started.',
   },
 ] as const
 
 export function FAQAccordion() {
   return (
-    <Accordion className="w-full">
+    <Accordion className="w-full border-t border-[var(--color-border-default)]" defaultValue={['faq-0']}>
       {FAQ_ITEMS.map((item, i) => (
-        <AccordionItem key={i} value={`faq-${i}`}>
-          <AccordionTrigger className="text-left">
+        <AccordionItem key={item.question} value={`faq-${i}`} className="border-b border-[var(--color-border-default)] not-last:border-b">
+          <AccordionTrigger className="items-center py-5 font-display text-[length:var(--font-size-lg)] font-medium hover:no-underline">
             {item.question}
           </AccordionTrigger>
-          <AccordionContent className="text-sm text-muted-foreground">
+          <AccordionContent className="max-w-3xl pr-10 text-[length:var(--font-size-base)] leading-relaxed text-muted-foreground">
             {item.answer}
           </AccordionContent>
         </AccordionItem>

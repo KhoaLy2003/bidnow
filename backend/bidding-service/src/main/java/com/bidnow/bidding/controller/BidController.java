@@ -5,10 +5,12 @@ import com.bidnow.bidding.dto.request.BuyNowRequest;
 import com.bidnow.bidding.dto.request.PlaceBidRequest;
 import com.bidnow.bidding.dto.response.BidHistoryResponse;
 import com.bidnow.bidding.dto.response.BuyNowResponse;
+import com.bidnow.bidding.dto.response.MyActiveBidsResponse;
 import com.bidnow.bidding.dto.response.PlaceBidResponse;
 import com.bidnow.bidding.service.BidHistoryService;
 import com.bidnow.bidding.service.BidService;
 import com.bidnow.bidding.service.BuyNowService;
+import com.bidnow.bidding.service.MyActiveBidsService;
 import com.bidnow.common.annotation.AuthenticatedUserId;
 import com.bidnow.common.dto.BaseResponse;
 import com.bidnow.common.dto.PageResponse;
@@ -37,6 +39,15 @@ public class BidController {
     private final BidService bidService;
     private final BidHistoryService bidHistoryService;
     private final BuyNowService buyNowService;
+    private final MyActiveBidsService myActiveBidsService;
+
+    @Operation(summary = "My active bids",
+            description = "Active auctions the caller has bid on, soonest-ending first, each flagged winning or "
+                    + "outbid, with per-tab counts. Not paginated (capped at 100). 503 if auction-service is down.")
+    @GetMapping("/me/active")
+    public ResponseEntity<BaseResponse<MyActiveBidsResponse>> myActiveBids(@AuthenticatedUserId UUID bidderId) {
+        return ResponseEntity.ok(BaseResponse.success(myActiveBidsService.myActiveBids(bidderId)));
+    }
 
     @Operation(summary = "Place a bid",
             description = "Validates the bid, locks the bidder's auction deposit on their first bid, and applies the "

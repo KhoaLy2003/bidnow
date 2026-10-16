@@ -3,16 +3,14 @@
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { BidInput } from './BidInput'
 import { BidButton } from './BidButton'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { formatCurrency } from '@/lib/format'
 import { addDollars, isLessThan, parseDollarInput } from '@/lib/money'
 import { minimumNextBid } from '@/lib/auction-utils'
+import { quickBidAmounts } from '@/lib/auction-display'
 import { classifyBidError, describeBidFailure, type BidFailure } from '@/lib/bid-errors'
 import { bidService } from '@/services/bid.service'
 import { useAuctionStore } from '@/store/auctionStore'
@@ -97,9 +95,17 @@ export function BidForm({ auctionId, currentBid, bidIncrement, startingPrice, to
     }
   }
 
+  function pickQuickBid(amount: number) {
+    setBidValue(amount.toFixed(2))
+    setInputError(undefined)
+    if (!failureView?.disablesForm) setFailure(null)
+  }
+
   return (
     <form onSubmit={handleSubmit} noValidate className={cn('flex flex-col gap-3', className)}>
+      <Label htmlFor={`bid-${auctionId}`} className="font-semibold">Your bid</Label>
       <BidInput
+        id={`bid-${auctionId}`}
         value={bidValue}
         onChange={(e) => {
           setBidValue(e.target.value)
@@ -115,6 +121,20 @@ export function BidForm({ auctionId, currentBid, bidIncrement, startingPrice, to
         disabled={formDisabled || isLoading}
         showSteppers
       />
+
+      <div role="group" aria-label="Quick bid amounts" className="flex flex-wrap gap-2">
+        {quickBidAmounts(minBid, bidIncrement).map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => pickQuickBid(amount)}
+            disabled={formDisabled || isLoading}
+            className="min-h-9 rounded-full border bg-background px-3.5 font-mono text-[13px] font-medium text-foreground/80 transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:border-[var(--color-text-brand)] hover:text-[var(--color-text-brand)] disabled:pointer-events-none disabled:opacity-50"
+          >
+            {formatCurrency(amount)}
+          </button>
+        ))}
+      </div>
 
       <BidButton
         type="submit"
@@ -133,16 +153,6 @@ export function BidForm({ auctionId, currentBid, bidIncrement, startingPrice, to
           )}
         </div>
       )}
-
-      <Separator />
-
-      <div className="flex items-center justify-between">
-        <Label htmlFor={`autobid-${auctionId}`} className="flex items-center gap-1.5 text-muted-foreground">
-          <Zap className="size-3.5 text-[var(--color-text-brand)]" />
-          Auto-bid <span className="text-[10px] uppercase tracking-wide">coming soon</span>
-        </Label>
-        <Switch id={`autobid-${auctionId}`} checked={false} disabled />
-      </div>
 
       <p className="text-xs text-muted-foreground text-center">
         Minimum next bid: <span className="font-mono">{formatCurrency(minBid)}</span>

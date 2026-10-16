@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { AuctionResultBanner } from './AuctionResultBanner'
 import { AuctionStatus } from '@/lib/design-tokens'
-import { PanelFooter } from './PanelFooter'
 import { PaymentStatusBlock } from '@/components/payment/PaymentStatusBlock'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
 
@@ -15,7 +14,7 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
   const { id, title, status, categoryId, currentBid, completedAt } = auction
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden flex flex-col">
+    <div className="rounded-[20px] border bg-card overflow-hidden flex flex-col shadow-[0_1px_2px_rgb(20_22_26/0.04),0_12px_32px_rgb(20_22_26/0.06)]">
       <AuctionResultBanner
         status={status as AuctionStatus.Won | AuctionStatus.Lost | AuctionStatus.Closed}
         finalBid={currentBid}
@@ -83,8 +82,6 @@ export function BidPanelEnded({ auction }: BidPanelEndedProps) {
           </Link>
         </div>
       )}
-
-      <PanelFooter />
     </div>
   )
 }
