@@ -1,5 +1,6 @@
 package com.bidnow.auction.service;
 
+import com.bidnow.auction.domain.enums.PurchasePaymentStatus;
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
@@ -8,6 +9,7 @@ import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.dto.response.PurchaseResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.common.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +28,8 @@ public interface AuctionService {
     SellerAuctionResponse createAuction(UUID sellerId, CreateAuctionRequest request);
 
     PageResponse<AuctionSummaryResponse> getMyAuctions(UUID sellerId, String type, UUID categoryId, Pageable pageable);
+
+    PageResponse<PurchaseResponse> getMyPurchases(UUID buyerId, PurchasePaymentStatus status, Pageable pageable);
 
     SellerAuctionResponse updateAuction(UUID sellerId, UUID auctionId, UpdateAuctionRequest request);
 
