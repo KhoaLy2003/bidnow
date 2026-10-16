@@ -10,7 +10,7 @@ import { NotificationBell } from "@/components/notification/NotificationBell";
 import { AccountMenu } from "@/components/layout/AccountMenu";
 import { NavLinks } from "@/components/layout/NavLinks";
 import { SearchDialog } from "@/components/layout/SearchDialog";
-import { AUTHED_NAV_LINKS, GUEST_NAV_LINKS, ROUTES } from "@/lib/navigation";
+import { NAV_LINKS, ROUTES } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 import { useAuthStore } from "@/store/authStore";
@@ -95,7 +95,7 @@ export function Header() {
           <span className="font-display text-2xl font-bold leading-none tracking-[-0.06em]">bidnow</span>
         </Link>
 
-        <NavLinks links={isAuthenticated && !isAdmin ? AUTHED_NAV_LINKS : GUEST_NAV_LINKS} />
+        <NavLinks links={NAV_LINKS} />
 
         <SearchTrigger
           onClick={() => setSearchOpen(true)}
