@@ -9,6 +9,9 @@ import com.bidnow.bidding.exception.BiddingExceptionHandler;
 import com.bidnow.bidding.service.BidHistoryService;
 import com.bidnow.bidding.service.BidService;
 import com.bidnow.bidding.service.BuyNowService;
+import com.bidnow.bidding.service.MyActiveBidsService;
+import com.bidnow.bidding.dto.response.MyActiveBidCounts;
+import com.bidnow.bidding.dto.response.MyActiveBidsResponse;
 import com.bidnow.common.dto.PageResponse;
 import com.bidnow.common.dto.PaginationMeta;
 import com.bidnow.common.exception.GlobalExceptionHandler;
@@ -52,6 +55,24 @@ class BidControllerSecurityTest {
 
     @MockBean
     private BuyNowService buyNowService;
+
+    @MockBean
+    private MyActiveBidsService myActiveBidsService;
+
+    @Test
+    void myActiveBids_withoutUserId_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/bids/me/active")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(myActiveBidsService);
+    }
+
+    @Test
+    void myActiveBids_withUserId_returns200() throws Exception {
+        when(myActiveBidsService.myActiveBids(BIDDER_ID)).thenReturn(MyActiveBidsResponse.builder()
+                .items(List.of()).counts(MyActiveBidCounts.builder().build()).build());
+
+        mockMvc.perform(get("/api/v1/bids/me/active").header("X-User-Id", BIDDER_ID.toString()))
+                .andExpect(status().isOk());
+    }
 
     @Test
     void auctionHistory_withoutUserId_isPublic() throws Exception {

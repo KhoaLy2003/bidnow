@@ -2,6 +2,8 @@ package com.bidnow.bidding.feign;
 
 import com.bidnow.bidding.dto.ApplyBidCommand;
 import com.bidnow.bidding.dto.ApplyBidResult;
+import com.bidnow.bidding.dto.AuctionBidSummariesCommand;
+import com.bidnow.bidding.dto.AuctionBidSummary;
 import com.bidnow.bidding.dto.BidContext;
 import com.bidnow.bidding.dto.BuyNowCommand;
 import com.bidnow.bidding.dto.BuyNowResult;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
 import java.util.UUID;
 
 @FeignClient(name = "auction-service")
@@ -25,4 +28,7 @@ public interface AuctionServiceClient {
 
     @PostMapping("/api/v1/internal/auctions/{id}/buy-now")
     BaseResponse<BuyNowResult> buyNow(@PathVariable("id") UUID auctionId, @RequestBody BuyNowCommand command);
+
+    @PostMapping("/api/v1/internal/auctions/bid-summaries")
+    BaseResponse<List<AuctionBidSummary>> getBidSummaries(@RequestBody AuctionBidSummariesCommand command);
 }
