@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { AntiSnipeNotice } from '@/components/seller/AntiSnipeNotice'
 import { DateTimePicker } from '@/components/seller/DateTimePicker'
+import { describeDuration } from '@/lib/auction-schedule'
 import { DepositRangeInput } from '@/components/seller/DepositRangeInput'
 import { ImageUploadGrid } from '@/components/seller/ImageUploadGrid'
 import { AuctionStatus } from '@/lib/design-tokens'
@@ -22,14 +23,6 @@ import { mediaService } from '@/services/media.service'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import type { ManagedImage } from '@/types/ui/seller.ui'
 import type { AuctionDetail } from '@/types/ui/auction.ui'
-
-const DURATION_FORMAT = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 })
-
-function describeDuration(ms: number): string {
-  if (ms <= 0) return '—'
-  const hours = ms / 3_600_000
-  return hours < 24 ? `${DURATION_FORMAT.format(hours)} hours` : `${DURATION_FORMAT.format(hours / 24)} days`
-}
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null

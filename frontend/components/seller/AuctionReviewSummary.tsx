@@ -1,4 +1,5 @@
 import { formatCurrency } from '@/lib/format'
+import { describeDuration } from '@/lib/auction-schedule'
 import type { CreateAuctionFormData } from '@/types/ui/seller.ui'
 
 const CATEGORIES: Record<string, string> = {
@@ -24,7 +25,15 @@ interface ReviewRow {
   mono?: boolean
 }
 
+/** "Oct 20, 2026, 12:00 PM GMT+7": the viewer's own time zone, named. */
+function formatWhen(d: Date): string {
+  return d.toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  })
+}
+
 export function AuctionReviewSummary({ data, endsAt, onEditStep }: AuctionReviewSummaryProps) {
+  const startsAt = data.startType === 'scheduled' ? data.scheduledStartTime : null
   const rows: ReviewRow[] = [
     { label: 'Title',          value: data.title || '—',                                 step: 1 },
     { label: 'Category',       value: CATEGORIES[data.categoryId] ?? data.categoryId ?? '—', step: 1 },
@@ -34,7 +43,9 @@ export function AuctionReviewSummary({ data, endsAt, onEditStep }: AuctionReview
     { label: 'Bid increment',  value: data.bidIncrement  > 0 ? formatCurrency(data.bidIncrement)  : '—', step: 3, mono: true },
     { label: 'Buy it now',     value: data.buyNowPrice   > 0 ? formatCurrency(data.buyNowPrice)   : 'Not set', step: 3, mono: true },
     { label: 'Deposit',        value: data.depositAmount > 0 ? `${formatCurrency(data.depositAmount)} (${((data.depositAmount / data.startingPrice) * 100).toFixed(0)}%)` : '—', step: 3, mono: true },
-    { label: 'Duration',       value: `${data.durationDays} day${data.durationDays !== 1 ? 's' : ''} · ends ${endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ICT`, step: 3 },
+    { label: 'Starts',         value: startsAt ? formatWhen(startsAt) : 'As soon as you publish',          step: 3 },
+    { label: 'Ends',           value: formatWhen(endsAt),                                                  step: 3 },
+    { label: 'Duration',       value: describeDuration(endsAt.getTime() - (startsAt ?? new Date()).getTime()), step: 3 },
     { label: 'Anti-snipe',     value: 'Enabled — +5 min if bid in last 5 min',           step: 3 },
   ]
 

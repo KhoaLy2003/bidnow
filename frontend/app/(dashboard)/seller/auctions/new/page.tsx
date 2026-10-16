@@ -1,12 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter }       from 'next/navigation'
 import Link                from 'next/link'
-import { CalendarIcon, Loader2 } from 'lucide-react'
-import { format }          from 'date-fns'
-import { Calendar }        from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Loader2 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button }          from '@/components/ui/button'
 import { Input }           from '@/components/ui/input'
@@ -20,7 +17,11 @@ import { ImageUploadGrid }     from '@/components/seller/ImageUploadGrid'
 import { DepositRangeInput }   from '@/components/seller/DepositRangeInput'
 import { AntiSnipeNotice }     from '@/components/seller/AntiSnipeNotice'
 import { AuctionReviewSummary } from '@/components/seller/AuctionReviewSummary'
+import { DateTimePicker }      from '@/components/seller/DateTimePicker'
 import { ImageThumbnail } from '@/components/shared/ImageThumbnail'
+import {
+  END_PRESET_DAYS, addDays, describeDuration, scheduleStart, validateSchedule,
+} from '@/lib/auction-schedule'
 import { INITIAL_FORM_DATA }   from '@/types/ui/seller.ui'
 import type { CreateAuctionFormData, ManagedImage } from '@/types/ui/seller.ui'
 import { formatCurrency } from '@/lib/format'
@@ -32,14 +33,6 @@ import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 import { CurrencyInput } from '@/components/ui/currency-input'
 
 const STEPS = ['Basics', 'Images', 'Pricing', 'Review']
-const DURATION_OPTIONS = [
-  { label: '1 day',   days: 1 },
-  { label: '3 days',  days: 3 },
-  { label: '5 days',  days: 5 },
-  { label: '7 days',  days: 7 },
-  { label: '14 days', days: 14 },
-  { label: '30 days', days: 30 },
-]
 
 interface FieldWrapProps {
   label:     string
@@ -63,7 +56,7 @@ function FieldWrap({ label, required, helper, error, children }: FieldWrapProps)
 }
 
 // ── Step validation ─────────────────────────────────────────────
-interface Errors { [k: string]: string }
+interface Errors { [k: string]: string | undefined }
 
 function validateStep1(data: CreateAuctionFormData): Errors {
   const e: Errors = {}
@@ -92,15 +85,7 @@ function validateStep3(data: CreateAuctionFormData): Errors {
     if (data.depositAmount < min || data.depositAmount > max)
       e.depositAmount = `Deposit must be ${formatCurrency(min)}–${formatCurrency(max)} (5–20% of starting price).`
   }
-  if (data.durationDays < 1 || data.durationDays > 30)
-    e.duration = 'Duration must be between 1 and 30 days.'
-  if (data.startType === 'scheduled') {
-    if (!data.scheduledStartTime) {
-      e.startTime = 'Please select a start date and time.'
-    } else if (data.scheduledStartTime <= new Date()) {
-      e.startTime = 'Scheduled start time must be in the future.'
-    }
-  }
+  Object.assign(e, validateSchedule(data))
   return e
 }
 
@@ -130,12 +115,11 @@ export default function CreateAuctionPage() {
     }
   }, [])
 
-  // Keep nowMs ticking so endsAt display stays accurate for "start now" auctions
+  // Keep "now" fresh so the end-time shortcuts and duration note count from the right moment
   useEffect(() => {
-    if (data.startType !== 'now') return
     const id = setInterval(() => setNowMs(Date.now()), 60_000)
     return () => clearInterval(id)
-  }, [data.startType])
+  }, [])
 
   // Fetch categories on mount
   useEffect(() => {
@@ -160,6 +144,14 @@ export default function CreateAuctionPage() {
   }
 
   async function handleSubmit(asDraft: boolean) {
+    // The end time may have slipped into the past while the seller sat on the review step.
+    const scheduleErrors = validateSchedule(data)
+    const startsAt = scheduleStart(data, Date.now())
+    if (Object.keys(scheduleErrors).length > 0 || !startsAt || !data.endTime) {
+      setErrors({ ...scheduleErrors })
+      setStep(3)
+      return
+    }
     setSubmitting(true)
     try {
       const uploadedUrls = await Promise.all(
@@ -176,10 +168,6 @@ export default function CreateAuctionPage() {
         })
       )
 
-      const actualStartTime = data.startType === 'scheduled' && data.scheduledStartTime ? data.scheduledStartTime : new Date();
-      const endTime = data.startType === 'scheduled' && data.scheduledStartTime
-        ? new Date(data.scheduledStartTime.getTime() + data.durationDays * 86_400_000)
-        : new Date(Date.now() + data.durationDays * 86_400_000);
       let auctionStatus: 'DRAFT' | 'SCHEDULED' | 'ACTIVE'
       if (asDraft) {
         auctionStatus = 'DRAFT'
@@ -197,8 +185,8 @@ export default function CreateAuctionPage() {
         bidIncrement: data.bidIncrement,
         buyNowPrice: data.buyNowPrice > 0 ? data.buyNowPrice : undefined,
         depositAmount: data.depositAmount,
-        startTime: actualStartTime.toISOString(),
-        endTime: endTime.toISOString(),
+        startTime: startsAt.toISOString(),
+        endTime: data.endTime.toISOString(),
         imageUrls: uploadedUrls,
         status: auctionStatus
       })
@@ -214,12 +202,10 @@ export default function CreateAuctionPage() {
 
 
 
-  const endsAt = useMemo(() => {
-    const baseTime = data.startType === 'scheduled' && data.scheduledStartTime
-      ? data.scheduledStartTime.getTime()
-      : nowMs;
-    return new Date(baseTime + data.durationDays * 86_400_000);
-  }, [nowMs, data.durationDays, data.startType, data.scheduledStartTime])
+  // Step 4 is only reachable once step 3 validated, so the end time is set by then.
+  const endsAt = data.endTime ?? new Date()
+  // Start the end-time shortcuts and the duration note count from the scheduled start, or from now.
+  const startBase = scheduleStart(data, nowMs)
 
   return (
     <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
@@ -378,82 +364,51 @@ export default function CreateAuctionPage() {
               </Tabs>
               {data.startType === 'scheduled' && (
                 <div className="mt-3">
-                  <Popover>
-                    <PopoverTrigger
-                      render={
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !data.scheduledStartTime && "text-muted-foreground",
-                            errors.startTime && "border-destructive"
-                          )}
-                        />
-                      }
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {data.scheduledStartTime ? format(data.scheduledStartTime, "PPP p") : <span>Pick a date and time</span>}
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={data.scheduledStartTime || undefined}
-                        onSelect={(d) => {
-                          if (d) {
-                            // Keep the existing time if editing date, otherwise set a default time (e.g., noon)
-                            const newDate = new Date(d);
-                            if (data.scheduledStartTime) {
-                              newDate.setHours(data.scheduledStartTime.getHours());
-                              newDate.setMinutes(data.scheduledStartTime.getMinutes());
-                            } else {
-                              newDate.setHours(12, 0, 0, 0);
-                            }
-                            update('scheduledStartTime', newDate);
-                          } else {
-                            update('scheduledStartTime', null);
-                          }
-                        }}
-                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                      />
-                      {data.scheduledStartTime && (
-                        <div className="p-3 border-t border-[var(--color-border-default)]">
-                          <Label className="text-xs mb-2 block text-muted-foreground">Time</Label>
-                          <Input 
-                            type="time" 
-                            className="w-full text-sm"
-                            value={format(data.scheduledStartTime, "HH:mm")}
-                            onChange={(e) => {
-                              const [hours, minutes] = e.target.value.split(':');
-                              const newDate = new Date(data.scheduledStartTime!);
-                              newDate.setHours(Number.parseInt(hours, 10), Number.parseInt(minutes, 10));
-                              update('scheduledStartTime', newDate);
-                            }}
-                          />
-                        </div>
-                      )}
-                    </PopoverContent>
-                  </Popover>
+                  <DateTimePicker
+                    id="create-start"
+                    value={data.scheduledStartTime}
+                    onChange={d => update('scheduledStartTime', d)}
+                    minDate={new Date(nowMs)}
+                    invalid={!!errors.startTime}
+                  />
                 </div>
               )}
             </FieldWrap>
 
-            <FieldWrap label="Duration" required
-              helper={`Auction will end on ${endsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at ${endsAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} ICT (GMT+7)`}
-              error={errors.duration}
+            <FieldWrap label="End time" required
+              helper={
+                data.endTime && startBase && data.endTime > startBase
+                  ? `Runs for ${describeDuration(data.endTime.getTime() - startBase.getTime())}, from ${data.startType === 'scheduled' ? 'the scheduled start' : 'when you publish'}. Anywhere from 1 hour to 30 days.`
+                  : 'Anywhere from 1 hour to 30 days after the start. Times are in your local time zone.'
+              }
+              error={errors.endTime}
             >
-              <Select
-                value={String(data.durationDays)}
-                onValueChange={v => update('durationDays', Number(v))}
-              >
-                <SelectTrigger className="w-32 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DURATION_OPTIONS.map(o => (
-                    <SelectItem key={o.days} value={String(o.days)}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DateTimePicker
+                id="create-end"
+                value={data.endTime}
+                onChange={d => update('endTime', d)}
+                placeholder="Pick an end date and time"
+                minDate={startBase ?? new Date(nowMs)}
+                invalid={!!errors.endTime}
+              />
+              <div className="flex flex-wrap gap-2 pt-1" role="group" aria-label="Quick end times">
+                {END_PRESET_DAYS.map(days => (
+                  <Button
+                    key={days}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs"
+                    disabled={!startBase}
+                    onClick={() => startBase && update('endTime', addDays(startBase, days))}
+                  >
+                    {days === 1 ? '1 day' : `${days} days`}
+                  </Button>
+                ))}
+              </div>
+              {data.startType === 'scheduled' && !data.scheduledStartTime && (
+                <p className="text-xs text-muted-foreground">Pick a start time to use the quick end times.</p>
+              )}
             </FieldWrap>
 
             <AntiSnipeNotice />
@@ -497,7 +452,7 @@ export default function CreateAuctionPage() {
                   <p className="font-mono font-medium text-[length:var(--font-size-md)]">
                     {data.startingPrice > 0 ? formatCurrency(data.startingPrice) : '$0.00'}
                   </p>
-                  <p className="text-xs text-muted-foreground">{data.durationDays}d · ends {endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                  <p className="text-xs text-muted-foreground">Ends {endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {endsAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
                 </div>
               </div>
 

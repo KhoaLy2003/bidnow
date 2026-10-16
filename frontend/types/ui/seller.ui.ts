@@ -54,7 +54,8 @@ export interface CreateAuctionFormData {
   bidIncrement:  number   // dollars
   buyNowPrice:   number   // dollars (0 = not set)
   depositAmount: number   // dollars
-  durationDays:  number
+  /** When bidding closes. Null until the seller picks it. */
+  endTime:       Date | null
   startType:     'now' | 'scheduled'
   scheduledStartTime: Date | null
 }
@@ -68,7 +69,7 @@ export const INITIAL_FORM_DATA: CreateAuctionFormData = {
   bidIncrement:  0,
   buyNowPrice:   0,
   depositAmount: 0,
-  durationDays:  3,
+  endTime:       null,
   startType:     'now',
   scheduledStartTime: null,
 }
