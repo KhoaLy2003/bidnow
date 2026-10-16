@@ -64,6 +64,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/auctions/public/**",
             // public bid history (single segment only; /my-bids stays authenticated)
             "/api/v1/bids/auction/*",
+            // public profile (only the safe fields; /me and /{id}/profile stay authenticated)
+            "/api/v1/users/*/public-profile",
             "/actuator",
             "/**/v3/api-docs/**",
             "/**/swagger-ui/**",

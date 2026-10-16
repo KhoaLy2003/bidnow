@@ -2,8 +2,9 @@
 
 import { useState, useEffect, type FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { AlertCircle, Loader2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { AuthShell } from '@/components/auth/AuthShell'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -62,70 +63,87 @@ function VerifyOtpContent() {
   }
 
   return (
-    <div className="w-full max-w-sm">
-      <div className="rounded-xl border bg-card p-8 flex flex-col gap-6">
+    <AuthShell
+      headline={
+        <>
+          Almost in.
+          <br />
+          Check your <span className="text-[var(--color-brand-300)]">inbox</span>.
+        </>
+      }
+      description="Enter the one-time code we emailed you so we know the address is yours."
+    >
+      <div className="flex flex-col gap-7">
         <div className="flex flex-col gap-2">
-          <Link 
-            href="/register" 
-            className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          <Link
+            href="/register"
+            className="flex w-fit items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ArrowLeft className="size-4 mr-1" />
+            <ArrowLeft className="mr-1 size-4" />
             Back to register
           </Link>
-          <div className="text-center">
-            <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">Verify email</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              We&apos;ve sent a code to <span className="font-medium text-foreground">{email}</span>
-            </p>
-          </div>
+          <p className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-[var(--color-text-brand)]">
+            Step 2 of 2
+          </p>
+          <h2 className="font-display text-[length:var(--font-size-2xl)] font-medium leading-tight tracking-tight">
+            Verify your email
+          </h2>
+          <p className="text-muted-foreground">
+            We&apos;ve sent a code to <span className="font-medium text-foreground">{email}</span>
+          </p>
         </div>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
+          <div
+            role="alert"
+            className="flex gap-2.5 rounded-md border border-destructive/20 bg-destructive/10 px-3.5 py-3 text-sm text-destructive"
+          >
+            <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="otp">Verification Code</Label>
-            <Input 
-              id="otp" 
-              type="text" 
-              placeholder="000000" 
-              required 
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="otp">Verification code</Label>
+            <Input
+              id="otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              required
               maxLength={6}
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+              className="h-14 text-center font-mono text-2xl tracking-[0.5em]"
             />
           </div>
-          <Button type="submit" variant="brand" className="w-full h-11 mt-1" disabled={isLoading || otp.length !== 6}>
-            {isLoading && <Loader2 className="size-4 animate-spin mr-2" />}
-            Verify Account
+          <Button type="submit" variant="brand" size="xl" className="mt-1 h-12 w-full text-base" disabled={isLoading || otp.length !== 6}>
+            {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+            Verify account
           </Button>
         </form>
 
-        <div className="text-center text-sm">
-          <p className="text-muted-foreground">
-            Didn&apos;t receive the code?{' '}
-            <button 
-              onClick={handleResend}
-              disabled={isResending}
-              className="text-[var(--color-text-link)] hover:underline font-medium disabled:opacity-50"
-            >
-              {isResending ? 'Sending...' : 'Resend code'}
-            </button>
-          </p>
-        </div>
+        <p className="border-t pt-6 text-sm text-muted-foreground">
+          Didn&apos;t receive the code?{' '}
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending}
+            className="font-medium text-[var(--color-text-link)] hover:underline disabled:opacity-50"
+          >
+            {isResending ? 'Sending...' : 'Resend code'}
+          </button>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   )
 }
 
 export default function VerifyOtpPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin text-primary" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>}>
       <VerifyOtpContent />
     </Suspense>
   )

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { BadgeCheck } from 'lucide-react'
 import { UserAvatar } from '@/components/shared/UserAvatar'
 import type { AuctionDetailSeller } from '@/types/ui/auction.ui'
@@ -23,12 +24,12 @@ export function SellerCard({ seller }: SellerCardProps) {
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          className="h-10 rounded-md border border-[var(--color-border-default)] px-[18px] text-[13px] font-medium transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:bg-muted"
+        <Link
+          href={`/users/${seller.id}`}
+          className="inline-flex h-10 items-center rounded-md border border-[var(--color-border-default)] px-[18px] text-[13px] font-medium transition-colors duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:bg-muted"
         >
           View profile
-        </button>
+        </Link>
       </div>
     </section>
   )

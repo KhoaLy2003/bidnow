@@ -84,3 +84,8 @@ export function toDatetimeLocal(date: Date): string {
     `T${pad(date.getHours())}:${pad(date.getMinutes())}`
   )
 }
+
+/** "March 2025" — the month a member joined. */
+export function formatMemberSince(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date)
+}

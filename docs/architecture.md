@@ -85,6 +85,12 @@ Synchronous internal calls go directly between services via Eureka + OpenFeign, 
 | Wallet | `GET /api/v1/internal/wallet/balance/{userId}` | Bidding | Total / available / locked balances |
 | User | `POST /api/v1/users/internal/summaries` `{userIds: [≤100]}` | Bidding | Batch display name + avatar for bid history (one query; unknown ids omitted) |
 
+### User Service (public API)
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `GET /api/v1/users/{userId}/public-profile` | public (gateway whitelist + service `permitAll`) | The part of a profile any visitor may see: `userId, displayName, avatarUrl, bio, city, country, memberSince`. Phone, street address, postal code, preferences and roles are never returned. `404` when the user has no profile. Rendered by the frontend at `/users/{id}`, linked from the auction's seller card and the winner on the seller's ended-auction page |
+
 ### Bidding Service (public API & events)
 
 | Endpoint | Auth | Purpose |

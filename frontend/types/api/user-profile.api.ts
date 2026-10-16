@@ -19,6 +19,18 @@ export interface UserProfileResponse {
   updatedAt: string;
 }
 
+/** `GET /api/v1/users/{id}/public-profile`: the only fields anyone may see. Contact details and roles are never sent. */
+export interface PublicUserProfileResponse {
+  userId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  city: string | null;
+  country: string | null;
+  /** ISO local date-time of when the user joined. */
+  memberSince: string;
+}
+
 export interface UpdateUserProfileRequest {
   displayName?: string | null;
   avatarUrl?: string | null;

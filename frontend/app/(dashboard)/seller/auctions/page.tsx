@@ -2,28 +2,29 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link                  from 'next/link'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, SearchX } from 'lucide-react'
 import { Button }            from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { ActiveAuctionRow, HistoricalAuctionRow } from '@/components/seller/SellerAuctionRow'
-import { AuctionFilters }    from '@/components/seller/AuctionFilters'
+import { SellerAuctionRow, SELLER_ROW_GRID } from '@/components/seller/SellerAuctionRow'
+import { AuctionFilters, AuctionResultsBar } from '@/components/seller/AuctionFilters'
 import { EmptyAuctions }     from '@/components/seller/EmptyAuctions'
-import { SellerAuctionStatus } from '@/types/ui/seller.ui'
 import type { SellerAuction }  from '@/types/ui/seller.ui'
 import { auctionService } from '@/services/auction.service'
 import { mapAuctionSummaryToSellerAuction } from '@/types/mappers/auction.mapper'
 import { toast } from 'sonner'
-import { getErrorMessage } from '@/lib/utils'
+import { cn, getErrorMessage } from '@/lib/utils'
+import { formatQueueClock } from '@/lib/home-queue'
+import { useNow } from '@/hooks/useNow'
+import {
+  DEFAULT_SELLER_FILTERS, SELLER_ENDED_PREVIEW,
+  buildSellerGroups, filterBySearchAndCategory, nextToClose, statusCounts, summarizeSellerAuctions,
+  type SellerFilterState, type SellerGroupKey,
+} from '@/lib/seller-auctions'
 import type { AuctionCategoryResponse } from '@/types/api/auction.api'
 
-const ITEMS_PER_PAGE = 20
-
-function TableHead({ children, right }: { readonly children: React.ReactNode; readonly right?: boolean }) {
-  return (
-    <th className={`border-b border-[var(--color-border-default)] py-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground ${right ? 'pr-4 text-right' : 'pr-4 text-left'}`}>
-      {children}
-    </th>
-  )
+const GROUP_DOT: Record<SellerGroupKey, string> = {
+  live:     'bg-[var(--color-auction-active-accent)]',
+  upcoming: 'bg-[var(--color-auction-scheduled-text)]',
+  ended:    'bg-[var(--color-neutral-400)]',
 }
 
 function LoadingState() {
@@ -45,17 +46,30 @@ function ErrorState({ onRetry }: { onRetry(): void }) {
   )
 }
 
+function NoMatches({ onClear }: { onClear(): void }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-[var(--color-border-strong)] bg-background px-6 py-14 text-center">
+      <SearchX aria-hidden className="size-7 text-muted-foreground" />
+      <p className="font-display font-medium text-[length:var(--font-size-lg)]">No auctions match</p>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        Nothing in your auctions fits these filters. Try a different title, or clear the filters to see everything again.
+      </p>
+      <Button variant="outline" className="h-11 px-5" onClick={onClear}>Clear all filters</Button>
+    </div>
+  )
+}
+
 export default function SellerAuctionsPage() {
   const [auctions,  setAuctions]  = useState<SellerAuction[]>([])
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState<string | null>(null)
 
-  const [search,       setSearch]       = useState('')
-  const [category,     setCategory]     = useState('') // selected category id, '' = All categories
-  const [categories,   setCategories]   = useState<AuctionCategoryResponse[]>([])
-  const [activePage,   setActivePage]   = useState(1)
-  const [histPage,     setHistPage]     = useState(1)
-  const [deletedIds,   setDeletedIds]   = useState<string[]>([])
+  const [filters,    setFilters]    = useState<SellerFilterState>(DEFAULT_SELLER_FILTERS)
+  const [categories, setCategories] = useState<AuctionCategoryResponse[]>([])
+  const [deletedIds, setDeletedIds] = useState<string[]>([])
+  const [showAllEnded, setShowAllEnded] = useState(false)
+
+  const now = useNow(1000)
 
   useEffect(() => {
     auctionService.getCategories()
@@ -63,10 +77,12 @@ export default function SellerAuctionsPage() {
       .catch(err => console.error('Failed to load categories:', err))
   }, [])
 
+  // Everything is fetched once and filtered here, so search, category and the status chips
+  // respond instantly and their counts always agree with what is on screen.
   const fetchAuctions = useCallback(() => {
     Promise.all([
-      auctionService.getMyAuctions({ type: 'active', categoryId: category || undefined, size: 100 }),
-      auctionService.getMyAuctions({ type: 'history', categoryId: category || undefined, size: 100 }),
+      auctionService.getMyAuctions({ type: 'active',  size: 100 }),
+      auctionService.getMyAuctions({ type: 'history', size: 100 }),
     ])
       .then(([activeRes, historyRes]) => {
         const merged = [...(activeRes.data.data || []), ...(historyRes.data.data || [])]
@@ -80,7 +96,7 @@ export default function SellerAuctionsPage() {
       .finally(() => {
         setLoading(false)
       })
-  }, [category])
+  }, [])
 
   useEffect(() => { fetchAuctions() }, [fetchAuctions])
 
@@ -89,205 +105,122 @@ export default function SellerAuctionsPage() {
     fetchAuctions()
   }, [fetchAuctions])
 
-  const handleCategoryChange = useCallback((v: string) => {
-    setLoading(true)
-    setCategory(v)
-    setActivePage(1)
-    setHistPage(1)
+  const updateFilters = useCallback((patch: Partial<SellerFilterState>) => {
+    setFilters(prev => ({ ...prev, ...patch }))
   }, [])
 
-  const { allActive, allHistorical } = useMemo(() => {
-    const active: SellerAuction[] = []
-    const historical: SellerAuction[] = []
-    auctions.forEach(a => {
-      if ([SellerAuctionStatus.Completed, SellerAuctionStatus.Failed, SellerAuctionStatus.Cancelled, SellerAuctionStatus.Rejected].includes(a.status)) {
-        historical.push(a)
-      } else {
-        active.push(a)
-      }
-    })
-    return { allActive: active, allHistorical: historical }
-  }, [auctions])
+  const clearFilters = useCallback(() => {
+    setFilters(prev => ({ ...DEFAULT_SELLER_FILTERS, sort: prev.sort }))
+  }, [])
 
-  const activeAuctions = useMemo(() => {
-    return allActive.filter(a => !deletedIds.includes(a.id)).filter(a => {
-      if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false
-      return true
-    })
-  }, [allActive, search, deletedIds])
-
-  const histAuctions = useMemo(() => {
-    return allHistorical.filter(a => {
-      if (search && !a.title.toLowerCase().includes(search.toLowerCase())) return false
-      return true
-    })
-  }, [allHistorical, search])
-
-  const activePage_items = activeAuctions.slice((activePage - 1) * ITEMS_PER_PAGE, activePage * ITEMS_PER_PAGE)
-  const histPage_items   = histAuctions.slice((histPage - 1)  * ITEMS_PER_PAGE, histPage  * ITEMS_PER_PAGE)
-  const activePageCount  = Math.max(1, Math.ceil(activeAuctions.length / ITEMS_PER_PAGE))
-  const histPageCount    = Math.max(1, Math.ceil(histAuctions.length  / ITEMS_PER_PAGE))
+  const visible = useMemo(
+    () => auctions.filter(a => !deletedIds.includes(a.id)),
+    [auctions, deletedIds],
+  )
+  const counts = useMemo(
+    () => statusCounts(filterBySearchAndCategory(visible, filters.query, filters.categoryId)),
+    [visible, filters.query, filters.categoryId],
+  )
+  const groups = useMemo(() => buildSellerGroups(visible, filters), [visible, filters])
+  const shownCount = groups.reduce((sum, g) => sum + g.auctions.length, 0)
+  const next = useMemo(() => nextToClose(visible), [visible])
+  const nextSeconds = next ? Math.max(0, Math.floor((next.endsAt.getTime() - now) / 1000)) : 0
 
   return (
-    <div className="flex flex-col gap-0 rounded-xl border border-[var(--color-border-default)] bg-background overflow-hidden">
+    <div className="flex flex-col gap-5">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4 px-6 py-5">
-        <div className="flex flex-col gap-0.5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <h1 className="font-display font-medium text-[length:var(--font-size-xl)]">My auctions</h1>
           <p className="text-sm text-muted-foreground">
-            {loading
-              ? 'Loading…'
-              : `${allActive.length + allHistorical.length} total · ${allActive.length} active · ${allHistorical.length} completed`
-            }
+            {loading ? 'Loading…' : summarizeSellerAuctions(visible)}
           </p>
+          {!loading && !error && next && (
+            <p className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+              <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-[var(--color-auction-active-accent)]" />
+              Next to close:
+              <Link href={`/seller/auctions/${next.id}/manage`} className="font-medium text-foreground hover:text-[var(--color-text-brand)]">
+                {next.title}
+              </Link>
+              <span className="font-mono font-medium text-foreground">{formatQueueClock(nextSeconds)}</span>
+            </p>
+          )}
         </div>
-        <Button variant="brand" size="lg" render={<Link href="/seller/auctions/new" />} nativeButton={false}>
-          + Create auction
+        <Button variant="brand" size="lg" className="h-11" render={<Link href="/seller/auctions/new" />} nativeButton={false}>
+          <Plus aria-hidden className="size-4" />
+          Create auction
         </Button>
       </div>
 
-      <Tabs defaultValue="active">
-        <div className="px-6">
-          <TabsList className="h-auto gap-0 rounded-none border-0 bg-transparent p-0">
-            <TabsTrigger
-              value="active"
-              className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent"
-            >
-              Active <span className="ml-1.5 font-mono text-xs text-muted-foreground">{allActive.length}</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="historical"
-              className="rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-muted-foreground data-[state=active]:border-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none bg-transparent"
-            >
-              Historical <span className="ml-1.5 font-mono text-xs text-muted-foreground">{allHistorical.length}</span>
-            </TabsTrigger>
-          </TabsList>
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState onRetry={retryFetch} />
+      ) : visible.length === 0 ? (
+        <div className="rounded-xl border border-[var(--color-border-default)] bg-background">
+          <EmptyAuctions />
         </div>
-
-        {/* ── Active tab ── */}
-        <TabsContent value="active" className="mt-0">
-          <AuctionFilters
-            search={search}
-            category={category}
+      ) : (
+        <>
+          <AuctionFilters filters={filters} categories={categories} counts={counts} onChange={updateFilters} />
+          <AuctionResultsBar
+            shown={shownCount}
+            total={visible.length}
+            filters={filters}
             categories={categories}
-            onSearch={setSearch}
-            onCategory={handleCategoryChange}
-            total={activeAuctions.length}
-            shown={activePage_items.length}
+            onChange={updateFilters}
+            onClearAll={clearFilters}
           />
 
-          {loading ? (
-            <LoadingState />
-          ) : error ? (
-            <ErrorState onRetry={retryFetch} />
-          ) : activeAuctions.length === 0 ? (
-            <EmptyAuctions />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr>
-                    <th className="w-14 pl-6 py-2" />
-                    <TableHead>Item</TableHead>
-                    <TableHead right>Current bid ↓</TableHead>
-                    <TableHead right>Bids</TableHead>
-                    <TableHead>Time left</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead right>Actions</TableHead>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activePage_items.map(a => (
-                    <ActiveAuctionRow
-                      key={a.id}
-                      auction={a}
-                      onDeleted={() => setDeletedIds(prev => [...prev, a.id])}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {groups.length === 0 && <NoMatches onClear={clearFilters} />}
 
-          {!loading && !error && activePageCount > 1 && (
-            <Pagination page={activePage} total={activePageCount} onChange={setActivePage} count={activeAuctions.length} pageSize={ITEMS_PER_PAGE} />
-          )}
-        </TabsContent>
+          {groups.map(group => {
+            const collapsible = group.key === 'ended' && group.auctions.length > SELLER_ENDED_PREVIEW
+            const rows = collapsible && !showAllEnded ? group.auctions.slice(0, SELLER_ENDED_PREVIEW) : group.auctions
+            return (
+              <section
+                key={group.key}
+                aria-label={group.label}
+                className="rounded-xl border border-[var(--color-border-default)] bg-background"
+              >
+                <div className={cn(SELLER_ROW_GRID, 'rounded-t-xl bg-[var(--color-bg-elevated)] px-4 py-3')}>
+                  <div className="col-span-3 flex min-w-0 flex-wrap items-center gap-2.5 md:col-span-2">
+                    <span aria-hidden className={cn('size-2 rounded-full', GROUP_DOT[group.key], group.key === 'live' && 'animate-pulse')} />
+                    <h2 className="text-sm font-medium">{group.label}</h2>
+                    <span className="font-mono text-xs text-muted-foreground">{group.auctions.length}</span>
+                    <span className="text-xs text-muted-foreground">{group.hint}</span>
+                  </div>
+                  <span className="hidden text-right text-xs text-muted-foreground md:block">{group.columns.price}</span>
+                  <span className="hidden text-right text-xs text-muted-foreground md:block">Bids</span>
+                  <span className="hidden text-xs text-muted-foreground md:block">{group.columns.time}</span>
+                  <span className="hidden text-xs text-muted-foreground md:block">{group.columns.status}</span>
+                </div>
 
-        {/* ── Historical tab ── */}
-        <TabsContent value="historical" className="mt-0">
-          <AuctionFilters
-            search={search}
-            category={category}
-            categories={categories}
-            onSearch={setSearch}
-            onCategory={handleCategoryChange}
-            total={histAuctions.length}
-            shown={histPage_items.length}
-          />
+                {rows.map(a => (
+                  <SellerAuctionRow
+                    key={a.id}
+                    auction={a}
+                    now={now}
+                    onDeleted={() => setDeletedIds(prev => [...prev, a.id])}
+                  />
+                ))}
 
-          {loading ? (
-            <LoadingState />
-          ) : error ? (
-            <ErrorState onRetry={retryFetch} />
-          ) : histAuctions.length === 0 ? (
-            <div className="py-20 text-center text-sm text-muted-foreground">No completed auctions yet.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr>
-                    <th className="w-14 pl-6 py-2" />
-                    <TableHead>Item</TableHead>
-                    <TableHead right>Final price</TableHead>
-                    <TableHead>Winner</TableHead>
-                    <TableHead>Ended</TableHead>
-                    <TableHead>Outcome</TableHead>
-                    <TableHead right>Actions</TableHead>
-                  </tr>
-                </thead>
-                <tbody>
-                  {histPage_items.map(a => (
-                    <HistoricalAuctionRow key={a.id} auction={a} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {!loading && !error && histPageCount > 1 && (
-            <Pagination page={histPage} total={histPageCount} onChange={setHistPage} count={histAuctions.length} pageSize={ITEMS_PER_PAGE} />
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-// ── Pagination ──────────────────────────────────────────────────
-function Pagination({ page, total, onChange, count, pageSize }: {
-  page: number; total: number; onChange(p: number): void; count: number; pageSize: number
-}) {
-  const from = (page - 1) * pageSize + 1
-  const to   = Math.min(page * pageSize, count)
-  return (
-    <div className="flex items-center justify-between px-6 py-3 border-t border-[var(--color-border-default)]">
-      <p className="text-xs text-muted-foreground">Showing {from}–{to} of {count}</p>
-      <div className="flex gap-1">
-        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page === 1} onClick={() => onChange(page - 1)}>‹</Button>
-        {Array.from({ length: total }, (_, i) => i + 1).map(p => (
-          <Button
-            key={p}
-            variant={p === page ? 'brand' : 'outline'}
-            size="sm"
-            className="h-7 w-7 p-0 text-xs"
-            onClick={() => onChange(p)}
-          >
-            {p}
-          </Button>
-        ))}
-        <Button variant="outline" size="sm" className="h-7 w-7 p-0" disabled={page === total} onClick={() => onChange(page + 1)}>›</Button>
-      </div>
+                {collapsible && (
+                  <div className="border-t border-[var(--color-border-default)] px-4 py-2">
+                    <Button
+                      variant="ghost"
+                      className="h-10 px-3 text-[13px] text-[var(--color-text-link)]"
+                      onClick={() => setShowAllEnded(v => !v)}
+                    >
+                      {showAllEnded ? 'Show fewer' : `Show ${group.auctions.length - SELLER_ENDED_PREVIEW} more ended`}
+                    </Button>
+                  </div>
+                )}
+              </section>
+            )
+          })}
+        </>
+      )}
     </div>
   )
 }

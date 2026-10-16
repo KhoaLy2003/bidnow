@@ -7,6 +7,7 @@ import com.bidnow.common.dto.UserNotificationPreferenceResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
+import com.bidnow.user.dto.response.PublicUserProfileResponse;
 import com.bidnow.user.dto.response.UserProfileResponse;
 
 import java.util.List;
@@ -23,6 +24,9 @@ public interface UserProfileService {
     List<UserNotificationPreferenceResponse> getNotificationPreferences(List<UUID> userIds);
 
     UserProfileResponse getUserProfile(UUID userId);
+
+    /** The profile fields any visitor may see; throws NotFoundException when the user has no profile. */
+    PublicUserProfileResponse getPublicProfile(UUID userId);
 
     /**
      * Returns the profile of the currently authenticated user.

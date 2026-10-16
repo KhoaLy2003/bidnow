@@ -10,6 +10,12 @@ interface WatchStageProps {
   extendKey: number
 }
 
+/**
+ * Math.sin / Math.cos can differ in the last digits between the Node server and the browser, which
+ * fails hydration on SVG coordinates. Two decimals are far below a pixel and identical on both sides.
+ */
+const dialPoint = (n: number) => Math.round(n * 100) / 100
+
 /** Static dial shown while the 3D scene loads, and kept for reduced motion, no WebGL, or a failed scene. */
 function WatchPoster() {
   const ticks = Array.from({ length: 60 }, (_, i) => i)
@@ -25,10 +31,10 @@ function WatchPoster() {
           return (
             <line
               key={i}
-              x1={200 + Math.sin(a) * r1}
-              y1={200 - Math.cos(a) * r1}
-              x2={200 + Math.sin(a) * 150}
-              y2={200 - Math.cos(a) * 150}
+              x1={dialPoint(200 + Math.sin(a) * r1)}
+              y1={dialPoint(200 - Math.cos(a) * r1)}
+              x2={dialPoint(200 + Math.sin(a) * 150)}
+              y2={dialPoint(200 - Math.cos(a) * 150)}
               stroke="white"
               strokeOpacity={major ? 0.9 : 0.35}
               strokeWidth={major ? 4 : 1.5}

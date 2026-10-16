@@ -644,7 +644,7 @@ Built on shadcn `<Avatar>`:
 **Desktop (≥ 768px):**
 - Sticky `<header>` — `bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
 - Bar: `h-[72px]`, `h-[60px]` once scrolled, plus a soft shadow. Logo | `NavLinks` | search trigger | actions
-- `NavLinks`: Browse and My bids (signed in) or Browse and How it works (guests). There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
+- `NavLinks`: Browse, How it works, FAQ and About for everyone (guests, members, admins; `NAV_LINKS` in `lib/navigation.ts`). My bids lives in `AccountMenu` and `BottomNav`. There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
 - Search trigger (`⌘K` / `Ctrl+K`) opens `SearchDialog`: recent searches and ending-soon lots when empty, debounced live results while typing
 - Right: `NotificationBell` + `AccountMenu` + `<Button variant="brand">` ("Sell", `/seller/auctions/new`). Guests get "Sign in" and "Join BidNow"
 - `AccountMenu`: identity, balance card (eye toggle), then My bids, Purchase history, My auctions | Wallet, Profile, Settings | theme switch | Sign out
@@ -672,6 +672,21 @@ Filtering is live: there is no Search or Apply button. The URL is the source of 
 - **Mobile (< 768px):** the Price control moves into a bottom Sheet opened by a "Filters (n)" pill (n counts price, ending soon and buy now). The sheet's "Show N auctions" button only closes it; changes already applied behind it. Category chips scroll horizontally.
 - **Category counts** are catalogue-wide live counts from `/public/category-counts`. They do not yet narrow with the other filters.
 - **Empty state:** offers one "Remove …" button per applied filter plus "Clear all filters".
+
+### Seller auctions (`/seller/auctions`)
+
+One list, no tabs. Every auction the seller owns is on the page at once, split into bands by what needs attention. The old Active / Historical switch is gone. Logic lives in `lib/seller-auctions.ts` (pure, covered by `seller-auctions.test.ts`).
+
+- **Bands (`sellerGroupOf`):** Live now (status Active, closing soonest first), Upcoming (Scheduled by start time, then Drafts), Ended (Sold, No sale, Cancelled, Rejected; most recent first). Empty bands are not drawn. Each band header names the order and the columns that apply to it (Current bid / Starting bid / Final price, Time left / Starts in / Ended).
+- **Live filtering:** nothing to press. The page fetches both lists once and filters on the client, so search, category and chips respond instantly. Search matches the title; category matches `categoryId`.
+- **Status chips:** All, Live, Scheduled, Drafts, Sold, Unsold (No sale, Cancelled, Rejected). Counts are narrowed by the current search and category, so a chip never leads to an empty list. Picking the chip that is already on goes back to All.
+- **Sort:** Time (default), Highest price, Most bids. It applies inside each band, and the band hint says so.
+- **Results bar:** "Showing N of M" with one removable chip per applied filter and "Clear all" (keeps the sort). No matches shows a dashed panel with "Clear all filters".
+- **Ended band:** shows the first 4 rows (`SELLER_ENDED_PREVIEW`) with "Show N more ended" / "Show fewer". This replaces the old 20-per-page pagination.
+- **Header:** the summary line ("14 auctions · 5 live · 2 scheduled · 1 draft · 6 ended") and "Next to close" with a live clock.
+- **Row (`SellerAuctionRow`):** thumbnail, title and category, price, bids, time, status, actions. Live rows tick once a second from one shared `useNow` and show a thin time bar. The tone is written out as well as coloured: Live, Ending soon (5 min or less), Final minute (1 min or less), the same thresholds as the homepage queue (`queueState`). The button always opens the manage page: "Manage" (live, scheduled, ended) or "Finish setup" (draft). A menu beside it has View public page, Edit details and Delete auction where allowed.
+- **Responsive:** `SELLER_ROW_GRID` is shared by band headers and rows. Below `md` a row becomes a two-line card (thumbnail, title, actions, then price, time and status with their own captions) and the Bids column is hidden. Status chips scroll sideways.
+- **Removed:** the Export button (it did nothing) and the server-side category refetch.
 
 ### My Bids page (`/my-bids`)
 
@@ -701,6 +716,18 @@ Concept: "The clock is the auctioneer." The page shows real-time bidding instead
 - `Section` / `SectionHeading` (`components/home/Section.tsx`) give every band the same container (`--container-xl`), vertical rhythm, mono eyebrow with an amber dot, and optional tinted background.
 - The old stats strip (50K+ users, $2.5M+, 4.8 rating), "Featured Picks" grid and "Why Trust BidNow?" cards were removed.
 - **Libraries:** `three`, `@react-three/fiber`, `@react-three/drei`, `motion`, `@number-flow/react`.
+
+### About page (`/about`)
+
+A technical showcase, not a company story: how BidNow is built and where it will run. Server component; copy and lists live in `lib/about.ts` (covered by `about.test.ts`). Sections, top to bottom:
+
+- **Hero:** always dark (`dark` class), eyebrow, headline, two CTAs and a four-fact strip (modules, DB ownership, service-to-service, live updates).
+- **Design principles:** four numbered cards (database per service, one door in, events for what can wait, live by default).
+- **Microservices (`#architecture`):** `ServiceMapDiagram` — gateway, Eureka, the six domain services with ports and data stores, three Feign calls and the Kafka bus — followed by three notes (request path, synchronous calls, events and audit). Ports, topics and Feign links mirror `backend/CLAUDE.md` and the services' `feign/` and `kafka/` packages; update the diagram when they change.
+- **Target deployment on AWS (`#aws`):** always dark. `AwsArchitectureDiagram` shows CloudFront and S3 at the edge, one ALB with path rules, two Auto Scaling Groups (Next.js; gateway plus services) across two AZs, and RDS PostgreSQL, ElastiCache Redis and MSK in the data tier. It is labelled a *target*: the CD workflow (`.github/workflows/cd-deploy.yml`) is still disabled.
+- **Tech stack:** four grouped lists (frontend, backend, data and messaging, quality and delivery) on a tinted band.
+- **Developers:** names and GitHub links only.
+- **Diagrams** (`components/about/`) are inline SVG drawn from `diagram-parts.tsx` (`Node`, `Arrow`, `Label`). Colours are design tokens, so they follow the theme. The SVG scales with its container down to 1000px wide, then the frame scrolls sideways. Each has a `<title>` and `<desc>` for screen readers.
 
 ---
 

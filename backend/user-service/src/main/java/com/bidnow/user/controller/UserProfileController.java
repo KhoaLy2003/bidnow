@@ -10,6 +10,7 @@ import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
 import com.bidnow.user.dto.request.UserSummariesRequest;
+import com.bidnow.user.dto.response.PublicUserProfileResponse;
 import com.bidnow.user.dto.response.UserProfileResponse;
 import com.bidnow.user.service.UserProfileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -137,6 +138,23 @@ public class UserProfileController {
             @Valid @RequestBody UpdateUserProfileRequest request) {
         UserProfileResponse response = userProfileService.updateMyProfile(userId, request);
         return ResponseEntity.ok(BaseResponse.success("Profile updated successfully", response));
+    }
+
+    /**
+     * Public profile of any user: display name, avatar, bio, city and country, and join date only.
+     * Reachable without a token (gateway whitelist plus permitAll in SecurityConfig).
+     */
+    @Operation(summary = "Get public user profile", description = "Fetches the publicly visible part of a user's profile. No authentication required.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Public profile fetched successfully",
+                    content = @Content(schema = @Schema(implementation = PublicUserProfileResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Profile not found")
+    })
+    @GetMapping("/{userId}/public-profile")
+    public ResponseEntity<BaseResponse<PublicUserProfileResponse>> getPublicProfile(
+            @Parameter(description = "UUID of the user", example = "550e8400-e29b-41d4-a716-446655440000")
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(BaseResponse.success(userProfileService.getPublicProfile(userId)));
     }
 
     /**

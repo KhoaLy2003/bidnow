@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Separator } from '@/components/ui/separator'
-import { BidNowGavelMark } from '@/components/shared/BidNowGavelMark'
+import { BidNowMark } from '@/components/shared/BidNowMark'
 
 const LINKS = {
   Platform: [
@@ -36,10 +36,8 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-3">
             <Link href="/" className="flex items-center gap-2">
-              <BidNowGavelMark size={24} />
-              <span className="text-base font-medium">
-                Bid<span className="text-[var(--color-text-brand)] font-medium">Now</span>
-              </span>
+              <BidNowMark size={24} />
+              <span className="font-display text-lg font-bold leading-none tracking-[-0.06em]">bidnow</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
               The fast, fair auction platform for buying and selling anything.

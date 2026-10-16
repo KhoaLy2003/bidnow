@@ -18,6 +18,7 @@ import com.bidnow.user.domain.entity.UserProfile;
 import com.bidnow.user.domain.entity.UserRole;
 import com.bidnow.user.domain.enums.UserRoleType;
 import com.bidnow.user.dto.request.UpdateUserProfileRequest;
+import com.bidnow.user.dto.response.PublicUserProfileResponse;
 import com.bidnow.user.dto.response.UserProfileResponse;
 import com.bidnow.user.mapper.UserProfileMapper;
 import com.bidnow.user.repository.UserPreferencesRepository;
@@ -132,6 +133,22 @@ public class UserProfileServiceImpl implements UserProfileService {
         UserPreferences preferences = userPreferencesRepository.findByUserId(userId).orElse(null);
 
         return userProfileMapper.toResponse(profile, roles, preferences);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicUserProfileResponse getPublicProfile(UUID userId) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("User profile not found", ErrorCodes.NOT_FOUND));
+        return PublicUserProfileResponse.builder()
+                .userId(profile.getUserId())
+                .displayName(profile.getDisplayName())
+                .avatarUrl(profile.getAvatarUrl())
+                .bio(profile.getBio())
+                .city(profile.getCity())
+                .country(profile.getCountry())
+                .memberSince(profile.getCreatedAt())
+                .build();
     }
 
     @Override
