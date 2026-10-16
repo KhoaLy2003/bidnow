@@ -3,7 +3,8 @@ export const ROUTES = {
   browse:          '/auctions',
   howItWorks:      '/how-it-works',
   faq:             '/faq',
-  myBids:          '/my-bids',
+  about:           '/about',
+  myBids:         '/my-bids',
   myAuctions:      '/seller/auctions',
   sell:            '/seller/auctions/new',
   wallet:          '/wallet',
@@ -25,6 +26,7 @@ export const NAV_LINKS: readonly NavLinkItem[] = [
   { label: 'Browse',       href: ROUTES.browse },
   { label: 'How it works', href: ROUTES.howItWorks },
   { label: 'FAQ',          href: ROUTES.faq },
+  { label: 'About',        href: ROUTES.about },
 ]
 
 /** A link is active on its own path and on any nested path ("/auctions/42" activates "/auctions"). */

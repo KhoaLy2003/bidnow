@@ -25,9 +25,9 @@ describe('isNavActive', () => {
 })
 
 describe('nav links', () => {
-  it('lists Browse, How it works and FAQ, in that order', () => {
-    expect(NAV_LINKS.map((l) => l.label)).toEqual(['Browse', 'How it works', 'FAQ'])
-    expect(NAV_LINKS.map((l) => l.href)).toEqual([ROUTES.browse, ROUTES.howItWorks, ROUTES.faq])
+  it('lists Browse, How it works, FAQ and About, in that order', () => {
+    expect(NAV_LINKS.map((l) => l.label)).toEqual(['Browse', 'How it works', 'FAQ', 'About'])
+    expect(NAV_LINKS.map((l) => l.href)).toEqual([ROUTES.browse, ROUTES.howItWorks, ROUTES.faq, ROUTES.about])
   })
 
   it('has no standalone Live link', () => {

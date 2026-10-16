@@ -644,7 +644,7 @@ Built on shadcn `<Avatar>`:
 **Desktop (≥ 768px):**
 - Sticky `<header>` — `bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
 - Bar: `h-[72px]`, `h-[60px]` once scrolled, plus a soft shadow. Logo | `NavLinks` | search trigger | actions
-- `NavLinks`: Browse, How it works and FAQ for everyone (guests, members, admins; `NAV_LINKS` in `lib/navigation.ts`). My bids lives in `AccountMenu` and `BottomNav`. There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
+- `NavLinks`: Browse, How it works, FAQ and About for everyone (guests, members, admins; `NAV_LINKS` in `lib/navigation.ts`). My bids lives in `AccountMenu` and `BottomNav`. There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
 - Search trigger (`⌘K` / `Ctrl+K`) opens `SearchDialog`: recent searches and ending-soon lots when empty, debounced live results while typing
 - Right: `NotificationBell` + `AccountMenu` + `<Button variant="brand">` ("Sell", `/seller/auctions/new`). Guests get "Sign in" and "Join BidNow"
 - `AccountMenu`: identity, balance card (eye toggle), then My bids, Purchase history, My auctions | Wallet, Profile, Settings | theme switch | Sign out
@@ -716,6 +716,18 @@ Concept: "The clock is the auctioneer." The page shows real-time bidding instead
 - `Section` / `SectionHeading` (`components/home/Section.tsx`) give every band the same container (`--container-xl`), vertical rhythm, mono eyebrow with an amber dot, and optional tinted background.
 - The old stats strip (50K+ users, $2.5M+, 4.8 rating), "Featured Picks" grid and "Why Trust BidNow?" cards were removed.
 - **Libraries:** `three`, `@react-three/fiber`, `@react-three/drei`, `motion`, `@number-flow/react`.
+
+### About page (`/about`)
+
+A technical showcase, not a company story: how BidNow is built and where it will run. Server component; copy and lists live in `lib/about.ts` (covered by `about.test.ts`). Sections, top to bottom:
+
+- **Hero:** always dark (`dark` class), eyebrow, headline, two CTAs and a four-fact strip (modules, DB ownership, service-to-service, live updates).
+- **Design principles:** four numbered cards (database per service, one door in, events for what can wait, live by default).
+- **Microservices (`#architecture`):** `ServiceMapDiagram` — gateway, Eureka, the six domain services with ports and data stores, three Feign calls and the Kafka bus — followed by three notes (request path, synchronous calls, events and audit). Ports, topics and Feign links mirror `backend/CLAUDE.md` and the services' `feign/` and `kafka/` packages; update the diagram when they change.
+- **Target deployment on AWS (`#aws`):** always dark. `AwsArchitectureDiagram` shows CloudFront and S3 at the edge, one ALB with path rules, two Auto Scaling Groups (Next.js; gateway plus services) across two AZs, and RDS PostgreSQL, ElastiCache Redis and MSK in the data tier. It is labelled a *target*: the CD workflow (`.github/workflows/cd-deploy.yml`) is still disabled.
+- **Tech stack:** four grouped lists (frontend, backend, data and messaging, quality and delivery) on a tinted band.
+- **Developers:** names and GitHub links only.
+- **Diagrams** (`components/about/`) are inline SVG drawn from `diagram-parts.tsx` (`Node`, `Arrow`, `Label`). Colours are design tokens, so they follow the theme. The SVG scales with its container down to 1000px wide, then the frame scrolls sideways. Each has a `<title>` and `<desc>` for screen readers.
 
 ---
 

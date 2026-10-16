@@ -19,7 +19,7 @@ export function NavLinks({ links }: { links: readonly NavLinkItem[] }) {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative flex items-center px-3.5 text-sm font-medium transition-colors',
+              'relative flex items-center whitespace-nowrap px-3.5 text-sm font-medium transition-colors',
               active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
           >

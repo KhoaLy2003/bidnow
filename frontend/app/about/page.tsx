@@ -1,352 +1,211 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ArrowRight, ArrowUpRight } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Section, SectionHeading } from '@/components/home/Section'
+import { ServiceMapDiagram } from '@/components/about/ServiceMapDiagram'
+import { AwsArchitectureDiagram } from '@/components/about/AwsArchitectureDiagram'
+import { Button } from '@/components/ui/button'
+import {
+  AWS_NOTES,
+  DEVELOPERS,
+  PRINCIPLES,
+  SERVICE_NOTES,
+  STACK,
+  githubUrl,
+  initials,
+} from '@/lib/about'
+import { ROUTES } from '@/lib/navigation'
 
 export const metadata: Metadata = {
-  title: 'About BidNow',
+  title: 'About',
   description:
-    "Vietnam's transparent, accessible, and fair auction platform — built around competitive bidding.",
+    'How BidNow is built: eight Spring Boot microservices, Kafka events, live WebSocket updates, and the three-tier AWS deployment behind it.',
 }
 
-const STATS = [
-  { value: '12,400+', label: 'Auctions completed' },
-  { value: '₫4.2B', label: 'GMV last quarter' },
-  { value: '98.6%', label: 'Settlement on time' },
-  { value: '2026', label: 'Founded · HCMC' },
+const FACTS = [
+  { label: 'Backend modules',    value: '8' },
+  { label: 'Database ownership', value: '1 per service' },
+  { label: 'Service-to-service', value: 'Feign + Kafka' },
+  { label: 'Live updates',       value: 'STOMP / WS' },
 ] as const
 
-const VALUES = [
-  {
-    icon: '◐',
-    title: 'Transparency',
-    body: 'Every bid is visible. Every result is final. Prices set by the market, not by us.',
-  },
-  {
-    icon: '✓',
-    title: 'Trust',
-    body: 'Verified identities, escrowed payments, and Buyer Protection on every qualifying transaction.',
-  },
-  {
-    icon: '○',
-    title: 'Accessibility',
-    body: 'Designed to work on any screen, any network condition, for users of every technical experience.',
-  },
-  {
-    icon: '★',
-    title: 'Accountability',
-    body: "When things go wrong — we respond quickly, investigate fairly, and make it right.",
-  },
-] as const
-
-const TIMELINE = [
-  { yr: '2025', q: 'Q3', title: 'Platform founded', body: 'Engineering and product team forms in Ho Chi Minh City.' },
-  { yr: '2025', q: 'Q4', title: 'Closed beta', body: 'First 200 users invited; 38 auctions completed.' },
-  { yr: '2026', q: 'Q1', title: 'Public beta launch', body: 'Core auction, bidding, and payment features go live.' },
-  { yr: '2026', q: 'Q2', title: 'VNPAY integration', body: 'Localized payment processing for Vietnamese banks and cards.' },
-  { yr: '2026', q: 'Q2', title: 'Buyer Protection', body: 'Escrow-backed guarantee on every verified-seller transaction.' },
-] as const
+const DIAGRAM_FRAME =
+  'overflow-x-auto rounded-xl border border-[var(--color-border-default)] bg-[var(--color-bg-elevated)]'
 
 export default function AboutPage() {
   return (
     <>
       <Header />
       <main id="main-content" className="flex-1">
-        {/* Hero */}
-        <div className="mx-auto w-full px-6" style={{ maxWidth: 1200, paddingTop: 80, paddingBottom: 48 }}>
-          <div className="flex flex-col gap-5">
-            <span
-              className="font-mono font-medium uppercase"
-              style={{ fontSize: 11, color: 'var(--color-brand-600)', letterSpacing: '0.1em' }}
-            >
+        {/* Hero: always dark, like the homepage */}
+        <section className="dark bg-[var(--color-brand-900)] text-foreground">
+          <div className="mx-auto w-full max-w-[var(--container-xl)] px-4 pt-16 sm:px-6 md:pt-24">
+            <p className="flex items-center gap-2.5 font-mono text-[length:var(--font-size-xs)] font-medium uppercase text-muted-foreground">
+              <span className="size-2 rounded-full bg-[var(--color-warning-default)]" aria-hidden="true" />
               About BidNow
-            </span>
-            <h1
-              className="font-display font-medium"
-              style={{
-                margin: 0,
-                fontSize: 'clamp(40px, 6vw, 72px)',
-                lineHeight: 1.0,
-                letterSpacing: '-0.025em',
-                color: 'var(--color-text-primary)',
-                maxWidth: 1020,
-              }}
-            >
-              Auctions that are{' '}
-              <em style={{ color: 'var(--color-brand-600)', fontStyle: 'normal' }}>transparent</em>,
-              <br />
-              accessible, and fair.
-            </h1>
-            <p
-              style={{
-                fontSize: 19,
-                lineHeight: 1.5,
-                color: 'var(--color-text-secondary)',
-                maxWidth: 720,
-                marginTop: 8,
-                marginBottom: 0,
-              }}
-            >
-              BidNow is Vietnam&apos;s modern online auction platform. We exist because competitive bidding
-              is the most honest way to determine market value — and because the country deserved a
-              marketplace built to prove it.
             </p>
+            <h1 className="mt-6 max-w-4xl font-display text-[length:clamp(2.5rem,6vw,4.25rem)] font-medium leading-[1.05] text-balance">
+              Real-time auctions, built as eight small services.
+            </h1>
+            <p className="mt-7 max-w-2xl text-[length:var(--font-size-md)] leading-relaxed text-muted-foreground text-pretty">
+              BidNow is an English-auction marketplace. Every bid, anti-sniping extension and payout moves through an
+              event-driven Spring Boot backend and reaches your screen over WebSocket. This page shows how the pieces
+              fit, and where they will run on AWS.
+            </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Button
+                variant="brand"
+                size="xl"
+                className="h-12 px-6"
+                render={<Link href="#architecture" />}
+                nativeButton={false}
+              >
+                See the architecture
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                variant="outline"
+                size="xl"
+                className="h-12 border-white/35 bg-transparent px-6 text-white hover:bg-white/10"
+                render={<Link href={ROUTES.browse} />}
+                nativeButton={false}
+              >
+                Browse auctions
+              </Button>
+            </div>
+            <dl className="mt-16 grid grid-cols-2 gap-x-6 border-t border-[var(--color-border-default)] md:mt-20 md:grid-cols-4">
+              {FACTS.map(({ label, value }) => (
+                <div key={label} className="pb-10 pt-6">
+                  <dt className="font-mono text-[length:var(--font-size-xs)] uppercase text-muted-foreground">{label}</dt>
+                  <dd className="mt-2 font-mono text-[length:var(--font-size-xl)] font-medium leading-tight sm:text-[length:var(--font-size-2xl)]">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
-        </div>
+        </section>
 
-        {/* Stats strip */}
-        <div className="mx-auto w-full px-6 pb-20" style={{ maxWidth: 1200 }}>
-          <div
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 py-8"
-            style={{
-              borderTop: '1px solid var(--color-border-default)',
-              borderBottom: '1px solid var(--color-border-default)',
-            }}
-          >
-            {STATS.map(({ value, label }) => (
-              <div key={label} className="flex flex-col gap-2">
-                <span
-                  className="font-mono font-medium"
-                  style={{ fontSize: 64, lineHeight: 1, letterSpacing: '-0.025em', color: 'var(--color-text-primary)' }}
-                >
-                  {value}
-                </span>
-                <span
-                  className="font-mono uppercase"
-                  style={{ fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}
-                >
-                  {label}
-                </span>
+        {/* Principles */}
+        <Section id="principles">
+          <SectionHeading eyebrow="Design principles" title="Four rules the whole system follows." />
+          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {PRINCIPLES.map(({ n, title, body }) => (
+              <li key={n} className="rounded-xl border border-[var(--color-border-default)] bg-card p-6">
+                <span className="font-mono text-[length:var(--font-size-xs)] font-medium text-[var(--color-text-brand)]">{n}</span>
+                <h3 className="mt-9 font-display text-[length:var(--font-size-lg)] font-medium leading-tight">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </Section>
+
+        {/* Microservices */}
+        <Section id="architecture" className="pt-0 md:pt-8">
+          <SectionHeading
+            eyebrow="Microservices"
+            title="Eight modules, one request path."
+            description="A Spring Boot 3.2 and Spring Cloud multi-module build. Requests enter through the gateway, services find each other through Eureka, and events fan out over Kafka."
+          />
+          <figure className="m-0">
+            <div className={DIAGRAM_FRAME}>
+              <ServiceMapDiagram />
+            </div>
+            <figcaption className="sr-only">BidNow microservice map</figcaption>
+          </figure>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
+            {SERVICE_NOTES.map(({ title, body }) => (
+              <div key={title}>
+                <h3 className="font-display text-[length:var(--font-size-md)] font-medium">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
               </div>
             ))}
           </div>
-        </div>
+        </Section>
 
-        {/* Mission */}
-        <div className="mx-auto w-full px-6 pb-24" style={{ maxWidth: 1100 }}>
-          <div className="flex flex-col gap-5" style={{ maxWidth: 820 }}>
-            <span
-              className="font-mono font-medium uppercase"
-              style={{ fontSize: 11, color: 'var(--color-brand-600)', letterSpacing: '0.1em' }}
-            >
-              Our mission
-            </span>
-            <h2
-              className="font-display font-medium"
-              style={{
-                margin: 0,
-                fontSize: 44,
-                lineHeight: 1.15,
-                letterSpacing: '-0.018em',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              Make auction-based commerce transparent, accessible, and fair for everyone in Vietnam.
-            </h2>
-            <p style={{ fontSize: 17, lineHeight: 1.65, color: 'var(--color-text-secondary)', maxWidth: 720, margin: 0 }}>
-              Traditional auction houses were inaccessible to most people. Informal auctions on social
-              platforms were rife with fraud, fake listings, and zero buyer protection. We built BidNow
-              as a purpose-built alternative — one that combines the excitement of competitive bidding
-              with the safeguards users deserve.
-            </p>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {['VNPAY-integrated', 'Anti-sniping', 'Escrow-backed', 'Identity-verified'].map((t) => (
-                <span
-                  key={t}
-                  className="font-mono uppercase"
-                  style={{
-                    fontSize: 10.5,
-                    letterSpacing: '0.06em',
-                    background: 'var(--color-brand-50)',
-                    color: 'var(--color-brand-700)',
-                    border: '1px solid hsl(239,87%,83%)',
-                    borderRadius: 4,
-                    padding: '3px 8px',
-                  }}
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Values */}
-        <div
-          className="py-20"
-          style={{ background: 'var(--color-bg-elevated)' }}
-        >
-          <div className="mx-auto w-full px-6" style={{ maxWidth: 1200 }}>
-            <div className="flex flex-col gap-8">
-              <div className="flex flex-wrap items-baseline justify-between gap-4">
-                <div className="flex flex-col gap-2">
-                  <span
-                    className="font-mono font-medium uppercase"
-                    style={{ fontSize: 11, color: 'var(--color-brand-600)', letterSpacing: '0.1em' }}
-                  >
-                    What we believe
-                  </span>
-                  <h2
-                    className="font-display font-medium"
-                    style={{ margin: 0, fontSize: 40, letterSpacing: '-0.018em', color: 'var(--color-text-primary)' }}
-                  >
-                    Four values, in order of importance.
-                  </h2>
-                </div>
-                <span
-                  className="font-mono uppercase"
-                  style={{ fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}
-                >
-                  FROM OUR FOUNDING DOC · MAY 2026
-                </span>
+        {/* AWS: always dark */}
+        <div className="dark bg-[var(--color-bg-base)] text-foreground">
+          <Section id="aws">
+            <SectionHeading
+              eyebrow="Target deployment on AWS"
+              title="A classic three-tier layout, behind a CDN."
+              description="Presentation, application and data tiers sit in separate subnets of one VPC. Traffic comes in through CloudFront and an Application Load Balancer; both compute tiers scale out in Auto Scaling Groups across two Availability Zones."
+            />
+            <figure className="m-0">
+              <div className={DIAGRAM_FRAME}>
+                <AwsArchitectureDiagram />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                {VALUES.map((v, i) => (
-                  <div
-                    key={v.title}
-                    className="flex flex-col gap-4 rounded-xl p-6"
-                    style={{
-                      border: '1px solid var(--color-border-default)',
-                      background: 'var(--color-bg-base)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center justify-center rounded-lg text-xl"
-                        style={{
-                          width: 44,
-                          height: 44,
-                          background: 'var(--color-brand-50)',
-                          color: 'var(--color-brand-700)',
-                        }}
-                      >
-                        {v.icon}
-                      </div>
-                      <span
-                        className="font-mono"
-                        style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}
-                      >
-                        0{i + 1}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span
-                        className="font-display font-medium"
-                        style={{ fontSize: 20, color: 'var(--color-text-primary)' }}
-                      >
-                        {v.title}
-                      </span>
-                      <span className="text-sm" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.55 }}>
-                        {v.body}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Timeline */}
-        <div className="mx-auto w-full px-6 py-24" style={{ maxWidth: 1200 }}>
-          <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-              <span
-                className="font-mono font-medium uppercase"
-                style={{ fontSize: 11, color: 'var(--color-brand-600)', letterSpacing: '0.1em' }}
-              >
-                Milestones
-              </span>
-              <h2
-                className="font-display font-medium"
-                style={{ margin: 0, fontSize: 40, letterSpacing: '-0.018em', color: 'var(--color-text-primary)' }}
-              >
-                A short, recent history.
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-8 relative pt-9">
-              {/* Rail */}
-              <div
-                className="absolute left-0 right-0 top-3 hidden lg:block"
-                style={{ height: 1, background: 'var(--color-border-default)' }}
-              />
-              {TIMELINE.map((m, i) => (
-                <div key={m.title} className="flex flex-col gap-3 relative">
-                  <div
-                    className="absolute hidden lg:block"
-                    style={{
-                      top: -28,
-                      left: 0,
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      background: i === TIMELINE.length - 1 ? 'var(--color-brand-600)' : 'var(--color-bg-base)',
-                      border: '2px solid var(--color-brand-600)',
-                    }}
-                  />
-                  <span
-                    className="font-mono uppercase"
-                    style={{ fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '0.06em' }}
-                  >
-                    {m.yr} · {m.q}
-                  </span>
-                  <span
-                    className="font-display font-medium"
-                    style={{ fontSize: 18, color: 'var(--color-text-primary)' }}
-                  >
-                    {m.title}
-                  </span>
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.55 }}>
-                    {m.body}
-                  </span>
+              <figcaption className="sr-only">BidNow on AWS: three-tier architecture</figcaption>
+            </figure>
+            <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              {AWS_NOTES.map(({ title, body }) => (
+                <div key={title}>
+                  <h3 className="font-display text-[length:var(--font-size-md)] font-medium">{title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
                 </div>
               ))}
             </div>
-          </div>
+          </Section>
         </div>
 
-        {/* Start bidding CTA */}
-        <div className="mx-auto w-full px-6 pb-24" style={{ maxWidth: 1200 }}>
-          <div
-            className="rounded-xl p-10 flex flex-wrap items-center justify-between gap-6"
-            style={{ background: 'var(--color-brand-800)', border: '1px solid var(--color-brand-800)' }}
-          >
-            <div className="flex flex-col gap-3" style={{ maxWidth: 520 }}>
-              <span
-                className="font-mono font-medium uppercase"
-                style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.1em' }}
-              >
-                Ready to bid?
-              </span>
-              <h3
-                className="font-display font-medium"
-                style={{ margin: 0, fontSize: 32, color: '#FFF', letterSpacing: '-0.015em' }}
-              >
-                Your first auction is one minute away.
-              </h3>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, margin: 0 }}>
-                Create a free account, verify your identity, and start bidding on live auctions today.
-                No fees until you win.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link
-                href="/register"
-                className={cn(buttonVariants({ size: 'xl' }), 'bg-white text-[var(--color-brand-900)] hover:bg-white/90 border-white')}
-              >
-                Create free account
-              </Link>
-              <Link
-                href="/auctions"
-                className={cn(buttonVariants({ variant: 'ghost', size: 'xl' }), 'text-white border border-white/30 hover:bg-white/10 hover:text-white')}
-              >
-                Browse auctions
-              </Link>
-            </div>
+        {/* Tech stack */}
+        <Section id="stack" tinted>
+          <SectionHeading eyebrow="Tech stack" title="What it is built with." />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {STACK.map(({ title, items }) => (
+              <section key={title} aria-labelledby={`stack-${title}`} className="rounded-xl border border-[var(--color-border-default)] bg-card p-6">
+                <h3 id={`stack-${title}`} className="font-display text-[length:var(--font-size-lg)] font-medium">
+                  {title}
+                </h3>
+                <ul className="mt-4">
+                  {items.map(({ name, role }) => (
+                    <li
+                      key={name}
+                      className="flex justify-between gap-4 border-t border-[var(--color-border-default)] py-2.5 text-sm"
+                    >
+                      <span className="font-medium">{name}</span>
+                      <span className="text-right text-muted-foreground">{role}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
           </div>
-        </div>
+        </Section>
+
+        {/* Team */}
+        <Section id="team">
+          <SectionHeading eyebrow="Developers" title="Built by" />
+          <ul className="grid max-w-3xl gap-4 sm:grid-cols-2">
+            {DEVELOPERS.map(({ name, handle }) => (
+              <li key={handle}>
+                <a
+                  href={githubUrl(handle)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-4 rounded-xl border border-[var(--color-border-default)] bg-card px-6 py-5 transition-[border-color] duration-[var(--duration-tesla)] ease-[var(--ease-tesla)] hover:border-[var(--color-text-brand)]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent font-display text-lg font-medium text-accent-foreground"
+                  >
+                    {initials(name)}
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="font-display text-[length:var(--font-size-lg)] font-medium">{name}</span>
+                    <span className="flex items-center gap-1 truncate font-mono text-[length:var(--font-size-xs)] text-[var(--color-text-brand)]">
+                      github.com/{handle}
+                      <ArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" />
+                      <span className="sr-only">(opens in a new tab)</span>
+                    </span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Section>
       </main>
       <Footer />
     </>
