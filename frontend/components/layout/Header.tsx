@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Plus, Search } from "lucide-react";
-import { BidNowGavelMark } from "@/components/shared/BidNowGavelMark";
+import { BidNowMark } from "@/components/shared/BidNowMark";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification/NotificationBell";
 import { AccountMenu } from "@/components/layout/AccountMenu";
@@ -91,10 +91,8 @@ export function Header() {
         )}
       >
         <Link href={ROUTES.home} aria-label="BidNow home" className="flex shrink-0 items-center gap-2.5">
-          <BidNowGavelMark size={32} />
-          <span className="font-display text-xl font-semibold tracking-[-0.01em]">
-            Bid<span className="text-[var(--color-text-brand)]">Now</span>
-          </span>
+          <BidNowMark size={32} />
+          <span className="font-display text-2xl font-bold leading-none tracking-[-0.06em]">bidnow</span>
         </Link>
 
         <NavLinks links={isAuthenticated && !isAdmin ? AUTHED_NAV_LINKS : GUEST_NAV_LINKS} />

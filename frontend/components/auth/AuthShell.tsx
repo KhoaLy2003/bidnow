@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { BidNowGavelMark } from '@/components/shared/BidNowGavelMark'
+import { BidNowMark } from '@/components/shared/BidNowMark'
 
 interface AuthShellProps {
   /** Large headline on the brand panel. */
@@ -36,10 +36,8 @@ export function AuthShell({ headline, description, aside, children }: AuthShellP
         </div>
 
         <Link href="/" className="flex w-fit items-center gap-2.5" aria-label="BidNow home">
-          <BidNowGavelMark size={32} />
-          <span className="font-display text-xl font-medium">
-            Bid<span className="text-[var(--color-brand-300)]">Now</span>
-          </span>
+          <BidNowMark size={32} />
+          <span className="font-display text-2xl font-bold leading-none tracking-[-0.06em]">bidnow</span>
         </Link>
 
         <div className={`${RISE} mt-8 flex max-w-xl flex-col lg:mt-auto lg:pb-12 lg:pt-16`}>
