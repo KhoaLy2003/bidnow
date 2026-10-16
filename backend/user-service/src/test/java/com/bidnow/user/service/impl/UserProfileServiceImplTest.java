@@ -6,6 +6,7 @@ import com.bidnow.common.dto.request.CreateUserProfileRequest;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.user.domain.entity.UserPreferences;
 import com.bidnow.user.domain.entity.UserProfile;
+import com.bidnow.user.dto.response.PublicUserProfileResponse;
 import com.bidnow.user.mapper.UserProfileMapper;
 import com.bidnow.user.repository.UserPreferencesRepository;
 import com.bidnow.user.repository.UserProfileRepository;
@@ -17,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +65,45 @@ class UserProfileServiceImplTest {
         assertThat(result.getId()).isEqualTo(userId);
         assertThat(result.getName()).isEqualTo("Alice Smith");
         assertThat(result.getAvatarUrl()).isEqualTo("https://cdn.example.com/alice.jpg");
+    }
+
+    @Test
+    void getPublicProfile_profileExists_mapsOnlyPublicFields() {
+        UUID userId = UUID.randomUUID();
+        LocalDateTime joined = LocalDateTime.of(2025, 3, 1, 12, 0);
+        UserProfile profile = UserProfile.builder()
+                .userId(userId)
+                .displayName("Linh Tran")
+                .avatarUrl("https://cdn.example.com/linh.jpg")
+                .bio("Vintage cameras")
+                .city("Hanoi")
+                .country("Vietnam")
+                .phoneNumber("+84123456789")
+                .address("1 Secret St")
+                .postalCode("100000")
+                .build();
+        profile.setCreatedAt(joined);
+
+        when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.of(profile));
+
+        PublicUserProfileResponse result = userProfileService.getPublicProfile(userId);
+
+        assertThat(result.getUserId()).isEqualTo(userId);
+        assertThat(result.getDisplayName()).isEqualTo("Linh Tran");
+        assertThat(result.getAvatarUrl()).isEqualTo("https://cdn.example.com/linh.jpg");
+        assertThat(result.getBio()).isEqualTo("Vintage cameras");
+        assertThat(result.getCity()).isEqualTo("Hanoi");
+        assertThat(result.getCountry()).isEqualTo("Vietnam");
+        assertThat(result.getMemberSince()).isEqualTo(joined);
+    }
+
+    @Test
+    void getPublicProfile_unknownUser_throwsNotFound() {
+        UUID userId = UUID.randomUUID();
+        when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userProfileService.getPublicProfile(userId))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test

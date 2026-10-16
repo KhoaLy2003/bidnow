@@ -5,6 +5,7 @@ import com.bidnow.common.dto.UserSummaryResponse;
 import com.bidnow.common.exception.GlobalExceptionHandler;
 import com.bidnow.common.exception.NotFoundException;
 import com.bidnow.common.resolver.UserIdArgumentResolver;
+import com.bidnow.user.dto.response.PublicUserProfileResponse;
 import com.bidnow.user.service.UserProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,6 +66,42 @@ class UserProfileControllerTest {
                 .andExpect(jsonPath("$.data.id").value(userId.toString()))
                 .andExpect(jsonPath("$.data.name").value("Alice Smith"))
                 .andExpect(jsonPath("$.data.avatarUrl").value("https://cdn.example.com/alice.jpg"));
+    }
+
+    @Test
+    void getPublicProfile_knownUser_returnsOnlyPublicFields() throws Exception {
+        UUID userId = UUID.randomUUID();
+        PublicUserProfileResponse profile = PublicUserProfileResponse.builder()
+                .userId(userId)
+                .displayName("Linh Tran")
+                .city("Hanoi")
+                .country("Vietnam")
+                .bio("Vintage cameras")
+                .memberSince(LocalDateTime.of(2025, 3, 1, 12, 0))
+                .build();
+
+        when(userProfileService.getPublicProfile(userId)).thenReturn(profile);
+
+        mockMvc.perform(get("/api/v1/users/{userId}/public-profile", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(userId.toString()))
+                .andExpect(jsonPath("$.data.displayName").value("Linh Tran"))
+                .andExpect(jsonPath("$.data.city").value("Hanoi"))
+                .andExpect(jsonPath("$.data.memberSince").exists())
+                .andExpect(jsonPath("$.data.phoneNumber").doesNotExist())
+                .andExpect(jsonPath("$.data.address").doesNotExist())
+                .andExpect(jsonPath("$.data.postalCode").doesNotExist())
+                .andExpect(jsonPath("$.data.roles").doesNotExist());
+    }
+
+    @Test
+    void getPublicProfile_unknownUser_returns404() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(userProfileService.getPublicProfile(userId))
+                .thenThrow(new NotFoundException("User profile not found", NOT_FOUND));
+
+        mockMvc.perform(get("/api/v1/users/{userId}/public-profile", userId))
+                .andExpect(status().isNotFound());
     }
 
     @Test
