@@ -11,6 +11,7 @@ public class NotificationLinks {
 
     public static final String AUCTIONS_PATH = "/auctions";
     public static final String WALLET_PATH = "/wallet";
+    public static final String PURCHASES_PATH = "/purchases";
     public static final String SELLER_AUCTIONS_PATH = "/seller/auctions";
 
     private final String frontendBaseUrl;

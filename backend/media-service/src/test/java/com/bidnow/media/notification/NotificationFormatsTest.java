@@ -29,5 +29,6 @@ class NotificationFormatsTest {
 
         assertThat(NotificationLinks.auctionPath(id)).isEqualTo("/auctions/" + id);
         assertThat(links.absolute(NotificationLinks.WALLET_PATH)).isEqualTo("http://localhost:3000/wallet");
+        assertThat(links.absolute(NotificationLinks.PURCHASES_PATH)).isEqualTo("http://localhost:3000/purchases");
     }
 }

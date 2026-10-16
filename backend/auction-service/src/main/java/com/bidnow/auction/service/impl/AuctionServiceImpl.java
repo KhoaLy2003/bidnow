@@ -7,6 +7,7 @@ import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.entity.AuctionStatusHistory;
 import com.bidnow.auction.domain.enums.AuctionSortBy;
 import com.bidnow.auction.domain.enums.AuctionStatus;
+import com.bidnow.auction.domain.enums.PurchasePaymentStatus;
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
@@ -15,6 +16,7 @@ import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.dto.response.PurchaseResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.feign.UserServiceClient;
 import com.bidnow.auction.job.AuctionActivationJob;
@@ -302,6 +304,49 @@ public class AuctionServiceImpl implements AuctionService {
                 .toList();
 
         return PaginationUtils.toPageResponse(page, summaries);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<PurchaseResponse> getMyPurchases(UUID buyerId, PurchasePaymentStatus status, Pageable pageable) {
+        SpecificationBuilder<AuctionItem> builder = SpecificationBuilder.<AuctionItem>forEntity()
+                .with("winnerId", SearchOperator.EQUAL, buyerId)
+                .withIsNull("deletedAt");
+
+        // A FAILED auction without bids has no winner, so the winnerId filter already excludes it.
+        Specification<AuctionItem> spec = (status == null
+                ? builder.withIn("status", List.of(AuctionStatus.COMPLETED, AuctionStatus.FAILED))
+                : switch (status) {
+                    case PENDING_PAYMENT -> builder.with("status", SearchOperator.EQUAL, AuctionStatus.COMPLETED)
+                            .withIsNull("winnerPaidAt");
+                    case PAID -> builder.with("status", SearchOperator.EQUAL, AuctionStatus.COMPLETED)
+                            .withIsNotNull("winnerPaidAt");
+                    case FORFEITED -> builder.with("status", SearchOperator.EQUAL, AuctionStatus.FAILED);
+                }).build();
+
+        Page<AuctionItem> page = auctionItemRepository.findAll(spec, pageable);
+        List<AuctionItem> auctions = page.getContent();
+        if (auctions.isEmpty()) {
+            return PaginationUtils.toPageResponse(page, List.of());
+        }
+
+        List<UUID> auctionIds = auctions.stream().map(AuctionItem::getId).toList();
+        Map<UUID, List<AuctionImage>> imagesByAuction = auctionImageRepository
+                .findByAuctionIdInOrderByDisplayOrderAsc(auctionIds)
+                .stream()
+                .collect(Collectors.groupingBy(img -> img.getAuction().getId()));
+        List<PurchaseResponse> purchases = auctions.stream()
+                .map(item -> {
+                    List<AuctionImage> images = imagesByAuction.getOrDefault(item.getId(), List.of());
+                    AuctionImage primary = images.stream()
+                            .filter(AuctionImage::getIsPrimary)
+                            .findFirst()
+                            .orElse(images.isEmpty() ? null : images.get(0));
+                    return auctionMapper.toPurchaseResponse(item, primary);
+                })
+                .toList();
+
+        return PaginationUtils.toPageResponse(page, purchases);
     }
 
     @Override

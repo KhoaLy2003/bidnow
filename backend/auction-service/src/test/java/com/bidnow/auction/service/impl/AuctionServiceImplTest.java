@@ -377,4 +377,37 @@ class AuctionServiceImplTest {
         triggerAfterCommit();
         verify(auctionKafkaProducer).publishAuctionCancelled(any());
     }
+
+    // -------------------------------------------------------
+    // getMyPurchases
+    // -------------------------------------------------------
+
+    @Test
+    void getMyPurchases_noWins_returnsEmptyPageWithoutLoadingImages() {
+        givenFindAllReturns(List.of());
+
+        PageResponse<com.bidnow.auction.dto.response.PurchaseResponse> result =
+                auctionService.getMyPurchases(UUID.randomUUID(), null, Pageable.unpaged());
+
+        assertThat(result.getData()).isEmpty();
+        verify(auctionImageRepository, never()).findByAuctionIdInOrderByDisplayOrderAsc(any());
+    }
+
+    @Test
+    void getMyPurchases_mapsEachWinWithItsPrimaryImage() {
+        AuctionItem item = buildItem(UUID.randomUUID());
+        AuctionImage secondary = AuctionImage.builder().auction(item).isPrimary(false).imageUrl("b.jpg").build();
+        AuctionImage primary = AuctionImage.builder().auction(item).isPrimary(true).imageUrl("a.jpg").build();
+        com.bidnow.auction.dto.response.PurchaseResponse mapped =
+                com.bidnow.auction.dto.response.PurchaseResponse.builder().auctionId(item.getId()).build();
+        givenFindAllReturns(List.of(item));
+        when(auctionImageRepository.findByAuctionIdInOrderByDisplayOrderAsc(List.of(item.getId())))
+                .thenReturn(List.of(secondary, primary));
+        when(auctionMapper.toPurchaseResponse(item, primary)).thenReturn(mapped);
+
+        PageResponse<com.bidnow.auction.dto.response.PurchaseResponse> result = auctionService.getMyPurchases(
+                UUID.randomUUID(), com.bidnow.auction.domain.enums.PurchasePaymentStatus.PAID, Pageable.unpaged());
+
+        assertThat(result.getData()).containsExactly(mapped);
+    }
 }

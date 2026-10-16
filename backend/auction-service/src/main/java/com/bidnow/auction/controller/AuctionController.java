@@ -1,5 +1,6 @@
 package com.bidnow.auction.controller;
 
+import com.bidnow.auction.domain.enums.PurchasePaymentStatus;
 import com.bidnow.auction.dto.request.CancelAuctionRequest;
 import com.bidnow.auction.dto.request.CreateAuctionRequest;
 import com.bidnow.auction.dto.request.PublicAuctionFilterRequest;
@@ -8,6 +9,7 @@ import com.bidnow.auction.dto.response.AuctionBrowseItem;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
 import com.bidnow.auction.dto.response.CategoryCountResponse;
+import com.bidnow.auction.dto.response.PurchaseResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.auction.service.AuctionService;
 import com.bidnow.common.annotation.AuthenticatedUserId;
@@ -130,6 +132,36 @@ public class AuctionController {
         String sortDir = "history".equalsIgnoreCase(type) ? "desc" : "asc";
         Pageable pageable = PaginationUtils.getPageable(page, size, sortBy, sortDir);
         PageResponse<AuctionSummaryResponse> response = auctionService.getMyAuctions(sellerId, type, categoryId, pageable);
+        return ResponseEntity.ok(BaseResponse.success(response));
+    }
+
+    /**
+     * =============================================================
+     * List auctions the authenticated user won (by bidding or Buy It Now), newest first,
+     * with each one's payment status.
+     *
+     * @param buyerId UUID of the authenticated user
+     * @param status  optional payment status filter (PENDING_PAYMENT, PAID, FORFEITED); all when omitted
+     * @param page    zero-based page index
+     * @param size    page size
+     * @return ResponseEntity containing a BaseResponse with a PageResponse of PurchaseResponse.
+     * HTTP 200 on success, 400 on an unknown status.
+     * =============================================================
+     */
+    @Operation(summary = "List auctions the authenticated user won, with payment status")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Purchases returned"),
+            @ApiResponse(responseCode = "400", description = "Unknown payment status filter")
+    })
+    @GetMapping("/me/purchases")
+    public ResponseEntity<BaseResponse<PageResponse<PurchaseResponse>>> getMyPurchases(
+            @AuthenticatedUserId UUID buyerId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PaginationUtils.getPageable(page, size, "completedAt", "desc");
+        PageResponse<PurchaseResponse> response =
+                auctionService.getMyPurchases(buyerId, PurchasePaymentStatus.parse(status), pageable);
         return ResponseEntity.ok(BaseResponse.success(response));
     }
 

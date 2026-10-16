@@ -74,12 +74,12 @@ public class PaymentNotificationHandler {
         dispatcher.dispatch(new NotificationIntent(event.getUserId(), NotificationType.PAYMENT_REQUIRED,
                 DedupKeys.payment("REQUIRED", auctionId), auctionId, "Payment required",
                 "You won \"" + title + "\". " + payInstruction(event),
-                NotificationLinks.WALLET_PATH, null,
+                NotificationLinks.PURCHASES_PATH, null,
                 new EmailSpec("AUCTION_WON", Map.of(
                         "auctionTitle", title,
                         "bidAmount", money(event.getAmount()),
                         "paymentDeadline", deadline(event.getDeadline()),
-                        "actionUrl", links.absolute(NotificationLinks.WALLET_PATH)), true)));
+                        "actionUrl", links.absolute(NotificationLinks.PURCHASES_PATH)), true)));
     }
 
     /** Payment reminder #2 (wallet sends it once, 24h before the deadline): the "final notice" email. */
@@ -92,12 +92,12 @@ public class PaymentNotificationHandler {
                 DedupKeys.payment("REMINDER_24H", auctionId), auctionId, "Payment reminder",
                 "You still need to pay for \"" + title + "\". " + payInstruction(event)
                         + " Unpaid wins are cancelled after the deadline.",
-                NotificationLinks.WALLET_PATH, null,
+                NotificationLinks.PURCHASES_PATH, null,
                 new EmailSpec("PAYMENT_REMINDER_2", Map.of(
                         "auctionTitle", title,
                         "bidAmount", money(owed),
                         "paymentDeadline", deadline(event.getDeadline()),
-                        "actionUrl", links.absolute(NotificationLinks.WALLET_PATH)), true)));
+                        "actionUrl", links.absolute(NotificationLinks.PURCHASES_PATH)), true)));
     }
 
     /** What the winner has to do, ending with a period: confirm, top up and pay, or pay the remainder (by the deadline). */
@@ -119,11 +119,11 @@ public class PaymentNotificationHandler {
         List<NotificationIntent> intents = new ArrayList<>();
         intents.add(new NotificationIntent(event.getUserId(), NotificationType.PAYMENT_RECEIVED, dedupKey, auctionId,
                 "Payment complete", "You paid " + money(event.getAmount()) + " for \"" + title + "\".",
-                NotificationLinks.WALLET_PATH, null,
+                NotificationLinks.PURCHASES_PATH, null,
                 new EmailSpec("PAYMENT_SUCCESSFUL", Map.of(
                         "auctionTitle", title,
                         "bidAmount", money(event.getAmount()),
-                        "actionUrl", links.absolute(NotificationLinks.WALLET_PATH)), true)));
+                        "actionUrl", links.absolute(NotificationLinks.PURCHASES_PATH)), true)));
         UUID seller = event.getSellerId() != null ? event.getSellerId() : auctions.sellerId(auctionId).orElse(null);
         if (seller != null) {
             intents.add(new NotificationIntent(seller, NotificationType.PAYMENT_RECEIVED, dedupKey, auctionId,
@@ -147,11 +147,11 @@ public class PaymentNotificationHandler {
                         ? "The payment deadline for \"" + title + "\" has passed, so your win was cancelled."
                         : "The payment deadline for \"" + title + "\" has passed. Your deposit of "
                                 + money(event.getDepositAmount()) + " was forfeited.",
-                NotificationLinks.WALLET_PATH, null,
+                NotificationLinks.PURCHASES_PATH, null,
                 new EmailSpec("PAYMENT_FAILED", Map.of(
                         "auctionTitle", title,
                         "depositAmount", money(event.getDepositAmount()),
-                        "actionUrl", links.absolute(NotificationLinks.WALLET_PATH)), true)));
+                        "actionUrl", links.absolute(NotificationLinks.PURCHASES_PATH)), true)));
     }
 
     private static boolean isZero(BigDecimal amount) {

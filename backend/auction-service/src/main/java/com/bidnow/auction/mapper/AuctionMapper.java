@@ -4,6 +4,7 @@ import com.bidnow.auction.domain.entity.AuctionCategory;
 import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.entity.AuctionStatusHistory;
+import com.bidnow.auction.domain.enums.PurchasePaymentStatus;
 import com.bidnow.auction.dto.request.UpdateAuctionRequest;
 import com.bidnow.auction.dto.response.AdminAuctionDetailResponse;
 import com.bidnow.auction.dto.response.AdminAuctionSummaryResponse;
@@ -13,6 +14,7 @@ import com.bidnow.auction.dto.response.AuctionDetailResponse;
 import com.bidnow.auction.dto.response.AuctionImageResponse;
 import com.bidnow.auction.dto.response.AuctionStatusHistoryResponse;
 import com.bidnow.auction.dto.response.AuctionSummaryResponse;
+import com.bidnow.auction.dto.response.PurchaseResponse;
 import com.bidnow.auction.dto.response.SellerAuctionResponse;
 import com.bidnow.common.dto.UserSummaryResponse;
 import org.mapstruct.Mapper;
@@ -72,6 +74,20 @@ public abstract class AuctionMapper {
                 .primaryImageUrl(primaryImage != null ? primaryImage.getImageUrl() : null)
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
+                .build();
+    }
+
+    public PurchaseResponse toPurchaseResponse(AuctionItem item, AuctionImage primaryImage) {
+        if (item == null) return null;
+        return PurchaseResponse.builder()
+                .auctionId(item.getId())
+                .title(item.getTitle())
+                .primaryImageUrl(primaryImage != null ? primaryImage.getImageUrl() : null)
+                .finalPrice(item.getCurrentPrice())
+                .paymentStatus(PurchasePaymentStatus.of(item))
+                .completedAt(item.getCompletedAt())
+                .paymentDeadline(item.getPaymentDeadline())
+                .paidAt(item.getWinnerPaidAt())
                 .build();
     }
 
