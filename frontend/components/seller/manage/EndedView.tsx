@@ -81,7 +81,15 @@ export function EndedView({ auction, bids, hasMoreBids, loadingBids, onLoadMore 
               <div className="flex items-center gap-3">
                 <UserAvatar name={winnerName ?? 'Winner'} avatarUrl={winningBid?.bidderAvatarUrl} size="lg" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{winnerName ? `@${winnerName}` : 'Winner'}</p>
+                  <p className="truncate text-sm font-medium">
+                    {auction.winnerId ? (
+                      <Link href={`/users/${auction.winnerId}`} className="hover:underline">
+                        {winnerName ? `@${winnerName}` : 'Winner'}
+                      </Link>
+                    ) : (
+                      winnerName ? `@${winnerName}` : 'Winner'
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     Winning bid <span className="font-mono">{formatCurrency(auction.currentBid)}</span>
                   </p>
