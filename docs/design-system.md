@@ -669,6 +669,17 @@ Filtering is live: there is no Search or Apply button. The URL is the source of 
 - **Category counts** are catalogue-wide live counts from `/public/category-counts`. They do not yet narrow with the other filters.
 - **Empty state:** offers one "Remove …" button per applied filter plus "Clear all filters".
 
+### My Bids page (`/my-bids`)
+
+The active auctions the signed-in user has bid on. Data comes from `GET /api/v1/bids/me/active` through `bidService.getMyActiveBids()` and `useMyActiveBids` (`hooks/useMyActiveBids.ts`); the page itself is a server component that only renders the title and `MyBidsClient`. The Claude Design prototype is described in `docs/prompt/my-bids-design-prompt.md`.
+
+- **Layout:** title and subtitle, a line `Tabs` bar (All / Winning / Outbid, each with a mono count), then the list. Tabs filter client-side (`lib/my-bids.ts`); there is no paging. The list is soonest-ending first, as the server returns it.
+- **Row (`MyBidRow`):** thumbnail, title with bid count, status pill, "Your bid", "Current bid", time left, action. From `md` up it is a seven-column grid under a header row; below `md` it is a card (image and title, a three-figure strip with 10px labels, a full-width action). One markup serves both: the strip uses `md:contents`.
+- **Status:** `BidStatusPill` is "Winning" (`--color-success-*`) or "Outbid" (`--color-auction-outbid-*`), with an icon so colour is not the only cue. Winning rows get an outline "View" button, outbid rows a brand "Bid again" button. Both go to `/auctions/{id}`; action buttons are 44px tall.
+- **Time left (`BidTimeLeft`):** plain mono text, amber under 5 minutes and red under 1 minute (same thresholds as `useCountdown`). It does not use the pill-shaped `CountdownTimer`, which would be too heavy in a row.
+- **Freshness:** the list refetches every 30 s while the tab is visible (`MY_BIDS_POLL_MS`), when the tab becomes visible again, and when an outbid, won or lost notification arrives in `notificationStore`. Prices and times between refetches can lag by up to 30 s; the countdown ticks locally.
+- **States:** first load shows `MyBidsSkeleton`. A failed refetch keeps the last list and shows an amber banner with Retry; a failed first load shows the banner alone. Empty copy depends on the tab, and only "All" offers "Browse auctions".
+
 ### Homepage (`/`)
 
 Concept: "The clock is the auctioneer." The page shows real-time bidding instead of describing it. Sections, top to bottom:
