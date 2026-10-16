@@ -11,6 +11,38 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
+describe('bidService.getMyActiveBids', () => {
+  beforeEach(() => mockFetch.mockReset())
+
+  it('fetches the caller\'s active bids uncached and maps them to UI bids', async () => {
+    const data = {
+      items: [{
+        auctionId: 'a-1', title: 'Leica', primaryImageUrl: null, currentPrice: 120, myHighestBid: 100,
+        totalBids: 4, endTime: '2026-10-17T10:00:00Z', lastBidAt: '2026-10-16T09:00:00Z', isWinning: false,
+      }],
+      counts: { all: 1, winning: 0, outbid: 1 },
+    }
+    mockFetch.mockResolvedValue(json({ status: 200, data }))
+
+    const bids = await bidService.getMyActiveBids()
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1/bids/me/active', { cache: 'no-store' })
+    expect(bids).toHaveLength(1)
+    expect(bids[0].endTime).toEqual(new Date('2026-10-17T10:00:00Z'))
+    expect(bids[0].isWinning).toBe(false)
+  })
+
+  it('throws a BidRequestError when auction-service is unavailable', async () => {
+    mockFetch.mockResolvedValue(
+      json({ status: 503, errorCode: 'SERVICE_UNAVAILABLE', message: 'down' }, 503))
+
+    const err = await bidService.getMyActiveBids().catch((e: unknown) => e)
+
+    expect(err).toBeInstanceOf(BidRequestError)
+    expect((err as BidRequestError).status).toBe(503)
+  })
+})
+
 describe('bidService.buyNow', () => {
   beforeEach(() => mockFetch.mockReset())
 

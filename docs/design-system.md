@@ -655,6 +655,10 @@ Built on shadcn `<Avatar>`:
 - Center "Sell" tab: raised `<Button variant="brand">` circle (`-mt-6`)
 - Safe area: `bottom-[calc(0.75rem+env(safe-area-inset-bottom))]`; pages using the dock need `pb-24`
 
+### Purchase history page (`/purchases`)
+
+Dashboard shell, `max-w-5xl`. Title (`font-display text-3xl font-semibold tracking-tight`) and a one-line subtitle; a "payments due" banner (amber `--color-auction-ending-*` tokens, 20px radius) only on the unfiltered first page when the wallet reports holds; filter pills (All, Pending payment, Paid, Forfeited) styled like the browse `FilterToggle`; then one `rounded-[20px]` card of rows. The filter and page live in the URL (`?status=pending&page=2`, page is 1-based) and the list refetches on change, dimming to 60% while a new page loads. A row is thumbnail, title link and "Won <date>", a `Badge` (`ending-soon` / `won` / `critical`) with a note (time left, paid date or missed deadline), a mono amount and a Pay button (pending rows only, opens `PayNowDialog`; the wallet hold supplies the exact remainder). Empty, filtered-empty, error (Retry) and skeleton states follow the browse page patterns. The Claude Design prototype is the source for the layout.
+
 ### Browse page (`/auctions`)
 
 Filtering is live: there is no Search or Apply button. The URL is the source of truth and the page is server-rendered; `useBrowseQuery` (`hooks/useBrowseQuery.ts`) keeps the controls in step with it.
@@ -683,6 +687,17 @@ One list, no tabs. Every auction the seller owns is on the page at once, split i
 - **Row (`SellerAuctionRow`):** thumbnail, title and category, price, bids, time, status, actions. Live rows tick once a second from one shared `useNow` and show a thin time bar. The tone is written out as well as coloured: Live, Ending soon (5 min or less), Final minute (1 min or less), the same thresholds as the homepage queue (`queueState`). Actions are "Manage" (live, scheduled), "Finish setup" (draft) or "View" (ended), plus a menu with View public page, Edit details and Delete auction where allowed.
 - **Responsive:** `SELLER_ROW_GRID` is shared by band headers and rows. Below `md` a row becomes a two-line card (thumbnail, title, actions, then price, time and status with their own captions) and the Bids column is hidden. Status chips scroll sideways.
 - **Removed:** the Export button (it did nothing) and the server-side category refetch.
+
+### My Bids page (`/my-bids`)
+
+The active auctions the signed-in user has bid on. Data comes from `GET /api/v1/bids/me/active` through `bidService.getMyActiveBids()` and `useMyActiveBids` (`hooks/useMyActiveBids.ts`); the page itself is a server component that only renders the title and `MyBidsClient`. The Claude Design prototype is described in `docs/prompt/my-bids-design-prompt.md`.
+
+- **Layout:** title and subtitle, a line `Tabs` bar (All / Winning / Outbid, each with a mono count), then the list. Tabs filter client-side (`lib/my-bids.ts`); there is no paging. The list is soonest-ending first, as the server returns it.
+- **Row (`MyBidRow`):** thumbnail, title with bid count, status pill, "Your bid", "Current bid", time left, action. From `md` up it is a seven-column grid under a header row; below `md` it is a card (image and title, a three-figure strip with 10px labels, a full-width action). One markup serves both: the strip uses `md:contents`.
+- **Status:** `BidStatusPill` is "Winning" (`--color-success-*`) or "Outbid" (`--color-auction-outbid-*`), with an icon so colour is not the only cue. Winning rows get an outline "View" button, outbid rows a brand "Bid again" button. Both go to `/auctions/{id}`; action buttons are 44px tall.
+- **Time left (`BidTimeLeft`):** plain mono text, amber under 5 minutes and red under 1 minute (same thresholds as `useCountdown`). It does not use the pill-shaped `CountdownTimer`, which would be too heavy in a row.
+- **Freshness:** the list refetches every 30 s while the tab is visible (`MY_BIDS_POLL_MS`), when the tab becomes visible again, and when an outbid, won or lost notification arrives in `notificationStore`. Prices and times between refetches can lag by up to 30 s; the countdown ticks locally.
+- **States:** first load shows `MyBidsSkeleton`. A failed refetch keeps the last list and shows an amber banner with Retry; a failed first load shows the banner alone. Empty copy depends on the tab, and only "All" offers "Browse auctions".
 
 ### Homepage (`/`)
 

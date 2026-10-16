@@ -51,6 +51,8 @@ CREATE INDEX idx_auction_items_category_id ON auction_items(category_id) WHERE d
 CREATE INDEX idx_auction_items_end_time ON auction_items(end_time) WHERE status = 'ACTIVE' AND deleted_at IS NULL;
 CREATE INDEX idx_auction_items_created_at ON auction_items(created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX idx_auction_items_winner_id ON auction_items(winner_id) WHERE winner_id IS NOT NULL AND deleted_at IS NULL;
+-- Purchase history (GET /auctions/me/purchases): a buyer's wins, newest first (migration 005)
+CREATE INDEX idx_auction_items_winner_completed_at ON auction_items(winner_id, completed_at DESC) WHERE winner_id IS NOT NULL AND deleted_at IS NULL;
 ```
 
 ---

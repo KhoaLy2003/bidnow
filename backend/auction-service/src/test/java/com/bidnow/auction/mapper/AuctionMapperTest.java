@@ -1,9 +1,12 @@
 package com.bidnow.auction.mapper;
 
 import com.bidnow.auction.domain.entity.AuctionCategory;
+import com.bidnow.auction.domain.entity.AuctionImage;
 import com.bidnow.auction.domain.entity.AuctionItem;
 import com.bidnow.auction.domain.enums.AuctionStatus;
+import com.bidnow.auction.domain.enums.PurchasePaymentStatus;
 import com.bidnow.auction.dto.response.AuctionDetailResponse;
+import com.bidnow.auction.dto.response.PurchaseResponse;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -54,5 +57,37 @@ class AuctionMapperTest {
 
         assertThat(response.getPaymentDeadline()).isNull();
         assertThat(response.getWinnerPaidAt()).isNull();
+    }
+
+    @Test
+    void toPurchaseResponse_mapsPaidWinWithPrimaryImage() {
+        OffsetDateTime completedAt = OffsetDateTime.of(2026, 10, 14, 8, 0, 0, 0, ZoneOffset.UTC);
+        OffsetDateTime deadline = completedAt.plusHours(48);
+        OffsetDateTime paidAt = completedAt.plusHours(5);
+        AuctionItem item = completedAuction()
+                .completedAt(completedAt).paymentDeadline(deadline).winnerPaidAt(paidAt).build();
+        AuctionImage image = AuctionImage.builder().imageUrl("https://cdn.example.com/seiko.jpg").auction(item).build();
+
+        PurchaseResponse response = mapper.toPurchaseResponse(item, image);
+
+        assertThat(response.getAuctionId()).isEqualTo(item.getId());
+        assertThat(response.getTitle()).isEqualTo("Seiko 6139");
+        assertThat(response.getPrimaryImageUrl()).isEqualTo("https://cdn.example.com/seiko.jpg");
+        assertThat(response.getFinalPrice()).isEqualByComparingTo("1150.00");
+        assertThat(response.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PAID);
+        assertThat(response.getCompletedAt()).isEqualTo(completedAt);
+        assertThat(response.getPaymentDeadline()).isEqualTo(deadline);
+        assertThat(response.getPaidAt()).isEqualTo(paidAt);
+    }
+
+    @Test
+    void toPurchaseResponse_pendingWinWithoutImageHasNullImageAndPaidAt() {
+        AuctionItem item = completedAuction().build();
+
+        PurchaseResponse response = mapper.toPurchaseResponse(item, null);
+
+        assertThat(response.getPaymentStatus()).isEqualTo(PurchasePaymentStatus.PENDING_PAYMENT);
+        assertThat(response.getPrimaryImageUrl()).isNull();
+        assertThat(response.getPaidAt()).isNull();
     }
 }

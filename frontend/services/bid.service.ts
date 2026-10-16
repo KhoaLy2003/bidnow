@@ -1,15 +1,18 @@
 import { apiFetch } from '@/lib/apiClient'
 import { mapBidHistoryResponse } from '@/types/mappers/bid.mapper'
+import { mapMyActiveBids } from '@/types/mappers/myBids.mapper'
 import type { ApiResponse, PageResponse } from '@/types/api/common.api'
 import type {
   ApiErrorResponse,
   BidHistoryResponse,
   BuyNowRequest,
   BuyNowResponse,
+  MyActiveBidsResponse,
   PlaceBidRequest,
   PlaceBidResponse,
 } from '@/types/api/bid.api'
 import type { BidEntry } from '@/types/ui/auction.ui'
+import type { MyActiveBid } from '@/types/ui/bid.ui'
 
 export const BID_PAGE_SIZE = 20
 
@@ -60,6 +63,14 @@ export const bidService = {
     if (!response.ok) throw await toBidRequestError(response)
     const body: ApiResponse<BuyNowResponse> = await response.json()
     return body.data
+  },
+
+  /** Active auctions the signed-in user has bid on, soonest-ending first. */
+  async getMyActiveBids(): Promise<MyActiveBid[]> {
+    const response = await apiFetch('/api/v1/bids/me/active', { cache: 'no-store' })
+    if (!response.ok) throw await toBidRequestError(response)
+    const body: ApiResponse<MyActiveBidsResponse> = await response.json()
+    return mapMyActiveBids(body.data)
   },
 
   async getAuctionBids(

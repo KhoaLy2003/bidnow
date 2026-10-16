@@ -659,7 +659,7 @@ At the end of this epic (Phase 1), the BidNow platform will have:
 A winner pays from either of two places, both backed by `GET /api/v1/wallets/payments/pending` and `POST /api/v1/wallets/payments/confirm`:
 
 - **Auction page:** in the Won panel, `PaymentStatusBlock` shows the remainder and a "Proceed to payment" button that opens `PayNowDialog`. States: loading, error (retry), preparing (fresh win, hold not created yet; polls 3 s for up to 30 s), due, expired, paid, forfeited, cancelled, none (no hold exists for the auction).
-- **Wallet page:** a "Payments due" list (auction image and title, remainder, time left, Pay).
+- **Purchase history page (`/purchases`):** replaces the wallet's old "Payments due" list. A "payments due" banner (count, total remaining, soonest deadline) sits above a paginated list of every auction the user won with a Pending payment / Paid / Forfeited badge; pending rows carry the Pay button (the wallet hold supplies the exact remainder and opens `PayNowDialog`). The wallet page now only links to it.
 
 `PayNowDialog` shows price, deposit applied, remainder and time left. When the funds are not yet held and the available balance is short, it shows the shortfall and an inline mock top-up (`POST /api/v1/wallets/deposit`) before Pay is enabled. State is shared through `paymentStore`, kept fresh by `PAYMENT_REQUIRED` / `PAYMENT_RECEIVED` / `PAYMENT_FAILED` notification pushes.
 

@@ -67,7 +67,7 @@ class PaymentNotificationHandlerTest {
         assertThat(intent.userId()).isEqualTo(WINNER);
         assertThat(intent.type()).isEqualTo(NotificationType.PAYMENT_REQUIRED);
         assertThat(intent.dedupKey()).isEqualTo(DedupKeys.payment("REQUIRED", AUCTION));
-        assertThat(intent.actionUrl()).isEqualTo("/wallet");
+        assertThat(intent.actionUrl()).isEqualTo("/purchases");
         assertThat(intent.message()).contains("$1,350.00").contains("2026-10-03 10:00 UTC").doesNotContain("top up");
         assertThat(intent.email().templateBaseName()).isEqualTo("AUCTION_WON");
         assertThat(intent.email().transactional()).isTrue();
@@ -75,7 +75,7 @@ class PaymentNotificationHandlerTest {
                 .containsEntry("auctionTitle", "Vintage Watch")
                 .containsEntry("bidAmount", "$1,500.00")
                 .containsEntry("paymentDeadline", "2026-10-03 10:00 UTC")
-                .containsEntry("actionUrl", "http://localhost:3000/wallet");
+                .containsEntry("actionUrl", "http://localhost:3000/purchases");
     }
 
     @Test
@@ -148,7 +148,7 @@ class PaymentNotificationHandlerTest {
         assertThat(intent.type()).isEqualTo(NotificationType.PAYMENT_REMINDER);
         assertThat(intent.dedupKey()).isEqualTo(DedupKeys.payment("REMINDER_24H", AUCTION));
         assertThat(intent.title()).isEqualTo("Payment reminder");
-        assertThat(intent.actionUrl()).isEqualTo("/wallet");
+        assertThat(intent.actionUrl()).isEqualTo("/purchases");
         assertThat(intent.message()).isEqualTo("You still need to pay for \"Vintage Watch\". Please complete your "
                 + "payment of $1,350.00 by 2026-10-03 10:00 UTC. Unpaid wins are cancelled after the deadline.");
         assertThat(intent.email().templateBaseName()).isEqualTo("PAYMENT_REMINDER_2");
@@ -157,7 +157,7 @@ class PaymentNotificationHandlerTest {
                 .containsEntry("auctionTitle", "Vintage Watch")
                 .containsEntry("bidAmount", "$1,350.00")
                 .containsEntry("paymentDeadline", "2026-10-03 10:00 UTC")
-                .containsEntry("actionUrl", "http://localhost:3000/wallet");
+                .containsEntry("actionUrl", "http://localhost:3000/purchases");
     }
 
     @Test

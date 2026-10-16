@@ -13,6 +13,10 @@ import com.bidnow.bidding.exception.ServiceUnavailableException;
 import com.bidnow.bidding.service.BidHistoryService;
 import com.bidnow.bidding.service.BidService;
 import com.bidnow.bidding.service.BuyNowService;
+import com.bidnow.bidding.service.MyActiveBidsService;
+import com.bidnow.bidding.dto.response.MyActiveBidCounts;
+import com.bidnow.bidding.dto.response.MyActiveBidResponse;
+import com.bidnow.bidding.dto.response.MyActiveBidsResponse;
 import com.bidnow.bidding.dto.request.BidHistoryQuery;
 import com.bidnow.bidding.dto.response.BidHistoryResponse;
 import com.bidnow.common.dto.PageResponse;
@@ -64,11 +68,15 @@ class BidControllerTest {
     @Mock
     private BuyNowService buyNowService;
 
+    @Mock
+    private MyActiveBidsService myActiveBidsService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BidController(bidService, bidHistoryService, buyNowService))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new BidController(bidService, bidHistoryService, buyNowService, myActiveBidsService))
                 .setControllerAdvice(new BiddingExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new UserIdArgumentResolver())
                 .build();
@@ -290,6 +298,40 @@ class BidControllerTest {
         mockMvc.perform(get("/api/v1/bids/auction/" + AUCTION_ID + "/my-bids").header("X-User-Id", BIDDER_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.data[0].bidderId").value(BIDDER_ID.toString()));
+    }
+
+    // ---------------------------------------------------------------------
+    // GET /api/v1/bids/me/active
+    // ---------------------------------------------------------------------
+
+    @Test
+    void myActiveBids_usesCallerFromHeaderAndReturnsItemsWithCounts() throws Exception {
+        when(myActiveBidsService.myActiveBids(BIDDER_ID)).thenReturn(MyActiveBidsResponse.builder()
+                .items(List.of(MyActiveBidResponse.builder().auctionId(AUCTION_ID).title("Watch")
+                        .currentPrice(new BigDecimal("230.00")).myHighestBid(new BigDecimal("200.00"))
+                        .totalBids(5).endTime(OffsetDateTime.parse("2026-10-18T10:00:00Z"))
+                        .lastBidAt(OffsetDateTime.parse("2026-10-16T09:00:00Z")).winning(false).build()))
+                .counts(MyActiveBidCounts.builder().all(1).winning(0).outbid(1).build())
+                .build());
+
+        mockMvc.perform(get("/api/v1/bids/me/active").header("X-User-Id", BIDDER_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].auctionId").value(AUCTION_ID.toString()))
+                .andExpect(jsonPath("$.data.items[0].myHighestBid").value(200.00))
+                .andExpect(jsonPath("$.data.items[0].currentPrice").value(230.00))
+                .andExpect(jsonPath("$.data.items[0].isWinning").value(false))
+                .andExpect(jsonPath("$.data.counts.all").value(1))
+                .andExpect(jsonPath("$.data.counts.outbid").value(1));
+    }
+
+    @Test
+    void myActiveBids_auctionServiceDown_returns503() throws Exception {
+        when(myActiveBidsService.myActiveBids(BIDDER_ID))
+                .thenThrow(new ServiceUnavailableException("Auction service is unavailable"));
+
+        mockMvc.perform(get("/api/v1/bids/me/active").header("X-User-Id", BIDDER_ID.toString()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.errorCode").value(BiddingErrorCodes.SERVICE_UNAVAILABLE));
     }
 
     // ---------------------------------------------------------------------

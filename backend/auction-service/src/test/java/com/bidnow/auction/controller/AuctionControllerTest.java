@@ -105,6 +105,38 @@ class AuctionControllerTest {
     }
 
     // -------------------------------------------------------
+    // GET /api/v1/auctions/me/purchases
+    // -------------------------------------------------------
+
+    @Test
+    void getMyPurchases_passesUserAndStatusToService() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(auctionService.getMyPurchases(any(), any(), any()))
+                .thenReturn(PageResponse.<com.bidnow.auction.dto.response.PurchaseResponse>builder()
+                        .data(List.of())
+                        .pagination(PaginationMeta.builder().page(0).limit(10).total(0L).totalPages(0).build())
+                        .build());
+
+        mockMvc.perform(get("/api/v1/auctions/me/purchases")
+                        .header("X-User-Id", userId.toString())
+                        .param("status", "PENDING_PAYMENT"))
+                .andExpect(status().isOk());
+
+        verify(auctionService).getMyPurchases(
+                org.mockito.ArgumentMatchers.eq(userId),
+                org.mockito.ArgumentMatchers.eq(com.bidnow.auction.domain.enums.PurchasePaymentStatus.PENDING_PAYMENT),
+                any());
+    }
+
+    @Test
+    void getMyPurchases_unknownStatus_returns400() throws Exception {
+        mockMvc.perform(get("/api/v1/auctions/me/purchases")
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .param("status", "BOGUS"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // -------------------------------------------------------
     // GET /api/v1/auctions/public/{id}
     // -------------------------------------------------------
 
