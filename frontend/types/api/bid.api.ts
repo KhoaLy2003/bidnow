@@ -37,6 +37,24 @@ export interface BidHistoryResponse {
   isAntiSnipingTriggered: boolean
 }
 
+/** One active auction the caller has bid on (`GET /api/v1/bids/me/active`). */
+export interface MyActiveBidResponse {
+  auctionId: string
+  title: string
+  primaryImageUrl: string | null
+  currentPrice: number
+  myHighestBid: number
+  totalBids: number
+  endTime: string
+  lastBidAt: string
+  isWinning: boolean
+}
+
+export interface MyActiveBidsResponse {
+  items: MyActiveBidResponse[]
+  counts: { all: number; winning: number; outbid: number }
+}
+
 export type BidErrorCode =
   | 'AUCTION_NOT_FOUND'
   | 'AUCTION_NOT_OPEN'
