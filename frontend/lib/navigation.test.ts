@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUTHED_NAV_LINKS, GUEST_NAV_LINKS, ROUTES, isNavActive } from './navigation'
+import { NAV_LINKS, ROUTES, isNavActive } from './navigation'
 
 describe('isNavActive', () => {
   it('matches the exact path', () => {
@@ -25,13 +25,16 @@ describe('isNavActive', () => {
 })
 
 describe('nav links', () => {
-  it('has no standalone Live link', () => {
-    const labels = [...AUTHED_NAV_LINKS, ...GUEST_NAV_LINKS].map((l) => l.label)
-    expect(labels).not.toContain('Live')
+  it('lists Browse, How it works and FAQ, in that order', () => {
+    expect(NAV_LINKS.map((l) => l.label)).toEqual(['Browse', 'How it works', 'FAQ'])
+    expect(NAV_LINKS.map((l) => l.href)).toEqual([ROUTES.browse, ROUTES.howItWorks, ROUTES.faq])
   })
 
-  it('shows My bids only to signed-in users', () => {
-    expect(AUTHED_NAV_LINKS.map((l) => l.href)).toContain(ROUTES.myBids)
-    expect(GUEST_NAV_LINKS.map((l) => l.href)).not.toContain(ROUTES.myBids)
+  it('has no standalone Live link', () => {
+    expect(NAV_LINKS.map((l) => l.label)).not.toContain('Live')
+  })
+
+  it('leaves member-only pages to the account menu', () => {
+    expect(NAV_LINKS.map((l) => l.href)).not.toContain(ROUTES.myBids)
   })
 })

@@ -644,7 +644,7 @@ Built on shadcn `<Avatar>`:
 **Desktop (≥ 768px):**
 - Sticky `<header>` — `bg-background border-b border-border sticky top-0 z-[--z-index-sticky]`
 - Bar: `h-[72px]`, `h-[60px]` once scrolled, plus a soft shadow. Logo | `NavLinks` | search trigger | actions
-- `NavLinks`: Browse and My bids (signed in) or Browse and How it works (guests). There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
+- `NavLinks`: Browse, How it works and FAQ for everyone (guests, members, admins; `NAV_LINKS` in `lib/navigation.ts`). My bids lives in `AccountMenu` and `BottomNav`. There is no "Live" link, every auction is live. The active page is a 2px brand bar on the header's bottom border
 - Search trigger (`⌘K` / `Ctrl+K`) opens `SearchDialog`: recent searches and ending-soon lots when empty, debounced live results while typing
 - Right: `NotificationBell` + `AccountMenu` + `<Button variant="brand">` ("Sell", `/seller/auctions/new`). Guests get "Sign in" and "Join BidNow"
 - `AccountMenu`: identity, balance card (eye toggle), then My bids, Purchase history, My auctions | Wallet, Profile, Settings | theme switch | Sign out

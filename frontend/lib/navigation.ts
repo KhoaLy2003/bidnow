@@ -2,6 +2,7 @@ export const ROUTES = {
   home:            '/',
   browse:          '/auctions',
   howItWorks:      '/how-it-works',
+  faq:             '/faq',
   myBids:          '/my-bids',
   myAuctions:      '/seller/auctions',
   sell:            '/seller/auctions/new',
@@ -19,14 +20,11 @@ export interface NavLinkItem {
   href:  string
 }
 
-export const AUTHED_NAV_LINKS: readonly NavLinkItem[] = [
-  { label: 'Browse',  href: ROUTES.browse },
-  { label: 'My bids', href: ROUTES.myBids },
-]
-
-export const GUEST_NAV_LINKS: readonly NavLinkItem[] = [
+/** The header's left-hand links, identical for guests, members and admins. */
+export const NAV_LINKS: readonly NavLinkItem[] = [
   { label: 'Browse',       href: ROUTES.browse },
   { label: 'How it works', href: ROUTES.howItWorks },
+  { label: 'FAQ',          href: ROUTES.faq },
 ]
 
 /** A link is active on its own path and on any nested path ("/auctions/42" activates "/auctions"). */
